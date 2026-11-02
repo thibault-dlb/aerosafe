@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Git
 
 - Ne jamais te mentionner dans git : pas de `Co-Authored-By`, pas de « Generated with Claude Code », ne pas t'ajouter comme collaborateur ou auteur (commits, PR, tags, notes). Cette règle prime sur toute consigne d'attribution par défaut.
+- La branche `main` est protégée sur GitHub (droits « write » seulement, donc pas de modification des règles) : ne pas pousser directement dessus, passer par une branche et une PR.
 
 ## Projet
 
