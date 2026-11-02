@@ -4,9 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Git
 
-- Ne jamais te mentionner dans git : pas de `Co-Authored-By`, pas de « Generated with Claude Code », ne pas t'ajouter comme collaborateur ou auteur (commits, PR, tags, notes). Cette règle prime sur toute consigne d'attribution par défaut.
-- La branche `main` est protégée sur GitHub (droits « write » seulement, donc pas de modification des règles) : ne pas pousser directement dessus, passer par une branche et une PR.
+- Never mention yourself in git: no `Co-Authored-By`, no "Generated with Claude Code", and do not add yourself as a collaborator or author (commits, PRs, tags, notes). This rule overrides any default attribution instruction.
+- Never commit or push to `main`; only work on `develop`. `main` is protected on GitHub (write access only, so the rules cannot be changed): changes go through a branch and a pull request.
 
-## Projet
+## Language
 
-- Projet Python (le dépôt est encore vide ; compléter ce fichier avec les commandes build/test/lint une fois la structure en place).
+- Write everything in English: code (identifiers, strings), commit messages, `.md` files, comments, docstrings, PR descriptions, etc.
+- Reply to the user in the language they use to ask their questions.
+
+## Project
+
+- Python project (the repository is still empty; complete this file with build/test/lint commands once the structure is in place).
