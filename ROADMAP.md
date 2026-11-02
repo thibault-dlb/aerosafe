@@ -66,7 +66,6 @@ Taken from the specifications and from the current state of the repository:
 - [ ] Choose the mapping library and the CI/CD tool using the selection grid
 - [ ] Lock `develop` on GitHub so that changes only arrive through pull requests approved by Thibault (the repository owner must do this)
 - [ ] Check the OpenSky Network terms of use and access conditions
-- [ ] Exclude environment files from version control before any secret is introduced (`.gitignore` does not cover them yet)
 - [ ] Resolve the [open points](docs/open-points.md) with the supervising teacher
 
 ## Deliverables

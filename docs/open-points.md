@@ -46,4 +46,3 @@ The specifications are reproduced as written in this repository. These points ne
 | V-01 | OpenSky Network conditions | Check the terms of use, quotas, query frequency and authentication (§V.1, §VII.1, §VII.3) |
 | V-02 | Public sharing | Sharing has not been validated by the supervising teacher (§V.2); the repository has been private since 2026-11-02 |
 | V-03 | Teacher access | The supervising teacher needs access to the private repository (§VIII.2); the repository owner must grant it |
-| V-04 | Environment files | `.gitignore` does not exclude environment files yet (§V.2) |
