@@ -35,6 +35,23 @@ Decisions that belong to the team and do not come from the sheet.
 | D-15 | Two naming styles in the database guide | The guide names tables and columns in uppercase French with prefixes (`DT_SUPPRESSION`, `BL_ACTIF`) but uses `created_at`, `updated_at`, `deleted_at`, `audit_logs` and `is_active` for timestamps, audit and reference tables. Which names apply is not stated. See [database conventions](database-conventions.md) |
 | D-16 | French names versus the English rule | The guide requires French names and French `COMMENT ON` text; the project rule is English. `CLAUDE.md` records French database objects as the only exception |
 | D-17 | Table for Keycloak users | The framework tables (`users`, ...) are legacy and never modified; the local user table is a business table and follows the business naming |
+| D-18 | Storage of positions | The database guide requires PostGIS when a position is queried by location (the area search of UC-01 does), but the column naming for geometry is not defined in the guide. Left to the logical schema |
+
+## Team decisions pending confirmation
+
+Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go beyond the project sheet or settle points of the specifications. They are the team's choice, not the sheet's, and should be confirmed with the supervising teacher.
+
+| Topic | Decision | Settles |
+| --- | --- | --- |
+| Supervisor scope | Dashboard, alerts, threshold changes, account management, and every User use case including trajectories | A-02, C-06 |
+| Account creation | Self sign-up (role User); the Supervisor modifies roles, deactivates and deletes | C-02, C-05 |
+| Processing an alert | `processedAt` and `processedBy` on the alert; no separate state | C-03 |
+| Thresholds | Stored in the `Rule` entity, changed by the Supervisor | A-02 |
+| R1 and R2 | R1 is the time since the last message received; R2 is the age of the last known position | A-01 |
+| Flights | `Flight` is an explicit entity grouping observations | D-06 (entity only; the continuity criterion stays open) |
+| Users | Local `User` row linked to Keycloak by `keycloakId` | A-06 |
+| Processing | Collection and evaluation run as scheduled tasks in the API; no worker container | D-05 (frequency stays open) |
+| AI module | Shown in the diagrams as optional, with an anomaly score | Bonus |
 
 ## Not in the project sheet
 

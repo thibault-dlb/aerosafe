@@ -87,7 +87,9 @@ The project sheet requires UML diagrams (step 2, deliverable 1) without listing 
 
 | Diagram | Content | Status |
 | --- | --- | --- |
-| Use cases | Actors: User, Supervisor | `TBD` |
-| Classes | Aircraft, Observation, Flight, Rule, Alert, User | `TBD` |
-| Sequence | "Detection and generation of an alert" scenario | `TBD` |
-| Components | Application architecture | `TBD` |
+| [Use cases](uml/use-cases.md) | Actors: Visitor, User, Supervisor, Scheduler, OpenSky, Keycloak | Drafted, to validate |
+| [Classes](uml/class-diagram.md) | Aircraft, Observation, Flight, Rule, Alert, User and reference classes | Drafted, to validate |
+| [Sequence](uml/sequence-alert.md) | "Detection and generation of an alert" scenario | Drafted, to validate |
+| [Components](uml/component-diagram.md) | Application architecture | Drafted, to validate |
+
+The diagrams are written in Mermaid, which GitHub renders directly.
