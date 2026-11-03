@@ -24,8 +24,13 @@ Technical and organisational choices are judged against these weighted criteria.
 | Backend / API | Python, FastAPI | Set | Specifications |
 | Versioning | Git | Set | Specifications |
 | Containers | Docker | Set | Specifications |
-| Frontend | React, TypeScript | Decided on 2026-11-02 | See below |
+| Frontend | React 19, TypeScript, Vite | Decided on 2026-11-02 | See below |
+| ORM | SQLAlchemy 2.0 (async) with asyncpg | Decided on 2026-11-03 | See below |
+| Database migrations | Alembic | Decided on 2026-11-03 | See below |
 | Python tests and linting | pytest, ruff | Decided on 2026-11-02 | No detailed assessment recorded |
+| Python test plugins | pytest-asyncio, pytest-cov, pytest-xdist | Decided on 2026-11-03 | See below |
+| Frontend tests | Vitest and Testing Library (unit), Playwright (end to end) | Decided on 2026-11-03 | See below |
+| Cache | Redis | Deferred | Adopted only if a need appears, see below |
 | Mapping library | `TBD` | Open | Must be open source; use the grid |
 | CI/CD tool | `TBD` | Open | Use the grid |
 | AI library (bonus) | `TBD` | Open | Python machine learning library |
@@ -50,6 +55,23 @@ The options were compared qualitatively against the grid. No numeric score was c
 
 - components are functions, as React recommends;
 - everything outside components (models, services, API client) uses TypeScript classes.
+
+## Backend, database, ORM and tests
+
+On 2026-11-03 the following choices were made. They were not compared against the grid: existing team experience with this stack was the reason. Versions are targets and are to be confirmed when installed.
+
+| Topic | Choice | Notes |
+| --- | --- | --- |
+| Backend | Python 3.11+, FastAPI, asynchronous | Pydantic 2 for schemas |
+| Frontend | React 19, TypeScript, Vite | Vite is the build tool |
+| Database | PostgreSQL 17 | |
+| ORM | SQLAlchemy 2.0 with asyncpg | Asynchronous sessions |
+| Migrations | Alembic | One migration per schema change |
+| Python tests | pytest with pytest-asyncio, pytest-cov and pytest-xdist | Minimum coverage of 80%, enforced (the test run fails below it). ruff is used for linting |
+| Frontend unit tests | Vitest with Testing Library | Minimum coverage of 80%, enforced (the test run fails below it) |
+| Frontend end-to-end tests | Playwright | |
+
+**Cache (Redis 7.4):** No AeroSafe requirement needs a cache yet. It is adopted only if measured load on the OpenSky data or the dashboard requires it. Until then PostgreSQL is enough and no Redis container is added.
 
 ## Mapping library
 
