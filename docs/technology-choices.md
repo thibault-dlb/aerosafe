@@ -28,6 +28,9 @@ Technical and organisational choices are judged against these weighted criteria.
 | ORM | SQLAlchemy 2.0 (async) with asyncpg | Decided on 2026-11-03 | See below |
 | Database migrations | Alembic | Decided on 2026-11-03 | See below |
 | Python tests and linting | pytest, ruff | Decided on 2026-11-02 | No detailed assessment recorded |
+| Frontend linting | ESLint with typescript-eslint | Decided on 2026-11-03 | Marine Nationale standard |
+| Gateway | Nginx | Decided on 2026-11-03 | Marine Nationale standard |
+| Package managers | uv (Python), pnpm (frontend) | Decided on 2026-11-03 | Marine Nationale standard |
 | Python test plugins | pytest-asyncio, pytest-cov, pytest-xdist | Decided on 2026-11-03 | See below |
 | Frontend tests | Vitest and Testing Library (unit), Playwright (end to end) | Decided on 2026-11-03 | See below |
 | Authentication | Keycloak, OpenID Connect (authorization code flow) | Decided on 2026-11-03 | Marine Nationale standard, see below |

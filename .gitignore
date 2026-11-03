@@ -4,3 +4,23 @@ CLAUDE.local.md
 .env
 .env.*
 !.env.example
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
+
+# Node
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

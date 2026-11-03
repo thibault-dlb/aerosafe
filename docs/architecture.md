@@ -9,11 +9,50 @@ The detailed architecture is `TBD`: it is produced during the design phase, incl
 | Component | Role | Technology |
 | --- | --- | --- |
 | Authentication | Accounts and roles (User / Supervisor) | Keycloak, OpenID Connect |
+| Gateway | Single entry point: serves the web interface and routes `/api` to the API | Nginx |
 | Web interface | Lookup, analysis and supervision | React, TypeScript; mapping library `TBD` |
 | API | Exposes business services and data | Python, FastAPI |
 | Database | Stores aircraft, observations and alerts | PostgreSQL |
 | Business rules engine | Evaluates rules R1 to R5 and generates alerts | Python |
 | AI module (optional) | Anomaly detection and anomaly score | Python machine learning library, `TBD` |
+
+## Repository layout
+
+Decided on 2026-11-03 (D-10), following the Marine Nationale standard.
+
+```text
+.
+├── docker-compose.yaml        Starts the whole application
+├── .env.example               Template of the environment file (.env is never committed)
+├── docs/                      Documentation
+└── src/
+    ├── api/                   Backend (Python, FastAPI)
+    │   ├── main.py            Application factory and entry point
+    │   ├── config/            Settings, one class per group, read from the environment
+    │   ├── core/              Cross-cutting building blocks (database, logger, base model)
+    │   ├── middlewares/       HTTP middlewares
+    │   ├── models/            SQLAlchemy models
+    │   ├── schemas/           Pydantic schemas of the API
+    │   ├── routes/            Routers; `v1/` holds the versioned endpoints
+    │   ├── services/          Business logic (rules engine, data collection)
+    │   ├── database/          Alembic migrations
+    │   ├── docker/            Container support files (database initialisation)
+    │   └── tests/             pytest tests (`unit/`, `api/`)
+    ├── front/                 Web interface (React, TypeScript, Vite)
+    │   ├── src/
+    │   │   ├── components/    Reusable components
+    │   │   ├── config/        Runtime configuration
+    │   │   ├── hooks/         React hooks
+    │   │   ├── models/        Classes modelling the data
+    │   │   ├── pages/         One folder or file per page
+    │   │   ├── providers/     React context providers
+    │   │   ├── services/      API client and other services
+    │   │   └── test/          Test setup
+    │   └── e2e/               Playwright end-to-end tests
+    └── nginx/                 Gateway configuration
+```
+
+Unit tests of the frontend sit next to the code they test (`*.test.ts`, `*.test.tsx`).
 
 ## Stated flows
 
