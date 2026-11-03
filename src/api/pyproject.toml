@@ -28,10 +28,11 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["."]
 testpaths = ["tests"]
 # Coverage is enabled by default; its scope is defined in [tool.coverage.run].
-addopts = "-n auto --cov --cov-report=term-missing"
+addopts = "-n 4 --cov --cov-report=term-missing"
 
 [tool.coverage.run]
 # `source` makes coverage count files that no test imports.
