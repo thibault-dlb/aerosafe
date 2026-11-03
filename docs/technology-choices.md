@@ -1,10 +1,10 @@
 # Technology choices
 
-Every technology chosen needs a written justification in the design documentation and is presented at the defence (§IV.2).
+Every technology chosen needs a written justification in the design documentation and is presented at the defence (project sheet: technology choices are part of deliverables 1 and 3).
 
 ## Selection grid
 
-Technical and organisational choices are judged against these weighted criteria. The grid is also used to settle points the specifications leave open: frontend framework, mapping library and CI tool.
+Technical and organisational choices are judged against these weighted criteria. The grid itself comes from the specifications (§IV.2); the project sheet defines none. It is also used to settle points the specifications leave open: frontend framework, mapping library and CI tool.
 
 | Criterion | Weight | What is assessed |
 | --- | --- | --- |
@@ -19,11 +19,11 @@ Technical and organisational choices are judged against these weighted criteria.
 
 | Topic | Choice | Status | Basis |
 | --- | --- | --- | --- |
-| Data source | OpenSky Network | Set | Specifications |
-| Database | PostgreSQL | Set | Specifications |
-| Backend / API | Python, FastAPI | Set | Specifications |
-| Versioning | Git | Set | Specifications |
-| Containers | Docker | Set | Specifications |
+| Data source | OpenSky Network | Set | Project sheet |
+| Database | PostgreSQL | Decided | The project sheet says "such as PostgreSQL" |
+| Backend / API | Python, FastAPI | Set | Project sheet (FastAPI) |
+| Versioning | Git | Set | Project sheet (step 6) |
+| Containers | Docker | Set | Project sheet (step 8) |
 | Frontend | React 19, TypeScript, Vite | Decided on 2026-11-02 | See below |
 | ORM | SQLAlchemy 2.0 (async) with asyncpg | Decided on 2026-11-03 | See below |
 | Database migrations | Alembic | Decided on 2026-11-03 | See below |
@@ -96,10 +96,11 @@ On 2026-11-03 authentication was delegated to an identity provider instead of be
 - Account creation, deactivation and deletion (BF-14, C-02, C-05) can use the Keycloak administration console or API, so the answer to C-02 decides how much account management the application has to build.
 - Keycloak adds a container and needs its own database schema, which can live in the same PostgreSQL server.
 - The JWKS cache is held in memory, so this choice does not require Redis.
+- The project sheet lists authentication and role management among the development tasks (step 3). Delegating them to Keycloak reduces that work to configuration and integration, which must be justified at the defence (A-06).
 
 ## Mapping library
 
-`TBD`. The specifications require an open-source library chosen with the grid.
+`TBD`. The project sheet only requires trajectories to be shown on a map. The specifications add that the library must be open source and chosen with the grid.
 
 ## CI/CD tool
 

@@ -1,6 +1,6 @@
 # User guide
 
-`TBD`: the application does not exist yet. This page lists what each profile will be able to do, according to the specifications. Step-by-step instructions will be added during development.
+`TBD`: the application does not exist yet. This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions will be added during development.
 
 > **Disclaimer:** AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally. This limitation is also shown in the application (§VII.3).
 
@@ -19,7 +19,7 @@ Coverage of air traffic depends on the OpenSky Network receiver network and is n
 
 ## Supervisor
 
-The Supervisor can also search for and view aircraft (UC-01).
+The Supervisor can also search for and view aircraft (UC-01). Only the dashboard, the alerts and the rules appear in the project sheet; processing alerts, adjusting thresholds and managing accounts come from the specifications (A-02).
 
 | Task | Use case | Instructions |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ The Supervisor can also search for and view aircraft (UC-01).
 
 ## Dashboard content
 
-The dashboard shows an overview of tracked aircraft and alerts (§VI.1.7):
+The project sheet does not describe the dashboard content (A-04). The specifications say it shows an overview of tracked aircraft and alerts (§VI.1.7):
 
 - number of alerts by rule and by period;
 - the aircraft most often concerned;

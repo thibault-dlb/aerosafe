@@ -1,6 +1,6 @@
 # Known issues
 
-Register of issues not fixed by the defence date, with their severity and any workaround. It is annexed to the documentation (§IX.3).
+Register of issues not fixed by the defence date, with their severity and any workaround. It is annexed to the documentation (§IX.3). The register, the severity levels and the warranty come from the specifications and are not in the project sheet.
 
 ## Register
 

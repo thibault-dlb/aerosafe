@@ -1,6 +1,6 @@
 # Requirements
 
-English translation of specifications §I to §III and §VI.2. The [French PDF](../Cahier_Des_Charge_Projet_Fil_Rouge.pdf) prevails. Contradictions found in the source are listed in [open points](open-points.md).
+Derived from the specifications (§I to §III and §VI.2), not from the project sheet. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. The objectives, user profiles and rules below match it, but the requirement codes (BF, NF), the priorities, the use cases and the acceptance wording do not appear in it and are not binding. The sheet gives no priority: priorities I and O are a refinement from the specifications. Differences are listed in [open points](open-points.md).
 
 ## Objectives
 
@@ -18,6 +18,8 @@ AeroSafe is a complete web application used to:
 Educational objectives go with these: mastering the software lifecycle, collaborative work with Git, code quality and testability, automated integration and reproducible deployment.
 
 ## Scope
+
+The project sheet has no scope section. The lists below come from the specifications, except where they restate the sheet.
 
 ### In scope
 
@@ -86,9 +88,13 @@ Priorities: **E** essential, required for acceptance; **I** important; **O** opt
 | User | Looks up and analyses aeronautical data: searches aircraft, views flights, trajectories and statistics. Expects quick access to information and a clear reading of flight parameters |
 | Supervisor | Supervises aircraft, business rules and alerts through the dashboard. Can configure rules, view and process alerts, and manage accounts and roles. Expects a synthetic view and the ability to react quickly |
 
+The project sheet only says that the Supervisor supervises aircraft, business rules and alerts through the dashboard. Configuring rules, processing alerts and managing accounts come from the specifications (A-02 in [open points](open-points.md)).
+
 The teaching staff (supervising teacher) are a third stakeholder with no access to the application. They commission the project and validate the deliverables.
 
 ## Use cases
+
+The project sheet asks to identify actors and use cases (step 1) but lists none. UC-01 to UC-07 come from the specifications.
 
 ### UC-01: Search for and view an aircraft
 

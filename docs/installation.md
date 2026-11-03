@@ -4,7 +4,7 @@ Only the project foundations exist so far: an API with a health check, an empty 
 
 ## Requirements for the procedure
 
-Source: specifications §VII.1, §VIII.2 and §IX.2.
+Source: project sheet step 8; specifications §VII.1, §VIII.2 and §IX.2 for the single-command and clean-machine requirements.
 
 - The whole application is launched through containers (Docker), with no manual dependency installation.
 - It runs from a single documented command, on a machine with no prior setup.
