@@ -35,14 +35,17 @@ See the [roadmap](ROADMAP.md) for milestones and next steps.
 | Component | Technology | Status |
 | --- | --- | --- |
 | Data source | OpenSky Network | Set by the specifications |
-| Database | PostgreSQL | Set by the specifications |
-| Backend / API | Python, FastAPI | Set by the specifications |
-| Frontend | React, TypeScript | Decided |
+| Database | PostgreSQL 17 | Set by the specifications |
+| Backend / API | Python 3.11+, FastAPI | Set by the specifications |
+| ORM and migrations | SQLAlchemy 2.0 (async), Alembic | Decided |
+| Frontend | React 19, TypeScript, Vite | Decided |
 | Mapping | Open-source library, `TBD` | Open |
 | Versioning | Git, hosted on GitHub | In place |
 | CI/CD | `TBD` | Open |
 | Containers | Docker | Set by the specifications |
-| Python tests and linting | pytest, ruff | Decided |
+| Python tests and linting | pytest (asyncio, cov, xdist), ruff; minimum 80% coverage | Decided |
+| Frontend tests | Vitest, Testing Library, Playwright; minimum 80% coverage | Decided |
+| Cache | Redis | Deferred, only if needed |
 | AI module (bonus) | Python machine learning library, `TBD` | Open |
 
 The reasoning behind each choice is in [technology choices](docs/technology-choices.md).

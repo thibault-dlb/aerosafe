@@ -7,10 +7,20 @@ Nothing is installed yet. This table lists what has been chosen so far. Check ea
 | Component | Purpose | Version | Licence |
 | --- | --- | --- | --- |
 | FastAPI | Backend API | `TBD` | MIT |
-| PostgreSQL | Database | `TBD` | PostgreSQL License |
-| React | Frontend | `TBD` | MIT |
+| PostgreSQL | Database | 17 (target) | PostgreSQL License |
+| SQLAlchemy | ORM | 2.0 (target) | MIT |
+| asyncpg | Asynchronous PostgreSQL driver | `TBD` | Apache-2.0 |
+| Alembic | Database migrations | `TBD` | MIT |
+| React | Frontend | 19 (target) | MIT |
 | TypeScript | Frontend language | `TBD` | Apache-2.0 |
+| Vite | Frontend build tool | `TBD` | MIT |
+| Vitest | Frontend unit tests | `TBD` | MIT |
+| Testing Library | Frontend component tests | `TBD` | MIT |
+| Playwright | Frontend end-to-end tests | `TBD` | Apache-2.0 |
 | pytest | Python tests | `TBD` | MIT |
+| pytest-asyncio | Async Python tests | `TBD` | Apache-2.0 |
+| pytest-cov | Python coverage | `TBD` | MIT |
+| pytest-xdist | Parallel Python tests | `TBD` | MIT |
 | ruff | Python linting | `TBD` | MIT |
 | Docker | Containers | `TBD` | `TBD` |
 | Mapping library | Trajectory map | `TBD` | `TBD`, must be open source |
