@@ -30,6 +30,7 @@ Technical and organisational choices are judged against these weighted criteria.
 | Python tests and linting | pytest, ruff | Decided on 2026-11-02 | No detailed assessment recorded |
 | Python test plugins | pytest-asyncio, pytest-cov, pytest-xdist | Decided on 2026-11-03 | See below |
 | Frontend tests | Vitest and Testing Library (unit), Playwright (end to end) | Decided on 2026-11-03 | See below |
+| Authentication | Keycloak, OpenID Connect (authorization code flow) | Decided on 2026-11-03 | Marine Nationale standard, see below |
 | Cache | Redis | Deferred | Adopted only if a need appears, see below |
 | Mapping library | `TBD` | Open | Must be open source; use the grid |
 | CI/CD tool | `TBD` | Open | Use the grid |
@@ -58,7 +59,7 @@ The options were compared qualitatively against the grid. No numeric score was c
 
 ## Backend, database, ORM and tests
 
-On 2026-11-03 the following choices were made. They were not compared against the grid: existing team experience with this stack was the reason. Versions are targets and are to be confirmed when installed.
+On 2026-11-03 the following choices were made. They were not compared against the grid: they follow the Marine Nationale standard stack. Versions are targets and are to be confirmed when installed.
 
 | Topic | Choice | Notes |
 | --- | --- | --- |
@@ -72,6 +73,26 @@ On 2026-11-03 the following choices were made. They were not compared against th
 | Frontend end-to-end tests | Playwright | |
 
 **Cache (Redis 7.4):** No AeroSafe requirement needs a cache yet. It is adopted only if measured load on the OpenSky data or the dashboard requires it. Until then PostgreSQL is enough and no Redis container is added.
+
+## Authentication
+
+On 2026-11-03 authentication was delegated to an identity provider instead of being built in the API. It was not compared against the grid: it follows the Marine Nationale standard for authentication.
+
+| Topic | Choice | Notes |
+| --- | --- | --- |
+| Identity provider | Keycloak | Open source (Apache 2.0), one realm for AeroSafe, run as a Docker container |
+| Protocol | OpenID Connect, authorization code flow | The login page is the one provided by Keycloak |
+| Frontend | `oidc-client-ts` | Tokens kept in `sessionStorage`, refreshed before they expire |
+| API | FastAPI with `OAuth2AuthorizationCodeBearer`, JWT validated with `python-jose` | Signing keys (JWKS) fetched from Keycloak and cached in memory |
+| Passwords | Hashed and stored by Keycloak | The API never sees a password (NF-02) |
+| Roles | `User` and `Supervisor` realm roles | Read from the token and checked by each restricted endpoint (BF-02) |
+
+**Consequences:**
+
+- The API and the frontend need no password handling code and no login form.
+- Account creation, deactivation and deletion (BF-14, C-02, C-05) can use the Keycloak administration console or API, so the answer to C-02 decides how much account management the application has to build.
+- Keycloak adds a container and needs its own database schema, which can live in the same PostgreSQL server.
+- The JWKS cache is held in memory, so this choice does not require Redis.
 
 ## Mapping library
 

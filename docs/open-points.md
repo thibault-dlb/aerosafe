@@ -34,7 +34,6 @@ The specifications are reproduced as written in this repository. These points ne
 | D-08 | Status of J1 | To be confirmed |
 | D-09 | Allocation of work among group members | Not defined; the specifications require the workload to be shared (§VII.2) and the presentation to cover group organisation |
 | D-10 | Repository layout and module organisation | Not decided |
-| D-11 | Authentication mechanism | Not specified beyond accounts, roles and hashed passwords |
 | D-12 | Frontend test and lint tools | Not decided |
 | D-13 | Commit scopes and version numbering scheme | Not decided |
 | D-14 | Machine learning library (bonus) | Not decided |

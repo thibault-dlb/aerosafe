@@ -8,7 +8,7 @@ The detailed architecture is `TBD`: it is produced during the design phase, incl
 
 | Component | Role | Technology |
 | --- | --- | --- |
-| Authentication | Accounts and roles (User / Supervisor) | `TBD` |
+| Authentication | Accounts and roles (User / Supervisor) | Keycloak, OpenID Connect |
 | Web interface | Lookup, analysis and supervision | React, TypeScript; mapping library `TBD` |
 | API | Exposes business services and data | Python, FastAPI |
 | Database | Stores aircraft, observations and alerts | PostgreSQL |
