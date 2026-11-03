@@ -20,5 +20,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-- AeroSafe is an educational aeronautical data monitoring application. No application code exists yet; complete this file with build/test/lint commands (pytest, ruff) once the structure is in place.
+- AeroSafe is an educational aeronautical data monitoring application. Only the project foundations exist so far (layout in `docs/architecture.md`): `src/api` (FastAPI), `src/front` (React) and `src/nginx` (gateway).
+- Start everything: `docker compose up --build` (copy `.env.example` to `.env` first).
+- Backend tests: `./run_tests.ps1 -Local` from the repository root (or `uv run pytest` from `src/api`); coverage must stay at 80% or more. Lint: `uv run ruff check .` from `src/api`.
+- Frontend, from `src/front`: `pnpm test:unit`, `pnpm lint`, `pnpm typecheck`, `pnpm test:e2e`.
 - The French PDFs at the repository root are the reference documents and prevail over the English documentation. Start with `README.md`, `ROADMAP.md` and `docs/open-points.md`, which lists what is still undecided.

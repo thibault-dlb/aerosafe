@@ -22,6 +22,16 @@ Nothing is installed yet. This table lists what has been chosen so far. Check ea
 | pytest-cov | Python coverage | `TBD` | MIT |
 | pytest-xdist | Parallel Python tests | `TBD` | MIT |
 | ruff | Python linting | `TBD` | MIT |
+| Uvicorn | ASGI server | see `src/api/uv.lock` | BSD-3-Clause |
+| Pydantic, pydantic-settings | Schemas and settings | see `src/api/uv.lock` | MIT |
+| httpx | HTTP client, API tests | see `src/api/uv.lock` | BSD-3-Clause |
+| Loguru | Logging | see `src/api/uv.lock` | MIT |
+| uv | Python package manager | `TBD` | Apache-2.0 or MIT |
+| React Router | Frontend routing | see `src/front/pnpm-lock.yaml` | MIT |
+| ESLint, typescript-eslint | Frontend linting | see `src/front/pnpm-lock.yaml` | MIT |
+| jsdom | DOM for frontend unit tests | see `src/front/pnpm-lock.yaml` | MIT |
+| pnpm | Frontend package manager | 12 | MIT |
+| Nginx | Gateway and static file server | 1.27 | BSD-2-Clause |
 | Docker | Containers | `TBD` | `TBD` |
 | Mapping library | Trajectory map | `TBD` | `TBD`, must be open source |
 

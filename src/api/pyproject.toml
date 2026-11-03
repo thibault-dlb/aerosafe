@@ -1,0 +1,68 @@
+[project]
+name = "aerosafe-api"
+version = "0.1.0"
+description = "AeroSafe backend API"
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.17.1",
+    "asyncpg>=0.30.0",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "pydantic>=2.12.3",
+    "pydantic-settings>=2.11.0",
+    "python-jose[cryptography]>=3.5.0",
+    "sqlalchemy[asyncio]>=2.0.44",
+    "uvicorn[standard]>=0.38.0",
+]
+
+[dependency-groups]
+dev = [
+    "greenlet>=3.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "pytest-xdist>=3.6",
+    "ruff>=0.8.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+testpaths = ["tests"]
+# Coverage is enabled by default; its scope is defined in [tool.coverage.run].
+addopts = "-n 4 --cov --cov-report=term-missing"
+
+[tool.coverage.run]
+# `source` makes coverage count files that no test imports.
+source = ["config", "core", "middlewares", "models", "routes", "schemas", "services"]
+branch = true
+concurrency = ["thread"]
+# Each xdist worker writes its own data file; pytest-cov combines them at the end.
+parallel = true
+omit = [
+    "*/__init__.py",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+# Blocking threshold: pytest fails when the global coverage drops below 80%.
+fail_under = 80
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["database/migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
