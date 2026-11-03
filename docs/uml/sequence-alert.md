@@ -1,6 +1,6 @@
 # Sequence diagram: detection and generation of an alert
 
-Source: project sheet §4 and §6, with the team decisions of 2026-11-03 listed in [open points](../open-points.md). Data collection and rule evaluation run as scheduled tasks inside the API process. The frequency is `TBD` (D-05).
+Source: project sheet §4 and §6, with the team decisions of 2026-11-03 listed in [open points](../open-points.md). Data collection and rule evaluation run as scheduled tasks inside the API process. The period is that of the active collection profile: 30 s for Île-de-France or 120 s for metropolitan France (D-05). Evaluation runs right after each collection.
 
 ```mermaid
 sequenceDiagram

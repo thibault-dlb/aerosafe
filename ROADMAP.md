@@ -16,7 +16,7 @@ Anything flagged `Not in the project sheet` comes from the specifications and is
 | # | Step | Tasks (project sheet) | Status |
 | --- | --- | --- | --- |
 | 1 | Analysis and specification | Analyse requirements, identify actors and use cases, define features and business rules | Largely done; several items come from the specifications, not from the sheet |
-| 2 | Design | UML modelling, software architecture, database design, module organisation, technology choices | In progress: technology choices and repository layout set; UML diagrams drafted in `docs/uml/` and to validate; relational schema not produced |
+| 2 | Design | UML modelling, software architecture, database design, module organisation, technology choices | In progress: technology choices (mapping library, CI tool, authentication) and repository layout set; UML diagrams drafted in `docs/uml/` and to validate; relational schema not produced |
 | 3 | Development | Web application, interface, authentication and role management, alert system | Foundations only |
 | 4 | Testing and quality | Unit tests, integration tests, component checks, fixes and code improvements | Tooling in place (pytest, Vitest, Playwright); no business tests yet |
 | 5 | Documentation and evolution | Technical and functional documentation, maintenance, evolution, new features including AI | In progress: documentation skeleton |
@@ -42,10 +42,10 @@ From the project sheet:
 
 - [ ] Validate the UML diagrams drafted in `docs/uml/` (step 2, deliverable 1) and confirm the [team decisions](docs/open-points.md) with the supervising teacher
 - [ ] Formalise the data model and the database design (step 2): relational schema, integrity constraints, indexes
-- [ ] Define the thresholds and calculations of rules R1 to R5, and tell R1 from R2 (§6: "second stage"; see A-01)
-- [ ] Choose the mapping library and the CI/CD tool using a written justification
-- [ ] Set up the CI pipeline (step 7)
-- [ ] Settle the ambiguities of the sheet with the supervising teacher (A-01 to A-06 in [open points](docs/open-points.md))
+- [ ] Validate the proposed thresholds and calculations of rules R1 to R5 in [business rules](docs/business-rules.md) (§6: "second stage"; see D-04)
+- [ ] Set up the CI pipeline with GitHub Actions (step 7)
+- [ ] Confirm with the supervising teacher the team's answers to the ambiguities of the sheet (A-01 to A-04 in [open points](docs/open-points.md))
+- [ ] Read the OpenSky terms of use and register an account for the OAuth2 credentials (quotas are documented in [architecture](docs/architecture.md))
 
 Repository housekeeping:
 

@@ -263,6 +263,6 @@ The guide and the project rules do not fit together everywhere. These points are
 
 | ID | Point | Detail |
 | --- | --- | --- |
-| D-15 | Two naming styles in the guide | Sections 1, 2 and 6 name tables and columns in uppercase French with prefixes (`DT_SUPPRESSION`, `BL_ACTIF`). Sections 8, 12 and 16 use `created_at`, `updated_at`, `deleted_at` and English names (`audit_logs`, `is_active`). Which names apply to timestamps, soft delete and audit columns is not stated |
+| D-15 | Two naming styles in the guide | Sections 1, 2 and 6 name tables and columns in uppercase French with prefixes (`DT_SUPPRESSION`, `BL_ACTIF`). Sections 8, 12 and 16 use `created_at`, `updated_at`, `deleted_at` and English names (`audit_logs`, `is_active`). **Decided on 2026-11-03:** the technical columns (timestamps, soft delete, active flag) and the audit table use the English names of sections 8, 12 and 16; business columns keep the prefixed French names |
 | D-16 | French names versus the English rule | The project rule is to write everything in English, identifiers included. The guide requires French names and French `COMMENT ON` text. `CLAUDE.md` records the French database objects as the only exception |
-| D-17 | Table for Keycloak users | The framework tables (`users`, ...) are legacy and never modified. The local user table of AeroSafe is a business table and follows the business naming (uppercase, French, singular) |
+| D-17 | Table for users | Keycloak was dropped (A-06), so the table holds the credentials itself. **Decided on 2026-11-03:** `UTILISATEUR`, a business table with uppercase French singular naming and no prefix. `W_` is reserved for temporary or import tables (section 1), so it does not fit |

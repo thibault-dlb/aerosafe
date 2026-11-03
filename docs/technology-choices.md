@@ -33,11 +33,11 @@ Technical and organisational choices are judged against these weighted criteria.
 | Package managers | uv (Python), pnpm (frontend) | Decided on 2026-11-03 | Marine Nationale standard |
 | Python test plugins | pytest-asyncio, pytest-cov, pytest-xdist | Decided on 2026-11-03 | See below |
 | Frontend tests | Vitest and Testing Library (unit), Playwright (end to end) | Decided on 2026-11-03 | See below |
-| Authentication | Keycloak, OpenID Connect (authorization code flow) | Decided on 2026-11-03 | Marine Nationale standard, see below |
+| Authentication | Built in the API: FastAPI, short-lived JWT, refresh token, argon2id | Decided on 2026-11-03 | The project sheet lists it as a development task, see below |
 | Cache | Redis | Deferred | Adopted only if a need appears, see below |
-| Mapping library | `TBD` | Open | Must be open source; use the grid |
-| CI/CD tool | `TBD` | Open | Use the grid |
-| AI library (bonus) | `TBD` | Open | Python machine learning library |
+| Mapping library | Leaflet with react-leaflet | Decided on 2026-11-03 | See below |
+| CI/CD tool | GitHub Actions | Decided on 2026-11-03 | See below |
+| AI library (bonus) | `TBD` | Postponed | To be decided when the module starts |
 
 ## Frontend: React with TypeScript
 
@@ -79,29 +79,28 @@ On 2026-11-03 the following choices were made. They were not compared against th
 
 ## Authentication
 
-On 2026-11-03 authentication was delegated to an identity provider instead of being built in the API. It was not compared against the grid: it follows the Marine Nationale standard for authentication.
+On 2026-11-03 the team chose to build authentication in the API. An identity provider (Keycloak) was considered first and dropped, because the project sheet lists "authentication and role management" among the development tasks (step 3, A-06).
 
 | Topic | Choice | Notes |
 | --- | --- | --- |
-| Identity provider | Keycloak | Open source (Apache 2.0), one realm for AeroSafe, run as a Docker container |
-| Protocol | OpenID Connect, authorization code flow | The login page is the one provided by Keycloak |
-| Frontend | `oidc-client-ts` | Tokens kept in `sessionStorage`, refreshed before they expire |
-| API | FastAPI with `OAuth2AuthorizationCodeBearer`, JWT validated with `python-jose` | Signing keys (JWKS) fetched from Keycloak and cached in memory |
-| Passwords | Hashed and stored by Keycloak | The API never sees a password (NF-02) |
-| Roles | `User` and `Supervisor` realm roles | Read from the token and checked by each restricted endpoint (BF-02) |
+| Passwords | argon2id | OWASP recommendation; never stored or logged in clear text (NF-02) |
+| Access token | JWT, valid about 15 minutes | Signed by the API; carries the user identifier and the role |
+| Refresh token | Opaque random value in an `HttpOnly` cookie | Only its hash is stored in the database, so it can be revoked (logout, deactivated or anonymised account) |
+| API | FastAPI security utilities, JWT handled with a maintained library | Library `TBD` when implemented (`python-jose` is no longer actively maintained) |
+| Frontend | Login form, access token kept in memory | Refreshed silently through the cookie before it expires |
+| Roles | `User` and `Supervisor`, from the `R_ROLE` reference table | Read from the token and checked by each restricted endpoint (BF-02) |
 
 **Consequences:**
 
-- The API and the frontend need no password handling code and no login form.
-- Account creation, deactivation and deletion (BF-14, C-02, C-05) can use the Keycloak administration console or API, so the answer to C-02 decides how much account management the application has to build.
-- Keycloak adds a container and needs its own database schema, which can live in the same PostgreSQL server.
-- The JWKS cache is held in memory, so this choice does not require Redis.
-- The project sheet lists authentication and role management among the development tasks (step 3). Delegating them to Keycloak reduces that work to configuration and integration, which must be justified at the defence (A-06).
+- The application owns the account lifecycle: sign-up (role `User`), login, logout, role change and deactivation by the Supervisor (BF-14, C-02).
+- Account deletion is an anonymisation, never a physical delete (C-05). See [database conventions](database-conventions.md) §10.
+- Throttling of failed logins and password rules must be implemented and tested.
+- No identity provider container is needed. The JWT is verified with a secret held in the environment, so this choice does not require Redis.
 
 ## Mapping library
 
-`TBD`. The project sheet only requires trajectories to be shown on a map. The specifications add that the library must be open source and chosen with the grid.
+Leaflet with react-leaflet, decided on 2026-11-03. It is open source, light, and enough to draw trajectories and positions on OpenStreetMap tiles. MapLibre GL and OpenLayers were considered; they offer more (vector rendering, heavy layers) than the project needs and are harder to learn. Assessed qualitatively against the grid: functional fit, team learning curve, cost and maturity favour Leaflet.
 
 ## CI/CD tool
 
-`TBD`. The repository is hosted on GitHub.
+GitHub Actions, decided on 2026-11-03. The repository is already hosted on GitHub, so no server has to be installed or maintained, the pipeline is a YAML file versioned with the code, and the free tier covers a project of this size. GitLab CI would require mirroring the repository, and Jenkins would require hosting it.

@@ -8,17 +8,47 @@ AeroSafe initially includes five business rules to detect unusual situations.
 
 | Rule | Detects | Threshold | Unit | Criticality (optional) |
 | --- | --- | --- | --- | --- |
-| R1 | Too long a delay since the last contact | `TBD` | `TBD` | `TBD` |
-| R2 | A position that has become too old | `TBD` | `TBD` | `TBD` |
-| R3 | A large change in altitude | `TBD` | `TBD` | `TBD` |
-| R4 | A large change in speed | `TBD` | `TBD` | `TBD` |
-| R5 | A large change in heading | `TBD` | `TBD` | `TBD` |
+| R1 | Too long a delay since the last contact | 300 | seconds | Medium |
+| R2 | A position that has become too old | 600 | seconds | Low |
+| R3 | A large change in altitude | 30 | m/s (vertical rate) | High |
+| R4 | A large change in speed | 2 | m/s² (acceleration) | Medium |
+| R5 | A large change in heading | 5 | °/s (turn rate) | Medium |
 
-The detailed definition and thresholds of each rule are set in a second stage of the project. The precise calculation behind each rule is also `TBD`.
+**These values are a proposal (D-04), not a decision.** The project sheet defers thresholds and calculations to a second stage (§6). They are stored in the `Rule` entity and the Supervisor can change them (UC-05), so a wrong first guess costs nothing. They must be validated by the team and the supervising teacher, then tuned on real data.
+
+### Proposed calculations
+
+Notation: `now` is the evaluation time; for an aircraft, `p1` and `p2` are its two latest consecutive observations of the same flight, `Δt = p2.positionAt − p1.positionAt`. OpenSky gives altitude in metres, speed in m/s and heading in degrees.
+
+| Rule | Observed value | Triggers when |
+| --- | --- | --- |
+| R1 | `now − lastContactAt` of the latest observation | value > 300 s |
+| R2 | `now − positionAt` of the latest observation | value > 600 s |
+| R3 | `abs(p2.altitude − p1.altitude) / Δt` | value > 30 m/s, with `10 s ≤ Δt ≤ 300 s` |
+| R4 | `abs(p2.speed − p1.speed) / Δt` | value > 2 m/s², with `10 s ≤ Δt ≤ 300 s` |
+| R5 | `shortest_angle(p2.heading, p1.heading) / Δt`, where `shortest_angle` is in 0 to 180° | value > 5 °/s, with `10 s ≤ Δt ≤ 300 s` and speed above 50 m/s |
+
+Reasoning behind the values:
+
+- **Collection period.** The data is collected every 30 s or 120 s depending on the profile. R1 at 300 s means missing more than two cycles of the slowest profile. R2 is higher than R1 on purpose: a position is never more recent than the last contact (`positionAt ≤ lastContactAt`), so R2 with a threshold below R1 would always fire first or at the same time. With R2 above R1, R1 means "the aircraft went silent" and R2 means "it still sends messages but without a usable position" (A-01).
+- **R3.** Airliners climb and descend at about 5 to 15 m/s. 30 m/s is roughly 5 900 ft/min, which is unusual for a commercial flight.
+- **R4.** Normal acceleration of an airliner is about 1 m/s². 2 m/s² flags an abrupt change.
+- **R5.** A standard-rate turn is 3 °/s. 5 °/s is well above it. The heading is compared as the shortest angle, so 359° to 1° is a 2° change. Measuring a rate and not an absolute change avoids false alerts with the 120 s period, where a normal turn can reach 90° between two points. Below 50 m/s the heading of OpenSky is too noisy to use.
+- **Window `10 s ≤ Δt ≤ 300 s`.** Too short a gap amplifies noise, too long a gap hides the real dynamics and would compare two different phases of a flight.
+
+### Scope and deduplication
+
+- Rules apply to aircraft that are **airborne** (`on_ground` false). R1 and R2 also stop being evaluated for an aircraft silent for more than 30 minutes, so that an aircraft which left the coverage zone does not raise alerts forever.
+- An aircraft does not raise the same rule twice while the situation lasts: a new alert for the same aircraft and rule is generated only after the previous episode ended (the value went back under the threshold).
+- Observations that belong to no flight are not used for R3 to R5, since a rate needs two points of the same flight (D-06).
+
+### Criticality
+
+`R_CRITICITE` holds three values: low, medium, high. The mapping above is a proposal. The criticality is optional in the project sheet, so a rule without one is valid.
 
 ## Evaluation
 
-- The engine evaluates the rules periodically on the data collected (BF-09). The frequency is `TBD`. The project sheet does not say that rules are evaluated periodically (D-05).
+- The engine evaluates the rules on the data collected (BF-09), right after each collection: every 30 s with the Île-de-France profile, every 120 s with the metropolitan France profile (D-05). The project sheet does not say that rules are evaluated periodically; this is the team's choice.
 - When a rule detects that a threshold has been exceeded, an alert is generated (UC-03).
 - When no threshold is exceeded, no alert is generated and the evaluation is logged (UC-03).
 - Rule triggers are logged so that the generation of an alert can be replayed and explained (NF-08).
@@ -30,18 +60,23 @@ Adding a rule must not require changing existing rules (§VI.1.5, NF-06).
 
 ## Alerts
 
-When a rule is triggered, an alert is generated and stored in the database. The project sheet says an alert "may contain" the items below and declares none mandatory (A-03). The specifications require at least:
+When a rule is triggered, an alert is generated and stored in the database. The project sheet says an alert "may contain" the items below and declares none mandatory (A-03). Team decision of 2026-11-03:
 
-- the aircraft concerned;
-- the rule triggered;
-- the date and time of the trigger;
-- the observed value;
-- the reference threshold;
-- an explanatory message.
-
-The criticality level is an optional attribute.
+- mandatory: the aircraft concerned, the rule triggered, the date and time of the trigger, an explanatory message;
+- optional: the observed value, the reference threshold, the criticality level. The engine fills the observed value and the threshold on every alert it generates, so that it can be explained and replayed (NF-08).
 
 The Supervisor can view, filter and sort alerts, and open their details (§VI.1.6). This comes from the specifications only: the project sheet does not describe alert management.
+
+### Dashboard (A-04, team decision)
+
+The minimal Dashboard of the Supervisor shows:
+
+- active alerts and alerts not yet processed, filterable by rule and date, with the action "mark as processed";
+- the aircraft currently tracked, on a map;
+- alert statistics: number of alerts per rule and per period;
+- the state of the collection: last successful run, OpenSky credits used, errors.
+
+Flight statistics, computed per flight: duration and distance, altitude and speed (maximum, mean), and number of observations.
 
 ## Testing
 

@@ -6,23 +6,21 @@ Items the reference documents do not settle. The [project sheet](../Fiche_projet
 
 | ID | Topic | Status |
 | --- | --- | --- |
-| D-01 | Mapping library | Not decided. The sheet only requires trajectories to be shown on a map (§5) |
-| D-02 | CI/CD tool | Not decided. The sheet asks for a CI/CD pipeline (step 7) without naming a tool |
-| D-04 | Thresholds, units and calculations of rules R1 to R5 | The sheet defers them to "a second stage" (§6) |
-| D-05 | Rule evaluation frequency | Not specified. The sheet does not say that rules are evaluated periodically |
-| D-06 | How observations are grouped into flights | Not specified. The sheet speaks of reconstructing trajectories (§5) and names no Flight entity or continuity criterion |
-| D-14 | Machine learning library (bonus) | Not decided |
+| D-04 | Thresholds, units and calculations of rules R1 to R5 | The sheet defers them to "a second stage" (§6). Values proposed in [business rules](business-rules.md), to validate with the team and the supervising teacher |
+| D-14 | Machine learning library (bonus) | Postponed: to be decided when the module starts |
+
+Decided on 2026-11-03 and moved to [Team decisions](#team-decisions-pending-confirmation): D-01, D-02, D-05, D-06.
 
 ## Ambiguities in the project sheet
 
 | ID | Topic | What the sheet says | Question |
 | --- | --- | --- | --- |
-| A-01 | R1 and R2 overlap | R1: "too long a delay since the last contact"; R2: "a position that has become too old" (§6) | What separates the two: the last message received, or the timestamp of the last position? |
-| A-02 | Scope of the Supervisor | Supervises aircraft, business rules and alerts through a Dashboard (§3) | Can the Supervisor change rule thresholds, mark alerts as processed, manage accounts? The sheet does not say |
-| A-03 | Mandatory alert fields | An alert "may contain" the aircraft, rule, date and time, criticality (optional), observed value, threshold and message (§6) | Which fields are mandatory? None is declared so |
-| A-04 | Dashboard and flight statistics | Both are named (§2, §5) and neither is described | What does the Dashboard show, and which statistics are computed? |
+| A-01 | R1 and R2 overlap | R1: "too long a delay since the last contact"; R2: "a position that has become too old" (§6) | Settled by the team: R1 is the time since the last message, R2 the age of the last position (to confirm with the teacher) |
+| A-02 | Scope of the Supervisor | Supervises aircraft, business rules and alerts through a Dashboard (§3) | Settled by the team: thresholds, alert processing and account management (to confirm with the teacher) |
+| A-03 | Mandatory alert fields | An alert "may contain" the aircraft, rule, date and time, criticality (optional), observed value, threshold and message (§6) | Settled by the team: aircraft, rule, date and time, message are mandatory |
+| A-04 | Dashboard and flight statistics | Both are named (§2, §5) and neither is described | Settled by the team, see [business rules](business-rules.md#dashboard-a-04-team-decision) |
 | A-05 | PostgreSQL | "A database such as PostgreSQL" (§4) | PostgreSQL is an example, not a requirement. The team chose PostgreSQL 17 |
-| A-06 | Authentication | Step 3 lists "authentication and role management" among the development tasks | Delegating it to Keycloak turns that development into configuration; to justify at the defence |
+| A-06 | Authentication | Step 3 lists "authentication and role management" among the development tasks | Closed: the team builds authentication in the API instead of using Keycloak |
 
 ## Repository decisions
 
@@ -30,12 +28,12 @@ Decisions that belong to the team and do not come from the sheet.
 
 | ID | Topic | Status |
 | --- | --- | --- |
-| D-09 | Allocation of work among group members | Not defined. The sheet only requires the presentation to cover "group organisation" (deliverable 3) |
-| D-13 | Commit scopes and version numbering scheme | Not decided |
-| D-15 | Two naming styles in the database guide | The guide names tables and columns in uppercase French with prefixes (`DT_SUPPRESSION`, `BL_ACTIF`) but uses `created_at`, `updated_at`, `deleted_at`, `audit_logs` and `is_active` for timestamps, audit and reference tables. Which names apply is not stated. See [database conventions](database-conventions.md) |
+| D-09 | Allocation of work among group members | Postponed. The sheet only requires the presentation to cover "group organisation" (deliverable 3) |
+| D-13 | Commit scopes and version numbering scheme | Postponed |
+| D-15 | Two naming styles in the database guide | Decided on 2026-11-03: technical columns and the audit table use the English names (`created_at`, `updated_at`, `deleted_at`, `is_active`, `audit_logs`); business columns keep the prefixed French names. See [database conventions](database-conventions.md) |
 | D-16 | French names versus the English rule | The guide requires French names and French `COMMENT ON` text; the project rule is English. `CLAUDE.md` records French database objects as the only exception |
-| D-17 | Table for Keycloak users | The framework tables (`users`, ...) are legacy and never modified; the local user table is a business table and follows the business naming |
-| D-18 | Storage of positions | The database guide requires PostGIS when a position is queried by location (the area search of UC-01 does), but the column naming for geometry is not defined in the guide. Left to the logical schema |
+| D-17 | Table for users | Decided on 2026-11-03: `UTILISATEUR`, a business table. Not `W_`, which the guide reserves for temporary or import tables |
+| D-18 | Storage of positions | Decided on 2026-11-03: PostGIS `geometry` column. Its exact name is set in the logical schema |
 
 ## Team decisions pending confirmation
 
@@ -48,9 +46,15 @@ Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go bey
 | Processing an alert | `processedAt` and `processedBy` on the alert; no separate state | C-03 |
 | Thresholds | Stored in the `Rule` entity, changed by the Supervisor | A-02 |
 | R1 and R2 | R1 is the time since the last message received; R2 is the age of the last known position | A-01 |
-| Flights | `Flight` is an explicit entity grouping observations | D-06 (entity only; the continuity criterion stays open) |
-| Users | Local `User` row linked to Keycloak by `keycloakId` | A-06 |
-| Processing | Collection and evaluation run as scheduled tasks in the API; no worker container | D-05 (frequency stays open) |
+| Flights | `Flight` is an explicit entity grouping observations. An observation joins the flight of the same `icao24` when at most N minutes separate it from the previous one; otherwise a new flight starts | D-06 |
+| Authentication | Built in the API: FastAPI, JWT of about 15 minutes, revocable refresh token in an `HttpOnly` cookie, argon2id. Keycloak dropped | A-06 |
+| Processing | Collection and evaluation run as scheduled tasks in the API; no worker container. Evaluation runs right after each collection | D-05 |
+| Collection | Live only. Two profiles switched by configuration: Île-de-France every 30 s (1 credit per request) or metropolitan France every 120 s (3 credits). No historical data | D-05 |
+| Mapping and CI | Leaflet with react-leaflet; GitHub Actions | D-01, D-02 |
+| Alerts | Aircraft, rule, date and time, message mandatory; observed value, threshold and criticality optional | A-03 |
+| Dashboard | Active alerts, tracked aircraft, alert statistics, collection state. Flight statistics: duration and distance, altitude and speed, number of observations | A-04 |
+| Scope | Every requirement of the specifications is to be developed, including flight statistics (BF-08), alert configuration (UC-05) and account management (UC-06) | C-01, C-04 |
+| Account deletion | A user can request it; the account is anonymised, never deleted, following the database guide | C-05 |
 | AI module | Shown in the diagrams as optional, with an anomaly score | Bonus |
 
 ## Not in the project sheet
@@ -80,6 +84,6 @@ Everything below comes from the specifications (`Cahier_Des_Charge_Projet_Fil_Ro
 
 | ID | Topic | Detail |
 | --- | --- | --- |
-| V-01 | OpenSky Network conditions | Check the terms of use, quotas, query frequency and authentication (§V.1, §VII.1, §VII.3) |
+| V-01 | OpenSky Network conditions | Quotas and authentication checked on 2026-11-03 (see [architecture](architecture.md#data-source)). The terms of use and the rule on query frequency still need to be read (§V.1, §VII.1, §VII.3) |
 | V-02 | Public sharing | Sharing has not been validated by the supervising teacher (§V.2); the repository has been private since 2026-11-02 |
 | V-03 | Teacher access | The supervising teacher needs access to the private repository (§VIII.2); the repository owner must grant it |
