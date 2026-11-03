@@ -32,6 +32,9 @@ Decisions that belong to the team and do not come from the sheet.
 | --- | --- | --- |
 | D-09 | Allocation of work among group members | Not defined. The sheet only requires the presentation to cover "group organisation" (deliverable 3) |
 | D-13 | Commit scopes and version numbering scheme | Not decided |
+| D-15 | Two naming styles in the database guide | The guide names tables and columns in uppercase French with prefixes (`DT_SUPPRESSION`, `BL_ACTIF`) but uses `created_at`, `updated_at`, `deleted_at`, `audit_logs` and `is_active` for timestamps, audit and reference tables. Which names apply is not stated. See [database conventions](database-conventions.md) |
+| D-16 | French names versus the English rule | The guide requires French names and French `COMMENT ON` text; the project rule is English. `CLAUDE.md` records French database objects as the only exception |
+| D-17 | Table for Keycloak users | The framework tables (`users`, ...) are legacy and never modified; the local user table is a business table and follows the business naming |
 
 ## Not in the project sheet
 

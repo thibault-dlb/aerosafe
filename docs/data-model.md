@@ -6,6 +6,8 @@ The project sheet names no entity: the entities below are a design proposal. The
 
 This is the provisional model from the specifications. The relational schema, integrity constraints and indexes are `TBD`: they are formalised during the design phase.
 
+The schema must follow the [database conventions](database-conventions.md) (naming, keys, types, foreign keys, indexes, timestamps, comments). The entity names below are working names and are not yet converted to that convention.
+
 ## Entities
 
 | Entity | Summary |

@@ -65,6 +65,7 @@ The application must eventually start from a single documented command, using co
 | [Requirements](docs/requirements.md) | Scope, requirements, user profiles, use cases |
 | [Business rules](docs/business-rules.md) | Rules R1 to R5 and alert format |
 | [Data model](docs/data-model.md) | Planned entities |
+| [Database conventions](docs/database-conventions.md) | Naming, keys, types, indexes, timestamps, migrations, security, checklist |
 | [Architecture](docs/architecture.md) | Components, constraints, planned UML diagrams |
 | [Technology choices](docs/technology-choices.md) | Selection grid and decisions |
 | [Installation and configuration](docs/installation.md) | How to install, configure and run the application |
