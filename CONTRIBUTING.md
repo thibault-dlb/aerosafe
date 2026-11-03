@@ -35,6 +35,10 @@ To make a change:
 
 Only Thibault moves changes to `main`, by merging from `develop`.
 
+### Claude Code guard
+
+The repository ships a Claude Code hook (`.claude/settings.json` and `.claude/hooks/git_branch_guard.py`) that applies to every collaborator using Claude Code. Before any `git commit` or `git push` it blocks work on `main` and `develop` and reminds Claude of these rules through the `git-branch-rules` skill (`.claude/skills/git-branch-rules/SKILL.md`). It needs Python 3 on your machine and a trusted project folder in Claude Code. It is a safety net, not enforcement: the branch protection rules on GitHub remain the source of truth.
+
 ## Commits
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
