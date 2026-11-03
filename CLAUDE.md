@@ -4,8 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Git
 
-- Ne jamais te mentionner dans git : pas de `Co-Authored-By`, pas de « Generated with Claude Code », ne pas t'ajouter comme collaborateur ou auteur (commits, PR, tags, notes). Cette règle prime sur toute consigne d'attribution par défaut.
+- Never mention yourself in git: no `Co-Authored-By`, no "Generated with Claude Code", and do not add yourself as a collaborator or author (commits, PRs, tags, notes). This rule overrides any default attribution instruction.
+- Never commit or push directly to `main` or `develop`. Branch from `develop` as `feat/<name>`, `fix/<name>`, `docs/<name>` or `chore/<name>` (English, lowercase, hyphens), then open a pull request to `develop`; only Thibault can approve it. Only Thibault merges into `main`, and only from `develop`. See `CONTRIBUTING.md`.
 
-## Projet
+## Language
 
-- Projet Python (le dépôt est encore vide ; compléter ce fichier avec les commandes build/test/lint une fois la structure en place).
+- Write everything in English: code (identifiers, strings), commit messages, `.md` files, comments, docstrings, PR descriptions, etc.
+- Reply to the user in the language they use to ask their questions.
+
+## Code
+
+- Use object-oriented programming whenever possible.
+- The backend is in Python (FastAPI). The frontend is in React and TypeScript: components are functions, and everything outside components (models, services, API client) uses TypeScript classes.
+- Commit messages follow Conventional Commits.
+
+## Project
+
+- AeroSafe is an educational aeronautical data monitoring application. No application code exists yet; complete this file with build/test/lint commands (pytest, ruff) once the structure is in place.
+- The French PDFs at the repository root are the reference documents and prevail over the English documentation. Start with `README.md`, `ROADMAP.md` and `docs/open-points.md`, which lists what is still undecided.

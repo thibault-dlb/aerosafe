@@ -1,1 +1,6 @@
 CLAUDE.local.md
+
+# Environment files hold secrets and must never be committed
+.env
+.env.*
+!.env.example
