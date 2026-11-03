@@ -51,7 +51,7 @@ For example: `feat(rules): add R1 detection`.
 
 Common types are `feat`, `fix`, `docs`, `test`, `refactor`, `build`, `ci` and `chore`. The list of scopes is `TBD`, as it depends on the module organisation.
 
-Contributions must stay traceable in the Git history: a missing version history or contribution trail means the Software Engineering and DevOps aspects are not validated (§V.3).
+Contributions must stay traceable in the Git history, as step 6 of the project sheet (code and version management) asks. The specifications add that a missing version history or contribution trail means the Software Engineering and DevOps aspects are not validated (§V.3).
 
 ## Tests and quality
 

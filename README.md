@@ -8,9 +8,9 @@ AeroSafe is the capstone project ("projet fil rouge") of the Software Engineerin
 
 ## Status
 
-No application code has been written yet. The repository currently holds the reference documents and the project documentation. Anything marked `TBD` has not been decided or produced yet.
+Only the project foundations exist so far: an API with a health check, an empty web interface and the container stack. No business feature has been developed yet. Anything marked `TBD` has not been decided or produced yet.
 
-See the [roadmap](ROADMAP.md) for milestones and next steps.
+See the [roadmap](ROADMAP.md) for the steps and next actions.
 
 ## Planned features
 
@@ -28,21 +28,21 @@ See the [roadmap](ROADMAP.md) for milestones and next steps.
 | Profile | Purpose |
 | --- | --- |
 | User | Look up and analyse aeronautical data |
-| Supervisor | Supervise aircraft, business rules and alerts through the dashboard; manage accounts and roles |
+| Supervisor | Supervise aircraft, business rules and alerts through the dashboard |
 
 ## Tech stack
 
 | Component | Technology | Status |
 | --- | --- | --- |
-| Data source | OpenSky Network | Set by the specifications |
-| Database | PostgreSQL 17 | Set by the specifications |
-| Backend / API | Python 3.11+, FastAPI | Set by the specifications |
+| Data source | OpenSky Network | Set by the project sheet |
+| Database | PostgreSQL 17 | Decided (the sheet says "such as PostgreSQL") |
+| Backend / API | Python 3.11+, FastAPI | Set by the project sheet |
 | ORM and migrations | SQLAlchemy 2.0 (async), Alembic | Decided |
 | Frontend | React 19, TypeScript, Vite | Decided |
 | Mapping | Open-source library, `TBD` | Open |
 | Versioning | Git, hosted on GitHub | In place |
 | CI/CD | `TBD` | Open |
-| Containers | Docker | Set by the specifications |
+| Containers | Docker | Set by the project sheet |
 | Python tests and linting | pytest (asyncio, cov, xdist), ruff; minimum 80% coverage | Decided |
 | Frontend tests | Vitest, Testing Library, Playwright; minimum 80% coverage | Decided |
 | Cache | Redis | Deferred, only if needed |
@@ -60,7 +60,7 @@ The application must eventually start from a single documented command, using co
 
 | Document | Content |
 | --- | --- |
-| [Roadmap](ROADMAP.md) | Steps, milestones, deliverables, next actions |
+| [Roadmap](ROADMAP.md) | Steps, deliverables, next actions |
 | [Contributing](CONTRIBUTING.md) | Coding, commit, testing and documentation rules |
 | [Requirements](docs/requirements.md) | Scope, requirements, user profiles, use cases |
 | [Business rules](docs/business-rules.md) | Rules R1 to R5 and alert format |
@@ -75,12 +75,11 @@ The application must eventually start from a single documented command, using co
 | [Known issues](docs/known-issues.md) | Known issues register and warranty terms |
 | [Change requests](docs/change-requests.md) | Change requests register |
 | [Project terms](docs/project-terms.md) | Intellectual property, confidentiality, compliance, penalties |
-| [Open points](docs/open-points.md) | Contradictions in the specifications and pending decisions |
+| [Open points](docs/open-points.md) | Pending decisions, ambiguities in the project sheet, items not in the sheet |
 
-The reference documents are in French and prevail over the English documentation in this repository:
+The [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) (Fiche de projet, in French) is the only source of truth and prevails over the English documentation in this repository.
 
-- [Specifications](Cahier_Des_Charge_Projet_Fil_Rouge.pdf) (Cahier des charges, version 1.0, 14 September 2026)
-- [Project sheet](Fiche_projet_AeroSafe_IPSA.pdf) (Fiche de projet)
+The [specifications](Cahier_Des_Charge_Projet_Fil_Rouge.pdf) (Cahier des charges, version 1.0, 14 September 2026) are a secondary document. Anything they add to the project sheet (requirement codes, priorities, milestones, use cases, contractual terms) is not binding and is flagged as not in the project sheet in the documentation.
 
 ## Team
 
@@ -90,4 +89,4 @@ Supervising teacher: Sirine SBOUI.
 
 ## Ownership and licence
 
-No open-source licence has been chosen. The code and documentation remain the intellectual property of the project group members, and IPSA holds a non-exclusive right to use the deliverables for teaching purposes. See [project terms](docs/project-terms.md).
+No open-source licence has been chosen. The project sheet says nothing about intellectual property. The terms in [project terms](docs/project-terms.md) come from the specifications and are not confirmed.

@@ -24,4 +24,4 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Start everything: `docker compose up --build` (copy `.env.example` to `.env` first).
 - Backend tests: `./run_tests.ps1 -Local` from the repository root (or `uv run pytest` from `src/api`); coverage must stay at 80% or more. Lint: `uv run ruff check .` from `src/api`.
 - Frontend, from `src/front`: `pnpm test:unit`, `pnpm lint`, `pnpm typecheck`, `pnpm test:e2e`.
-- The French PDFs at the repository root are the reference documents and prevail over the English documentation. Start with `README.md`, `ROADMAP.md` and `docs/open-points.md`, which lists what is still undecided.
+- `Fiche_projet_AeroSafe_IPSA.pdf` (the project sheet, in French) is the only source of truth and prevails over everything else, including the English documentation. `Cahier_Des_Charge_Projet_Fil_Rouge.pdf` is a secondary document: whatever it adds to the sheet (requirement codes, milestones, priorities, use cases) is not binding and is flagged as such in the docs. Start with `README.md`, `ROADMAP.md` and `docs/open-points.md`, which lists what is still undecided.

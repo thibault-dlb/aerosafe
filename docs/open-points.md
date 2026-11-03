@@ -1,10 +1,43 @@
 # Open points
 
-Items the reference documents do not settle. Nothing here has been decided on the team's behalf. Last updated: 2026-11-02.
+Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-03.
 
-## Contradictions in the specifications
+## Pending decisions
 
-The specifications are reproduced as written in this repository. These points need to be settled with the supervising teacher, since any change to the specifications requires an amendment.
+| ID | Topic | Status |
+| --- | --- | --- |
+| D-01 | Mapping library | Not decided. The sheet only requires trajectories to be shown on a map (§5) |
+| D-02 | CI/CD tool | Not decided. The sheet asks for a CI/CD pipeline (step 7) without naming a tool |
+| D-04 | Thresholds, units and calculations of rules R1 to R5 | The sheet defers them to "a second stage" (§6) |
+| D-05 | Rule evaluation frequency | Not specified. The sheet does not say that rules are evaluated periodically |
+| D-06 | How observations are grouped into flights | Not specified. The sheet speaks of reconstructing trajectories (§5) and names no Flight entity or continuity criterion |
+| D-14 | Machine learning library (bonus) | Not decided |
+
+## Ambiguities in the project sheet
+
+| ID | Topic | What the sheet says | Question |
+| --- | --- | --- | --- |
+| A-01 | R1 and R2 overlap | R1: "too long a delay since the last contact"; R2: "a position that has become too old" (§6) | What separates the two: the last message received, or the timestamp of the last position? |
+| A-02 | Scope of the Supervisor | Supervises aircraft, business rules and alerts through a Dashboard (§3) | Can the Supervisor change rule thresholds, mark alerts as processed, manage accounts? The sheet does not say |
+| A-03 | Mandatory alert fields | An alert "may contain" the aircraft, rule, date and time, criticality (optional), observed value, threshold and message (§6) | Which fields are mandatory? None is declared so |
+| A-04 | Dashboard and flight statistics | Both are named (§2, §5) and neither is described | What does the Dashboard show, and which statistics are computed? |
+| A-05 | PostgreSQL | "A database such as PostgreSQL" (§4) | PostgreSQL is an example, not a requirement. The team chose PostgreSQL 17 |
+| A-06 | Authentication | Step 3 lists "authentication and role management" among the development tasks | Delegating it to Keycloak turns that development into configuration; to justify at the defence |
+
+## Repository decisions
+
+Decisions that belong to the team and do not come from the sheet.
+
+| ID | Topic | Status |
+| --- | --- | --- |
+| D-09 | Allocation of work among group members | Not defined. The sheet only requires the presentation to cover "group organisation" (deliverable 3) |
+| D-13 | Commit scopes and version numbering scheme | Not decided |
+
+## Not in the project sheet
+
+Everything below comes from the specifications (`Cahier_Des_Charge_Projet_Fil_Rouge.pdf`). It does not appear in the project sheet, so none of it is binding. It becomes relevant only if the supervising teacher confirms that the specifications apply.
+
+### Contradictions in the specifications
 
 | ID | Topic | What the specifications say | Question |
 | --- | --- | --- | --- |
@@ -15,28 +48,15 @@ The specifications are reproduced as written in this repository. These points ne
 | C-05 | Account deletion | §VII.3 requires the ability to delete an account under the GDPR; UC-06 only lists create, modify and deactivate, and no requirement covers deletion | How and by whom is an account deleted? |
 | C-06 | Supervisor access to trajectories | UC-01 explicitly extends to the Supervisor; UC-02 names only the User as actor | Can the Supervisor view trajectories? |
 
-## Gaps in the milestones
+### Milestones
 
 | ID | Topic | Detail |
 | --- | --- | --- |
-| G-01 | Requirements with no milestone | The wording of J2 and J3 does not name BF-07 (trajectory), BF-08 (statistics), BF-13 (rule settings) or BF-14 (account management) |
+| G-01 | Requirements with no milestone | The wording of J2 and J3 does not name BF-07, BF-08, BF-13 or BF-14 |
+| D-07 | Milestone dates | Unknown; every due date is "to be defined" |
+| D-08 | Status of J1 | Cannot be checked: the project sheet defines no milestone |
 
-## Pending decisions
-
-| ID | Topic | Status |
-| --- | --- | --- |
-| D-01 | Mapping library | Not decided; must be open source, chosen with the selection grid |
-| D-02 | CI/CD tool | Not decided; chosen with the selection grid |
-| D-04 | Thresholds, units and calculations of rules R1 to R5 | Set in a second stage of the project |
-| D-05 | Rule evaluation frequency | Not specified ("periodically") |
-| D-06 | Time continuity criterion for grouping observations into flights | Not specified |
-| D-07 | Milestone dates | Unknown; J1 is to be set with the supervising teacher |
-| D-08 | Status of J1 | To be confirmed |
-| D-09 | Allocation of work among group members | Not defined; the specifications require the workload to be shared (§VII.2) and the presentation to cover group organisation |
-| D-13 | Commit scopes and version numbering scheme | Not decided |
-| D-14 | Machine learning library (bonus) | Not decided |
-
-## Checks to do
+### Checks to do
 
 | ID | Topic | Detail |
 | --- | --- | --- |

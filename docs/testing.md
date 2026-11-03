@@ -1,6 +1,8 @@
 # Testing
 
-Source: specifications §IX.1 and §IX.2.
+Source: project sheet step 4 (unit tests, integration tests, component checks, fixes) and step 7 (test automation, continuous integration); specifications §IX.1 and §IX.2 for the rest.
+
+The acceptance criteria CA-01 to CA-10, the functional acceptance record and the presence of the supervising teacher at acceptance come from the specifications only and are not in the project sheet.
 
 ## Tools
 

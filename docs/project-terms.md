@@ -1,8 +1,8 @@
 # Project terms
 
-English summary of specifications §V and §VII.3. The [French PDF](../Cahier_Des_Charge_Projet_Fil_Rouge.pdf) prevails.
+English summary of specifications §V and §VII.3. None of it appears in the [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf), which says nothing about intellectual property, confidentiality, regulation or penalties. Treat it as unconfirmed until the supervising teacher states that these terms apply.
 
-The two parties are the sponsor (IPSA, represented by the supervising teacher) and the project group. The specifications are the project's contractual reference, and any change requires an amendment approved by both parties.
+The two parties are the sponsor (IPSA, represented by the supervising teacher) and the project group.
 
 ## Intellectual property
 

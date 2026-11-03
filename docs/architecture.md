@@ -1,6 +1,6 @@
 # Architecture
 
-Source: specifications §VI.1.10 and §VII.1, and [technology choices](technology-choices.md).
+Source: project sheet §8 (authentication, web interface, FastAPI API, PostgreSQL database, rules engine, optional AI module) and step 2 (UML, architecture, database design, module organisation); specifications §VI.1.10 and §VII.1; and [technology choices](technology-choices.md).
 
 The detailed architecture is `TBD`: it is produced during the design phase, including a component diagram showing the flows between components.
 
@@ -83,13 +83,11 @@ Unit tests of the frontend sit next to the code they test (`*.test.ts`, `*.test.
 
 ## Planned UML diagrams
 
+The project sheet requires UML diagrams (step 2, deliverable 1) without listing them. The four below come from the specifications.
+
 | Diagram | Content | Status |
 | --- | --- | --- |
 | Use cases | Actors: User, Supervisor | `TBD` |
 | Classes | Aircraft, Observation, Flight, Rule, Alert, User | `TBD` |
 | Sequence | "Detection and generation of an alert" scenario | `TBD` |
 | Components | Application architecture | `TBD` |
-
-## Repository layout
-
-`TBD`.

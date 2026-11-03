@@ -1,12 +1,12 @@
 # API
 
-`TBD`: the API does not exist yet. This page lists what the specifications require of it, and will be completed during development.
+`TBD`: the API does not exist yet. This page lists what the project sheet and the specifications require of it, and will be completed during development.
 
 The API documentation is kept in the repository as Markdown and/or generated automatically (§VIII.2).
 
 ## Requirements
 
-Source: specifications §II, §VI.1.1, §VII.1 and §III.2.
+Source: project sheet §8 (a FastAPI API); specifications §II, §VI.1.1, §VII.1 and §III.2 for the role checks, the protection of endpoints and the 2-second target.
 
 - The backend is a FastAPI application exposing business services and data.
 - API endpoints check the caller's role before running a restricted operation.

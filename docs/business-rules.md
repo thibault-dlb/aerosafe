@@ -1,6 +1,6 @@
 # Business rules
 
-Source: specifications §VI.1.5, §VI.1.6 and §VI.1.8.
+Source: project sheet §6; specifications §VI.1.5, §VI.1.6 and §VI.1.8 for the additional detail flagged below.
 
 ## Rules
 
@@ -18,7 +18,7 @@ The detailed definition and thresholds of each rule are set in a second stage of
 
 ## Evaluation
 
-- The engine evaluates the rules periodically on the data collected (BF-09). The frequency is `TBD`.
+- The engine evaluates the rules periodically on the data collected (BF-09). The frequency is `TBD`. The project sheet does not say that rules are evaluated periodically (D-05).
 - When a rule detects that a threshold has been exceeded, an alert is generated (UC-03).
 - When no threshold is exceeded, no alert is generated and the evaluation is logged (UC-03).
 - Rule triggers are logged so that the generation of an alert can be replayed and explained (NF-08).
@@ -30,7 +30,7 @@ Adding a rule must not require changing existing rules (§VI.1.5, NF-06).
 
 ## Alerts
 
-When a rule is triggered, an alert is generated and stored in the database. An alert contains at least:
+When a rule is triggered, an alert is generated and stored in the database. The project sheet says an alert "may contain" the items below and declares none mandatory (A-03). The specifications require at least:
 
 - the aircraft concerned;
 - the rule triggered;
@@ -41,12 +41,12 @@ When a rule is triggered, an alert is generated and stored in the database. An a
 
 The criticality level is an optional attribute.
 
-The Supervisor can view, filter and sort alerts, and open their details (§VI.1.6).
+The Supervisor can view, filter and sort alerts, and open their details (§VI.1.6). This comes from the specifications only: the project sheet does not describe alert management.
 
 ## Testing
 
-Each rule has at least one triggering test case and one non-triggering test case (§IX.2). See [testing](testing.md).
+Each rule has at least one triggering test case and one non-triggering test case (§IX.2, specifications only). See [testing](testing.md).
 
 ## AI comparison (bonus)
 
-An optional module may detect anomalies and generate alerts through machine learning, to compare the deterministic approach (R1 to R5) with a learned one. The model uses historical data to identify atypical behaviour and produce an anomaly score. It only starts once all priority E requirements are met (§VII.2).
+An optional module may detect anomalies and generate alerts through machine learning, to compare the deterministic approach (R1 to R5) with a learned one. The model uses historical data to identify atypical behaviour and produce an anomaly score. It only starts once all priority E requirements are met (§VII.2, specifications only; the project sheet only calls the module optional or a bonus).
