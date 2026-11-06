@@ -23,7 +23,7 @@ The two parties are the sponsor (IPSA, represented by the supervising teacher) a
 
 ## Regulatory constraints
 
-- **Data source terms:** use of OpenSky Network data must comply with its published terms, particularly regarding the project's non-commercial, educational nature. Status: `TBD`, not checked yet.
+- **Data source terms:** use of OpenSky Network data must comply with its published terms, particularly regarding the project's non-commercial, educational nature. Checked on 2026-11-06: educational, non-profit use is allowed; the terms also forbid redistributing the data, require a citation in publications and the deletion of the data at the end of the project. Whether automated collection counts as operational use is still to confirm (V-01). See [OpenSky Network](opensky.md).
 - **Personal data:** account data is processed in line with the GDPR: purpose limited to running the application, data minimisation, secure storage and the ability to delete an account.
 - **Third-party licences:** only libraries whose licence allows educational use and redistribution of the source code are used, and they are documented.
 - **Institution rules:** the project follows IPSA's internal regulations and IT charter, and the rules on academic integrity.

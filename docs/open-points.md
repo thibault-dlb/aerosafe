@@ -1,6 +1,6 @@
 # Open points
 
-Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-03.
+Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-06.
 
 ## Pending decisions
 
@@ -84,6 +84,6 @@ Everything below comes from the specifications (`Cahier_Des_Charge_Projet_Fil_Ro
 
 | ID | Topic | Detail |
 | --- | --- | --- |
-| V-01 | OpenSky Network conditions | Quotas and authentication checked on 2026-11-03 (see [architecture](architecture.md#data-source)). The terms of use and the rule on query frequency still need to be read (§V.1, §VII.1, §VII.3) |
+| V-01 | OpenSky Network conditions | Quotas and authentication checked on 2026-11-03 (see [architecture](architecture.md#data-source)); terms of use read on 2026-11-06 (see [OpenSky Network](opensky.md)). Still open: whether automated collection through the REST API counts as "operational use", which needs a written licence from OpenSky (§V.1, §VII.1, §VII.3) |
 | V-02 | Public sharing | Sharing has not been validated by the supervising teacher (§V.2); the repository has been private since 2026-11-02 |
 | V-03 | Teacher access | The supervising teacher needs access to the private repository (§VIII.2); the repository owner must grant it |

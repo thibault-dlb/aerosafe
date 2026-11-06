@@ -64,6 +64,7 @@ The application must eventually start from a single documented command, using co
 | [Contributing](CONTRIBUTING.md) | Coding, commit, testing and documentation rules |
 | [Requirements](docs/requirements.md) | Scope, requirements, user profiles, use cases |
 | [Business rules](docs/business-rules.md) | Rules R1 to R5 and alert format |
+| [OpenSky Network](docs/opensky.md) | Data source terms of use, access, fields and collection constraints |
 | [Data model](docs/data-model.md) | Planned entities |
 | [Database conventions](docs/database-conventions.md) | Naming, keys, types, indexes, timestamps, migrations, security, checklist |
 | [Architecture](docs/architecture.md) | Components, constraints, planned UML diagrams |
