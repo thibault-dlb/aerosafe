@@ -8,6 +8,7 @@ Nothing is installed yet. This table lists what has been chosen so far. Check ea
 | --- | --- | --- | --- |
 | FastAPI | Backend API | `TBD` | MIT |
 | PostgreSQL | Database | 17 (target) | PostgreSQL License |
+| PostGIS | Spatial extension for PostgreSQL (D-18) | 3.7 | GPL-2.0-or-later |
 | SQLAlchemy | ORM | 2.0 (target) | MIT |
 | asyncpg | Asynchronous PostgreSQL driver | `TBD` | Apache-2.0 |
 | Alembic | Database migrations | `TBD` | MIT |

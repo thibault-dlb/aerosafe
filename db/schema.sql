@@ -4,6 +4,7 @@
 -- Once validated it becomes Alembic migrations: one change per migration, each with its down,
 -- and the reference data in a separate migration.
 
+-- Needs a superuser: src/api/docker/init-db.sh creates it first, so this line changes nothing there.
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- Keeps updated_at current on every business table (conventions §8).
