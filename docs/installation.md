@@ -42,7 +42,8 @@ Secrets such as database credentials, API keys and environment variables are nev
 | --- | --- | --- | --- |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | PostgreSQL administrator, used to create the application database | Yes | None |
 | `DB_HOST`, `DB_PORT` | Where the API finds the database | Yes | `postgres`, `5432` in the template |
-| `DB_USER`, `DB_PASS`, `DB_NAME` | Application database and its user | Yes | None |
+| `DB_USER`, `DB_PASS`, `DB_NAME` | Application database and its user, limited to reading and writing data | Yes | None |
+| `DB_MIGRATION_USER`, `DB_MIGRATION_PASS` | Owner of the application database, used only to run the migrations | Yes | None |
 | `VITE_API_URL` | Public URL of the API, as seen from the browser | No | `http://localhost:8888/api` |
 
 ## Environments

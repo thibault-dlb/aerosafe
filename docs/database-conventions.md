@@ -28,6 +28,9 @@ Each column carries a prefix that tells its data type. `ID` is the only type wit
 | `NB_` | Number | Any figure or number: integer, decimal, signed, percentage; anything that is computed | `NB_LIT`, `NB_QUANTITE_DISPONIBLE` |
 | `LN_` | Link | Text with an action semantic: email (opens the mailbox), social network profile, path to an image on the server | `LN_EMAIL`, `LN_INSTAGRAM`, `LN_IMG_SRC` |
 | `BL_` | Boolean | Exhaustive, non-evolving list of 3 values or fewer. Usually two choices (yes/no), sometimes three (yes/no/not applicable) | `BL_ACTIF` (1/0), `BL_OCCUPE` (OUI/NON/N.A.) |
+| `GEO_` | Geometry | PostGIS geometry. **Project extension, not in the guide** (decided on 2026-11-06) | `GEO_POSITION` |
+
+A foreign key is named `ID_<TABLE>`, without the `R_` prefix. When a table references the same table twice, a suffix gives each column its role: `ID_AEROPORT_ORIGINE`, `ID_AEROPORT_DESTINATION`. This is a **project extension, not in the guide** (decided on 2026-11-06).
 
 Why: without a prefix a developer can write `total * taux` without knowing whether `total` is a number or a label. With `NB_TOTAL * NB_TAUX` the error is visible before running the query.
 

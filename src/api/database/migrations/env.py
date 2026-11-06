@@ -20,7 +20,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", db_settings.DATABASE_ASYNC_URL)
+config.set_main_option("sqlalchemy.url", db_settings.DATABASE_MIGRATION_ASYNC_URL)
 
 target_metadata = Base.metadata
 
