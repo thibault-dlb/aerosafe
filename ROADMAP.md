@@ -1,6 +1,6 @@
 # Roadmap
 
-Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-03.
+Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-06.
 
 Anything flagged `Not in the project sheet` comes from the specifications and is not binding. See [open points](docs/open-points.md).
 
@@ -43,9 +43,11 @@ From the project sheet:
 - [ ] Validate the UML diagrams drafted in `docs/uml/` (step 2, deliverable 1) and confirm the [team decisions](docs/open-points.md) with the supervising teacher
 - [ ] Formalise the data model and the database design (step 2): relational schema, integrity constraints, indexes
 - [ ] Validate the proposed thresholds and calculations of rules R1 to R5 in [business rules](docs/business-rules.md) (§6: "second stage"; see D-04)
+- [x] Choose the mapping library and the CI/CD tool using a written justification (Leaflet, GitHub Actions; wrapper licence to confirm, D-01)
 - [ ] Set up the CI pipeline with GitHub Actions (step 7)
 - [ ] Confirm with the supervising teacher the team's answers to the ambiguities of the sheet (A-01 to A-04 in [open points](docs/open-points.md))
-- [ ] Read the OpenSky terms of use and register an account for the OAuth2 credentials (quotas are documented in [architecture](docs/architecture.md))
+- [x] Read the OpenSky terms of use (see [OpenSky Network](docs/opensky.md))
+- [ ] Register one OpenSky account for the group and create its OAuth2 API client (quotas are documented in [architecture](docs/architecture.md))
 
 Repository housekeeping:
 
@@ -55,7 +57,7 @@ Not in the project sheet, to confirm with the supervising teacher:
 
 - [ ] Whether milestone dates exist, and whether J1 to J4 apply
 - [ ] Give the supervising teacher access to the private repository (specifications §VIII.2; the repository owner must do this)
-- [ ] Check the OpenSky Network terms of use and access conditions
+- [ ] Confirm that automated collection through the OpenSky REST API is allowed for the course without a written licence (V-01, see [OpenSky Network](docs/opensky.md))
 
 ## Deliverables
 

@@ -1,6 +1,6 @@
 # Business rules
 
-Source: project sheet §6; specifications §VI.1.5, §VI.1.6 and §VI.1.8 for the additional detail flagged below.
+Source: project sheet §6; specifications §VI.1.5, §VI.1.6 and §VI.1.8 for the additional detail flagged below. OpenSky fields, units and terms: [OpenSky Network](opensky.md).
 
 ## Rules
 
@@ -18,7 +18,7 @@ AeroSafe initially includes five business rules to detect unusual situations.
 
 ### Proposed calculations
 
-Notation: `now` is the evaluation time; for an aircraft, `p1` and `p2` are its two latest consecutive observations of the same flight, `Δt = p2.positionAt − p1.positionAt`. OpenSky gives altitude in metres, speed in m/s and heading in degrees.
+Notation: `now` is the time of the collection that has just run, not the time the engine runs, so a delay in the evaluation never makes the data look older than it is; for an aircraft, `p1` and `p2` are its two latest consecutive observations of the same flight, `Δt = p2.positionAt − p1.positionAt`. OpenSky gives altitude in metres, speed in m/s and heading in degrees (see [fields used by the rules](opensky.md#fields-used-by-the-rules)).
 
 | Rule | Observed value | Triggers when |
 | --- | --- | --- |
@@ -34,6 +34,8 @@ Reasoning behind the values:
 - **R3.** Airliners climb and descend at about 5 to 15 m/s. 30 m/s is roughly 5 900 ft/min, which is unusual for a commercial flight.
 - **R4.** Normal acceleration of an airliner is about 1 m/s². 2 m/s² flags an abrupt change.
 - **R5.** A standard-rate turn is 3 °/s. 5 °/s is well above it. The heading is compared as the shortest angle, so 359° to 1° is a 2° change. Measuring a rate and not an absolute change avoids false alerts with the 120 s period, where a normal turn can reach 90° between two points. Below 50 m/s the heading of OpenSky is too noisy to use.
+- **R2 and missing positions.** OpenSky leaves the position time empty when no position was received in the last 15 seconds. R2 therefore uses the latest stored observation that has a position, never the latest raw state vector.
+- **Rates, not raw differences.** R3 to R5 divide by `Δt`. Comparing raw differences would make the same manoeuvre trigger or not depending on how far apart the two observations are.
 - **Window `10 s ≤ Δt ≤ 300 s`.** Too short a gap amplifies noise, too long a gap hides the real dynamics and would compare two different phases of a flight.
 
 ### Scope and deduplication
@@ -41,6 +43,7 @@ Reasoning behind the values:
 - Rules apply to aircraft that are **airborne** (`on_ground` false). R1 and R2 also stop being evaluated for an aircraft silent for more than 30 minutes, so that an aircraft which left the coverage zone does not raise alerts forever.
 - An aircraft does not raise the same rule twice while the situation lasts: a new alert for the same aircraft and rule is generated only after the previous episode ended (the value went back under the threshold).
 - Observations that belong to no flight are not used for R3 to R5, since a rate needs two points of the same flight (D-06).
+- An observation with a missing value (altitude, speed or heading) is skipped by the rule that needs it.
 
 ### Criticality
 
@@ -56,7 +59,7 @@ Reasoning behind the values:
 
 ## Extending the engine
 
-Adding a rule must not require changing existing rules (§VI.1.5, NF-06).
+Adding a rule must not require changing existing rules (§VI.1.5, NF-06). Each rule is a separate class with the same `check` method (see the [alert sequence diagram](uml/sequence-alert.md)), and the engine reads the list of rules from the `Rule` entity, so it is not limited to R1 to R5.
 
 ## Alerts
 
@@ -81,6 +84,24 @@ Flight statistics, computed per flight: duration and distance, altitude and spee
 ## Testing
 
 Each rule has at least one triggering test case and one non-triggering test case (§IX.2, specifications only). See [testing](testing.md).
+
+Proposed cases, for an airborne aircraft and two observations of the same flight:
+
+| Rule | Triggering case | Non-triggering case |
+| --- | --- | --- |
+| R1 | Last contact 420 s before `now` | Last contact 60 s before `now` |
+| R2 | Last position 900 s before `now`, last contact 20 s before | Last position 120 s before `now` |
+| R3 | +1,200 m in 30 s (40 m/s) | +300 m in 30 s (10 m/s) |
+| R4 | 230 → 170 m/s in 20 s (3 m/s²) | 230 → 220 m/s in 30 s (0.33 m/s²) |
+| R5 | 90° → 200° in 20 s at 200 m/s (110°, 5.5 °/s) | 350° → 10° in 20 s at 200 m/s (20°, 1 °/s) |
+
+Edge cases:
+
+- R3 to R5: a pair with `Δt` = 5 s or `Δt` = 600 s is ignored.
+- R3 to R5: an aircraft with `on_ground` true is ignored.
+- R5: a 110° turn in 20 s at 30 m/s (below 50 m/s) is ignored.
+- R2: a latest observation without a position falls back to the previous observation that has one.
+- Deduplication: a second evaluation of the same episode raises no new alert; a new episode after the value went back under the threshold raises one.
 
 ## AI comparison (bonus)
 

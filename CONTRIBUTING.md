@@ -56,7 +56,7 @@ Contributions must stay traceable in the Git history, as step 6 of the project s
 ## Tests and quality
 
 - Python tests use pytest and Python linting uses ruff. Frontend unit tests use Vitest, end-to-end tests use Playwright and linting uses ESLint. The commands are in [testing](docs/testing.md).
-- The CI pipeline must run the automated tests on every code change (§VII.1). The CI tool is `TBD`.
+- The CI pipeline must run the automated tests on every code change (§VII.1). The CI tool is GitHub Actions (see [technology choices](docs/technology-choices.md)).
 - Each rule from R1 to R5 needs at least one triggering test case and one non-triggering test case (§IX.2).
 
 The full strategy is in [testing](docs/testing.md).
