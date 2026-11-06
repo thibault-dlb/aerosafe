@@ -20,21 +20,21 @@ $$ LANGUAGE plpgsql;
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE R_ROLE (
-    ID        SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ID        BIGINT   GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     CD_ROLE   TEXT     NOT NULL UNIQUE,
     LB_ROLE   TEXT     NOT NULL,
     is_active BOOLEAN  NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE R_CRITICITE (
-    ID           SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ID           BIGINT   GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     CD_CRITICITE TEXT     NOT NULL UNIQUE,
     LB_CRITICITE TEXT     NOT NULL,
     is_active    BOOLEAN  NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE R_UNITE (
-    ID        SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ID        BIGINT   GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     CD_UNITE  TEXT     NOT NULL UNIQUE,
     LB_UNITE  TEXT     NOT NULL,
     is_active BOOLEAN  NOT NULL DEFAULT TRUE
@@ -66,13 +66,17 @@ CREATE TABLE VOL (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at     TIMESTAMPTZ NULL,
-    CHECK (DT_FIN IS NULL OR DT_FIN > DT_DEBUT)
+    -- Target of the composite foreign key from OBSERVATION.
+    UNIQUE (ID, ID_AERONEF),
+    -- A flight can hold a single observation, so both dates can be equal.
+    CHECK (DT_FIN IS NULL OR DT_FIN >= DT_DEBUT)
 );
 
+-- One point per row, a deliberate deviation from conventions §15: see docs/data-model.md.
 CREATE TABLE OBSERVATION (
     ID                 BIGINT                GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     ID_AERONEF         BIGINT                NOT NULL REFERENCES AERONEF (ID) ON DELETE RESTRICT,
-    ID_VOL             BIGINT                NULL     REFERENCES VOL (ID) ON DELETE RESTRICT,
+    ID_VOL             BIGINT                NULL,
     DT_DERNIER_CONTACT TIMESTAMPTZ           NOT NULL,
     DT_POSITION        TIMESTAMPTZ           NULL,
     GEO_POSITION       geometry(Point, 4326) NULL,
@@ -85,6 +89,8 @@ CREATE TABLE OBSERVATION (
     deleted_at         TIMESTAMPTZ           NULL,
     -- The same OpenSky state vector is never stored twice.
     UNIQUE (ID_AERONEF, DT_DERNIER_CONTACT),
+    -- A flight always belongs to the aircraft of its observations.
+    FOREIGN KEY (ID_VOL, ID_AERONEF) REFERENCES VOL (ID, ID_AERONEF) ON DELETE RESTRICT,
     CHECK (DT_POSITION IS NULL OR DT_POSITION <= DT_DERNIER_CONTACT)
 );
 
@@ -93,8 +99,8 @@ CREATE TABLE REGLE (
     CD_REGLE       TEXT           NOT NULL UNIQUE,
     LB_DESCRIPTION TEXT           NOT NULL,
     NB_SEUIL       NUMERIC(10, 3) NOT NULL CHECK (NB_SEUIL >= 0),
-    ID_UNITE       SMALLINT       NOT NULL REFERENCES R_UNITE (ID) ON DELETE RESTRICT,
-    ID_CRITICITE   SMALLINT       NULL     REFERENCES R_CRITICITE (ID) ON DELETE RESTRICT,
+    ID_UNITE       BIGINT         NOT NULL REFERENCES R_UNITE (ID) ON DELETE RESTRICT,
+    ID_CRITICITE   BIGINT         NULL     REFERENCES R_CRITICITE (ID) ON DELETE RESTRICT,
     is_active      BOOLEAN        NOT NULL DEFAULT TRUE,
     created_at     TIMESTAMPTZ    NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ    NOT NULL DEFAULT now(),
@@ -105,7 +111,7 @@ CREATE TABLE UTILISATEUR (
     ID                   BIGINT      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     LN_EMAIL             TEXT        NOT NULL UNIQUE,
     LB_HASH_MOT_DE_PASSE TEXT        NULL,
-    ID_ROLE              SMALLINT    NOT NULL REFERENCES R_ROLE (ID) ON DELETE RESTRICT,
+    ID_ROLE              BIGINT      NOT NULL REFERENCES R_ROLE (ID) ON DELETE RESTRICT,
     DT_ANONYMISATION     TIMESTAMPTZ NULL,
     is_active            BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -123,7 +129,7 @@ CREATE TABLE ALERTE (
     NB_VALEUR_OBSERVEE        NUMERIC(12, 3) NULL,
     NB_SEUIL                  NUMERIC(10, 3) NULL,
     LB_MESSAGE                TEXT           NOT NULL,
-    ID_CRITICITE              SMALLINT       NULL REFERENCES R_CRITICITE (ID) ON DELETE RESTRICT,
+    ID_CRITICITE              BIGINT         NULL REFERENCES R_CRITICITE (ID) ON DELETE RESTRICT,
     DT_TRAITEMENT             TIMESTAMPTZ    NULL,
     ID_UTILISATEUR_TRAITEMENT BIGINT         NULL REFERENCES UTILISATEUR (ID) ON DELETE RESTRICT,
     created_at                TIMESTAMPTZ    NOT NULL DEFAULT now(),
@@ -220,7 +226,7 @@ COMMENT ON COLUMN VOL.deleted_at IS 'Date de suppression logique ; NULL si la li
 COMMENT ON TABLE OBSERVATION IS 'Vecteur d''état d''un aéronef reçu d''OpenSky, nettoyé puis stocké par le collecteur.';
 COMMENT ON COLUMN OBSERVATION.ID IS 'Identifiant technique de l''observation.';
 COMMENT ON COLUMN OBSERVATION.ID_AERONEF IS 'Aéronef observé.';
-COMMENT ON COLUMN OBSERVATION.ID_VOL IS 'Vol auquel l''observation est rattachée ; NULL si elle n''appartient à aucun vol.';
+COMMENT ON COLUMN OBSERVATION.ID_VOL IS 'Vol auquel l''observation est rattachée, forcément du même aéronef ; NULL si elle n''appartient à aucun vol.';
 COMMENT ON COLUMN OBSERVATION.DT_DERNIER_CONTACT IS 'Date du dernier message reçu de l''aéronef (last_contact OpenSky), utilisée par R1.';
 COMMENT ON COLUMN OBSERVATION.DT_POSITION IS 'Date de la dernière position connue (time_position OpenSky), utilisée par R2 ; NULL sans position.';
 COMMENT ON COLUMN OBSERVATION.GEO_POSITION IS 'Position géographique (point PostGIS, WGS 84) ; NULL sans position.';

@@ -74,8 +74,8 @@ erDiagram
         text CD_REGLE UK
         text LB_DESCRIPTION
         numeric NB_SEUIL
-        smallint ID_UNITE FK
-        smallint ID_CRITICITE FK
+        bigint ID_UNITE FK
+        bigint ID_CRITICITE FK
         boolean is_active
     }
     ALERTE {
@@ -86,7 +86,7 @@ erDiagram
         numeric NB_VALEUR_OBSERVEE
         numeric NB_SEUIL
         text LB_MESSAGE
-        smallint ID_CRITICITE FK
+        bigint ID_CRITICITE FK
         timestamptz DT_TRAITEMENT
         bigint ID_UTILISATEUR_TRAITEMENT FK
     }
@@ -94,7 +94,7 @@ erDiagram
         bigint ID PK
         text LN_EMAIL UK
         text LB_HASH_MOT_DE_PASSE
-        smallint ID_ROLE FK
+        bigint ID_ROLE FK
         timestamptz DT_ANONYMISATION
         boolean is_active
     }
@@ -106,19 +106,19 @@ erDiagram
         timestamptz DT_REVOCATION
     }
     R_ROLE {
-        smallint ID PK
+        bigint ID PK
         text CD_ROLE UK
         text LB_ROLE
         boolean is_active
     }
     R_CRITICITE {
-        smallint ID PK
+        bigint ID PK
         text CD_CRITICITE UK
         text LB_CRITICITE
         boolean is_active
     }
     R_UNITE {
-        smallint ID PK
+        bigint ID PK
         text CD_UNITE UK
         text LB_UNITE
         boolean is_active
@@ -133,15 +133,40 @@ erDiagram
 - A rule has exactly one unit and zero or one default criticality. An alert has zero or one criticality.
 - An alert is processed by zero or one user. A user has exactly one role and owns zero or more refresh tokens.
 
+## Table lifecycle
+
+Nothing is deleted physically. `TBD` marks what the project has not decided yet.
+
+| Table | Created by | Modified by | Deleted by | Expected volume |
+|---|---|---|---|---|
+| `AERONEF` | Collector, at the first observation of an ICAO24 address | Source of the registration, model and airline is `TBD` | `TBD`, through `deleted_at` | One row per aircraft seen |
+| `VOL` | Collector, when a new flight starts (D-06) | Collector, which closes the flight | `TBD`, through `deleted_at` | One row per flight |
+| `OBSERVATION` | Collector, at each collection | Collector | `TBD`, through `deleted_at` | One row per aircraft and collection: 2 880 collections a day for Île-de-France every 30 s, 720 for metropolitan France every 120 s (D-05). As an assumption, 1 000 aircraft every 120 s give about 720 000 rows a day |
+| `REGLE` | Initial data, then an `INSERT` for each new rule (NF-06) | Supervisor, for the threshold (UC-05) | `TBD`, through `deleted_at` | 5 rows at the start |
+| `ALERTE` | Rules engine | Supervisor, who marks it as processed (C-03) | `TBD`, through `deleted_at` | `TBD`, depends on the thresholds (D-04) |
+| `UTILISATEUR` | The API, at registration | The API, including anonymisation on request (A-06) | Never: the row is anonymised | `TBD` |
+| `JETON_RAFRAICHISSEMENT` | The API, at login | The API, which revokes it | `TBD`, through `deleted_at` | One row per login |
+
+## Deviation from the guide
+
+The [conventions](database-conventions.md#15-traces-geometry-and-drawings-p-17-and-18) ask for one row per trace, never a table of points. `OBSERVATION` keeps one point per row on purpose (decided on 2026-11-06):
+
+- each point is a measurement with its own times, altitude, speed, heading and on-ground status, which a `LINESTRING` cannot hold;
+- R1 and R2 read the latest observation, and R3 to R5 compare two consecutive observations;
+- observations arrive one at a time, so a trace would be rewritten at each collection.
+
+The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, so no trace is stored on `VOL`.
+
 ## Integrity constraints
 
 | Table | Constraint |
 |---|---|
-| All | `ID` is `BIGINT` (`SMALLINT` for reference tables) `GENERATED ALWAYS AS IDENTITY` |
+| All | `ID` is `BIGINT GENERATED ALWAYS AS IDENTITY` |
 | All | Every foreign key is `ON DELETE RESTRICT`. Nothing is deleted physically: business tables use `deleted_at`, reference tables `is_active`, users are anonymised |
 | `AERONEF` | `CD_ICAO24` is unique and has 6 lowercase hexadecimal characters |
-| `VOL` | `DT_FIN` is after `DT_DEBUT` when known |
+| `VOL` | `DT_FIN` is on or after `DT_DEBUT` when known, since a flight can hold a single observation |
 | `OBSERVATION` | Unique pair (`ID_AERONEF`, `DT_DERNIER_CONTACT`), so the same state vector is never stored twice |
+| `OBSERVATION` | Foreign key (`ID_VOL`, `ID_AERONEF`) to `VOL` (`ID`, `ID_AERONEF`), so a flight always belongs to the aircraft of its observations |
 | `OBSERVATION` | `DT_POSITION` ≤ `DT_DERNIER_CONTACT`; `NB_VITESSE` ≥ 0; `NB_CAP` from 0 to under 360 |
 | `REGLE` | `CD_REGLE` is unique and free text, so R6 can be added with an `INSERT` (NF-06); `NB_SEUIL` ≥ 0 |
 | `ALERTE` | `DT_TRAITEMENT` and `ID_UTILISATEUR_TRAITEMENT` are both set or both empty (C-03) |
@@ -161,6 +186,7 @@ Every foreign key is indexed, except `OBSERVATION.ID_AERONEF`, which is the firs
 | `OBSERVATION` (`DT_DERNIER_CONTACT`) | The engine reads the latest observations after each collection (BF-09) |
 | `OBSERVATION` GiST (`GEO_POSITION`) | Search by area (UC-01, D-18) |
 | `VOL` (`ID_AERONEF`, `DT_DEBUT`) | Flights of one aircraft |
+| `VOL` (`ID`, `ID_AERONEF`), unique | Target of the composite foreign key from `OBSERVATION` |
 | `AERONEF` (`LB_IMMATRICULATION`), (`LB_COMPAGNIE`) | Aircraft search (BF-04) |
 | `ALERTE` (`DT_DECLENCHEMENT`), and one per foreign key | Filter and sort alerts on the dashboard (BF-12) |
 | One per foreign key on `REGLE`, `UTILISATEUR`, `JETON_RAFRAICHISSEMENT` | Conventions: foreign keys are never indexed automatically |
@@ -192,7 +218,7 @@ Personal data is limited to `UTILISATEUR`: email address and password hash. A de
 
 | Point | Proposal |
 |---|---|
-| Prefix of the geometry column | The guide defines no prefix for a geometry. `GEO_POSITION` uses a new `GEO_` prefix, to confirm and add to the conventions |
+| Retention of observations | `OBSERVATION` is the table that grows fastest (see [Table lifecycle](#table-lifecycle)) and has no retention period yet. Set one before any long collection |
 | Deduplication of alerts | The same rule must not raise a second alert while the situation lasts. Handled by the engine for now; a nullable `DT_FIN_EPISODE` on `ALERTE` can be added if it must survive a restart |
 | `on_ground` | The team rules use it but the class diagram does not list it. Added here as `BL_AU_SOL`; the class diagram should be updated |
 | Default criticality per rule | The class diagram links criticality to the alert only. `REGLE.ID_CRITICITE` is added so the engine knows which criticality to copy |
