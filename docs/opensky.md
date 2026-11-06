@@ -67,9 +67,9 @@ Each state vector gives, among others, the fields below. They map to the `Observ
 | `baro_altitude`, `geo_altitude` | `altitude` | Barometric and geometric altitude | m |
 | `velocity` | `speed` | Speed over ground | m/s |
 | `true_track` | `heading` | Heading, clockwise from north (0°) | ° |
-| `on_ground` | Not in the class diagram yet | True if the position comes from a surface position report | Boolean |
+| `on_ground` | `onGround` | True if the position comes from a surface position report | Boolean |
 
-Both times must be stored: R1 uses `lastContactAt` and R2 `positionAt`. The rules also need `on_ground` to ignore aircraft on the ground, so the class diagram and the data model need this attribute. Which altitude (barometric or geometric) feeds `altitude` is `TBD`.
+Both times must be stored: R1 uses `lastContactAt` and R2 `positionAt`. The rules also use `onGround` to ignore aircraft on the ground. Which altitude (barometric or geometric) feeds `altitude` is `TBD`.
 
 ## Collection
 

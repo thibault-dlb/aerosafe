@@ -6,10 +6,11 @@ Items the reference documents do not settle. The [project sheet](../Fiche_projet
 
 | ID | Topic | Status |
 | --- | --- | --- |
+| D-01 | Mapping library | Leaflet, decided on 2026-11-03 and scored against the grid in [technology choices](technology-choices.md#mapping-library-leaflet). Open: the `react-leaflet` wrapper is under the Hippocratic License 2.1, which is not an open-source licence, so Leaflet would be used directly |
 | D-04 | Thresholds, units and calculations of rules R1 to R5 | The sheet defers them to "a second stage" (§6). Values proposed in [business rules](business-rules.md), to validate with the team and the supervising teacher |
 | D-14 | Machine learning library (bonus) | Postponed: to be decided when the module starts |
 
-Decided on 2026-11-03 and moved to [Team decisions](#team-decisions-pending-confirmation): D-01, D-02, D-05, D-06.
+Decided on 2026-11-03 and moved to [Team decisions](#team-decisions-pending-confirmation): D-02, D-05, D-06. D-01 is decided too but stays here until the licence of the wrapper is settled.
 
 ## Ambiguities in the project sheet
 
@@ -50,7 +51,7 @@ Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go bey
 | Authentication | Built in the API: FastAPI, JWT of about 15 minutes, revocable refresh token in an `HttpOnly` cookie, argon2id. Keycloak dropped | A-06 |
 | Processing | Collection and evaluation run as scheduled tasks in the API; no worker container. Evaluation runs right after each collection | D-05 |
 | Collection | Live only. Two profiles switched by configuration: Île-de-France every 30 s (1 credit per request) or metropolitan France every 120 s (3 credits). No historical data | D-05 |
-| Mapping and CI | Leaflet with react-leaflet; GitHub Actions | D-01, D-02 |
+| Mapping and CI | Leaflet (the `react-leaflet` wrapper depends on its licence, see D-01); GitHub Actions, scored in [technology choices](technology-choices.md) | D-01, D-02 |
 | Alerts | Aircraft, rule, date and time, message mandatory; observed value, threshold and criticality optional | A-03 |
 | Dashboard | Active alerts, tracked aircraft, alert statistics, collection state. Flight statistics: duration and distance, altitude and speed, number of observations | A-04 |
 | Scope | Every requirement of the specifications is to be developed, including flight statistics (BF-08), alert configuration (UC-05) and account management (UC-06) | C-01, C-04 |

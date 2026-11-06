@@ -39,9 +39,9 @@ See the [roadmap](ROADMAP.md) for the steps and next actions.
 | Backend / API | Python 3.11+, FastAPI | Set by the project sheet |
 | ORM and migrations | SQLAlchemy 2.0 (async), Alembic | Decided |
 | Frontend | React 19, TypeScript, Vite | Decided |
-| Mapping | Open-source library, `TBD` | Open |
+| Mapping | Leaflet (BSD-2-Clause) | Decided, wrapper to confirm |
 | Versioning | Git, hosted on GitHub | In place |
-| CI/CD | `TBD` | Open |
+| CI/CD | GitHub Actions | Decided, workflow to write |
 | Containers | Docker | Set by the project sheet |
 | Python tests and linting | pytest (asyncio, cov, xdist), ruff; minimum 80% coverage | Decided |
 | Frontend tests | Vitest, Testing Library, Playwright; minimum 80% coverage | Decided |

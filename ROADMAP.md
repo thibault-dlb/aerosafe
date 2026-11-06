@@ -43,6 +43,7 @@ From the project sheet:
 - [ ] Validate the UML diagrams drafted in `docs/uml/` (step 2, deliverable 1) and confirm the [team decisions](docs/open-points.md) with the supervising teacher
 - [ ] Formalise the data model and the database design (step 2): relational schema, integrity constraints, indexes
 - [ ] Validate the proposed thresholds and calculations of rules R1 to R5 in [business rules](docs/business-rules.md) (§6: "second stage"; see D-04)
+- [x] Choose the mapping library and the CI/CD tool using a written justification (Leaflet, GitHub Actions; wrapper licence to confirm, D-01)
 - [ ] Set up the CI pipeline with GitHub Actions (step 7)
 - [ ] Confirm with the supervising teacher the team's answers to the ambiguities of the sheet (A-01 to A-04 in [open points](docs/open-points.md))
 - [x] Read the OpenSky terms of use (see [OpenSky Network](docs/opensky.md))

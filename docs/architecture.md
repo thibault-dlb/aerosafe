@@ -10,7 +10,7 @@ The detailed architecture is `TBD`: it is produced during the design phase, incl
 | --- | --- | --- |
 | Authentication | Accounts and roles (User / Supervisor), part of the API | FastAPI, JWT, argon2id |
 | Gateway | Single entry point: serves the web interface and routes `/api` to the API | Nginx |
-| Web interface | Lookup, analysis and supervision | React, TypeScript, Leaflet (react-leaflet) |
+| Web interface | Lookup, analysis and supervision | React, TypeScript, Leaflet (React wrapper depends on its licence, D-01) |
 | API | Exposes business services and data | Python, FastAPI |
 | Database | Stores aircraft, observations and alerts | PostgreSQL |
 | Business rules engine | Evaluates rules R1 to R5 and generates alerts | Python |
