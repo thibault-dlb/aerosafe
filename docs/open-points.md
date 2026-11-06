@@ -6,8 +6,8 @@ Items the reference documents do not settle. The [project sheet](../Fiche_projet
 
 | ID | Topic | Status |
 | --- | --- | --- |
-| D-01 | Mapping library | Not decided. The sheet only requires trajectories to be shown on a map (§5) |
-| D-02 | CI/CD tool | Not decided. The sheet asks for a CI/CD pipeline (step 7) without naming a tool |
+| D-01 | Mapping library | Leaflet, decided on 2026-11-03 and scored against the grid in [technology choices](technology-choices.md#mapping-library-leaflet). Open: the `react-leaflet` wrapper is under the Hippocratic License 2.1, which is not an open-source licence, so Leaflet would be used directly |
+| D-02 | CI/CD tool | GitHub Actions, decided on 2026-11-03 and scored against the grid in [technology choices](technology-choices.md#cicd-tool-github-actions). The workflow file is still to write |
 | D-04 | Thresholds, units and calculations of rules R1 to R5 | The sheet defers them to "a second stage" (§6) |
 | D-05 | Rule evaluation frequency | Not specified. The sheet does not say that rules are evaluated periodically |
 | D-06 | How observations are grouped into flights | Not specified. The sheet speaks of reconstructing trajectories (§5) and names no Flight entity or continuity criterion |

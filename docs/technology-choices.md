@@ -33,11 +33,11 @@ Technical and organisational choices are judged against these weighted criteria.
 | Package managers | uv (Python), pnpm (frontend) | Decided on 2026-11-03 | Marine Nationale standard |
 | Python test plugins | pytest-asyncio, pytest-cov, pytest-xdist | Decided on 2026-11-03 | See below |
 | Frontend tests | Vitest and Testing Library (unit), Playwright (end to end) | Decided on 2026-11-03 | See below |
-| Authentication | Keycloak, OpenID Connect (authorization code flow) | Decided on 2026-11-03 | Marine Nationale standard, see below |
+| Authentication | Built in the API: FastAPI, short-lived JWT, refresh token, argon2id | Decided on 2026-11-03 | The project sheet lists it as a development task, see below |
 | Cache | Redis | Deferred | Adopted only if a need appears, see below |
-| Mapping library | `TBD` | Open | Must be open source; use the grid |
-| CI/CD tool | `TBD` | Open | Use the grid |
-| AI library (bonus) | `TBD` | Open | Python machine learning library |
+| Mapping library | Leaflet (BSD-2-Clause) | Decided on 2026-11-03, scored grid added | See below. The react-leaflet wrapper is still to confirm (licence) |
+| CI/CD tool | GitHub Actions | Decided on 2026-11-03, scored grid added | See below |
+| AI library (bonus) | `TBD` | Postponed | To be decided when the module starts |
 
 ## Frontend: React with TypeScript
 
@@ -79,29 +79,62 @@ On 2026-11-03 the following choices were made. They were not compared against th
 
 ## Authentication
 
-On 2026-11-03 authentication was delegated to an identity provider instead of being built in the API. It was not compared against the grid: it follows the Marine Nationale standard for authentication.
+On 2026-11-03 the team chose to build authentication in the API. An identity provider (Keycloak) was considered first and dropped, because the project sheet lists "authentication and role management" among the development tasks (step 3, A-06).
 
 | Topic | Choice | Notes |
 | --- | --- | --- |
-| Identity provider | Keycloak | Open source (Apache 2.0), one realm for AeroSafe, run as a Docker container |
-| Protocol | OpenID Connect, authorization code flow | The login page is the one provided by Keycloak |
-| Frontend | `oidc-client-ts` | Tokens kept in `sessionStorage`, refreshed before they expire |
-| API | FastAPI with `OAuth2AuthorizationCodeBearer`, JWT validated with `python-jose` | Signing keys (JWKS) fetched from Keycloak and cached in memory |
-| Passwords | Hashed and stored by Keycloak | The API never sees a password (NF-02) |
-| Roles | `User` and `Supervisor` realm roles | Read from the token and checked by each restricted endpoint (BF-02) |
+| Passwords | argon2id | OWASP recommendation; never stored or logged in clear text (NF-02) |
+| Access token | JWT, valid about 15 minutes | Signed by the API; carries the user identifier and the role |
+| Refresh token | Opaque random value in an `HttpOnly` cookie | Only its hash is stored in the database, so it can be revoked (logout, deactivated or anonymised account) |
+| API | FastAPI security utilities, JWT handled with a maintained library | Library `TBD` when implemented (`python-jose` is no longer actively maintained) |
+| Frontend | Login form, access token kept in memory | Refreshed silently through the cookie before it expires |
+| Roles | `User` and `Supervisor`, from the `R_ROLE` reference table | Read from the token and checked by each restricted endpoint (BF-02) |
 
 **Consequences:**
 
-- The API and the frontend need no password handling code and no login form.
-- Account creation, deactivation and deletion (BF-14, C-02, C-05) can use the Keycloak administration console or API, so the answer to C-02 decides how much account management the application has to build.
-- Keycloak adds a container and needs its own database schema, which can live in the same PostgreSQL server.
-- The JWKS cache is held in memory, so this choice does not require Redis.
-- The project sheet lists authentication and role management among the development tasks (step 3). Delegating them to Keycloak reduces that work to configuration and integration, which must be justified at the defence (A-06).
+- The application owns the account lifecycle: sign-up (role `User`), login, logout, role change and deactivation by the Supervisor (BF-14, C-02).
+- Account deletion is an anonymisation, never a physical delete (C-05). See [database conventions](database-conventions.md) §10.
+- Throttling of failed logins and password rules must be implemented and tested.
+- No identity provider container is needed. The JWT is verified with a secret held in the environment, so this choice does not require Redis.
 
-## Mapping library
+## Mapping library: Leaflet
 
-`TBD`. The project sheet only requires trajectories to be shown on a map. The specifications add that the library must be open source and chosen with the grid.
+Scores from 1 (poor) to 5 (excellent), weighted with the grid. Total out of 5. The scores are one member's assessment: the "Team skills" row must be confirmed by the group.
 
-## CI/CD tool
+| Criterion | Weight | Leaflet | MapLibre GL JS | OpenLayers |
+| --- | --- | --- | --- | --- |
+| Functional fit | 25% | 4: markers, lines (trajectories), popups | 5: also 3D and vector tiles | 5: very complete GIS features |
+| Team skills | 20% | 5: simplest API, many tutorials | 3: more concepts to learn | 2: steep learning curve |
+| Stack integration | 15% | 4: plain JavaScript library, usable from a TypeScript class | 4: React wrappers exist | 4: no official React wrapper |
+| Maturity and support | 15% | 5: widely used since 2011 | 4: active, younger | 4: mature, smaller community |
+| Cost and licence | 15% | 5: free, BSD-2-Clause | 5: free, BSD-3-Clause | 5: free, BSD-2-Clause |
+| Portability and deployment | 10% | 5: bundled in the static build | 5: bundled in the static build | 5: bundled in the static build |
+| **Weighted total** | | **4.60** | 4.30 | 4.10 |
 
-`TBD`. The repository is hosted on GitHub.
+**Why Leaflet:** it covers what AeroSafe needs (aircraft markers, trajectory lines, popups with flight data, BF-07) with the simplest learning curve, which matters most given the deadlines. Map tiles come from OpenStreetMap, whose data is under the ODbL: the credit "OpenStreetMap contributors" must be shown on the map. The public tile servers are not meant for heavy traffic, so they are fine for a demonstration but a tile provider would be needed beyond it.
+
+**Trade-off:** no 3D view. If a 3D trajectory view is wanted later, MapLibre GL JS is the fallback.
+
+**Licence point to settle (open):** the team chose Leaflet "with react-leaflet" on 2026-11-03. Leaflet is BSD-2-Clause, but `react-leaflet` 5.0.0 and `@react-leaflet/core` 3.0.0 are published under the Hippocratic License 2.1. That is an ethical-source licence: it is not an OSI-approved open-source licence and it restricts some uses. The specifications ask for an open-source mapping library and for libraries that allow redistribution of the source code (§IV.2, §VII.3). Proposal: use Leaflet directly, wrapped in one TypeScript class (for example a map service that draws markers and trajectories) called from a small React component. This also fits the rule that everything outside components uses classes. Record the final choice and its licence in [dependencies](dependencies.md).
+
+## CI/CD tool: GitHub Actions
+
+Same scale and weights as above.
+
+| Criterion | Weight | GitHub Actions | GitLab CI | Jenkins |
+| --- | --- | --- | --- | --- |
+| Functional fit | 25% | 5: runs tests on every push and pull request | 4: needs the repository mirrored to GitLab | 4: everything possible, more to configure |
+| Team skills | 20% | 4: YAML file, many examples | 3: YAML, new platform | 2: server administration |
+| Stack integration | 15% | 5: built into GitHub, ready-made Python, Node and Docker actions | 4: Docker-based | 4: plugins |
+| Maturity and support | 15% | 5 | 5 | 5 |
+| Cost and licence | 15% | 4: free monthly minutes for private repositories | 4: free monthly minutes | 5: free, but needs a server |
+| Portability and deployment | 10% | 5: hosted, nothing to install | 5: hosted | 3: server to host and maintain |
+| **Weighted total** | | **4.65** | 4.05 | 3.80 |
+
+**Why GitHub Actions:** the repository is already on GitHub, so CI runs next to the pull requests with nothing to install, and the pipeline is a YAML file versioned with the code. A workflow in `.github/workflows/` runs on every push and every pull request, since the specifications want the tests run on every change (§VII.1):
+
+- backend: `ruff check` and `pytest` with the 80% coverage threshold;
+- frontend: `pnpm lint`, `pnpm typecheck` and `pnpm test:unit` with the 80% coverage threshold;
+- end-to-end tests (Playwright) and the Docker build, if the free minutes allow.
+
+**Trade-off:** free minutes are limited for private repositories, so the pipeline stays short and the slowest jobs can be limited to pull requests to `develop`. The workflow file does not exist yet: `.github/` only holds `CODEOWNERS`.

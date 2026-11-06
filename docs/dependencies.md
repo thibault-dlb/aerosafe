@@ -33,7 +33,7 @@ Nothing is installed yet. This table lists what has been chosen so far. Check ea
 | pnpm | Frontend package manager | 12 | MIT |
 | Nginx | Gateway and static file server | 1.27 | BSD-2-Clause |
 | Docker | Containers | `TBD` | `TBD` |
-| Mapping library | Trajectory map | `TBD` | `TBD`, must be open source |
+| Leaflet | Trajectory map | `TBD` | BSD-2-Clause |
 
 ## Data source
 

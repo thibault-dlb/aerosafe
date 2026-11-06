@@ -43,7 +43,7 @@ From the project sheet:
 - [ ] Validate the UML diagrams drafted in `docs/uml/` (step 2, deliverable 1) and confirm the [team decisions](docs/open-points.md) with the supervising teacher
 - [ ] Formalise the data model and the database design (step 2): relational schema, integrity constraints, indexes
 - [ ] Define the thresholds and calculations of rules R1 to R5, and tell R1 from R2 (§6: "second stage"; see A-01)
-- [ ] Choose the mapping library and the CI/CD tool using a written justification
+- [x] Choose the mapping library and the CI/CD tool using a written justification (Leaflet, GitHub Actions; wrapper licence to confirm)
 - [ ] Set up the CI pipeline (step 7)
 - [ ] Settle the ambiguities of the sheet with the supervising teacher (A-01 to A-06 in [open points](docs/open-points.md))
 
