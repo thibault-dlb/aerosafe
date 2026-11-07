@@ -17,9 +17,14 @@ class RoleCode:
 
 @dataclass(frozen=True)
 class CurrentUser:
-    """The authenticated caller, read from the access token."""
+    """The authenticated caller.
+
+    `id` is the internal key, for foreign keys only. `public_id` is the ULID: the only one
+    that may appear in a token, a URL or a response.
+    """
 
     id: int
+    public_id: str
     role: str
 
 

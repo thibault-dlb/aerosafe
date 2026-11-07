@@ -5,6 +5,7 @@ import httpx
 import pytest
 from fastapi import Depends, FastAPI
 
+from core.models import new_ulid
 from core.security import CurrentUser, RoleCode, get_current_user, require_role
 
 
@@ -39,14 +40,16 @@ async def test_a_request_is_refused_until_authentication_exists(application: Fas
 
 
 async def test_the_wrong_role_gets_403(application: FastAPI) -> None:
-    application.dependency_overrides[get_current_user] = lambda: CurrentUser(1, RoleCode.USER)
+    application.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        1, new_ulid(), RoleCode.USER
+    )
 
     assert (await call(application)).status_code == 403
 
 
 async def test_the_right_role_goes_through(application: FastAPI) -> None:
     application.dependency_overrides[get_current_user] = lambda: CurrentUser(
-        7, RoleCode.SUPERVISOR
+        7, new_ulid(), RoleCode.SUPERVISOR
     )
 
     response = await call(application)
