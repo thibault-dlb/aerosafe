@@ -65,5 +65,10 @@ def test_migrations_form_a_single_chain() -> None:
     assert len(ScriptDirectory.from_config(config).get_heads()) == 1
 
 
+@pytest.mark.parametrize("name", ["AERONEF", "VOL", "ALERTE", "UTILISATEUR"])
+def test_tables_reached_by_the_api_have_a_public_identifier(name: str) -> None:
+    assert "CD_ULID" in Base.metadata.tables[name].columns
+
+
 def test_new_ulid_has_the_public_identifier_format() -> None:
     assert len(new_ulid()) == 26

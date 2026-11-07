@@ -19,6 +19,7 @@ def upgrade() -> None:
         """
         CREATE TABLE "UTILISATEUR" (
             "ID" BIGINT GENERATED ALWAYS AS IDENTITY,
+            "CD_ULID" TEXT NOT NULL,
             "LN_EMAIL" TEXT NOT NULL,
             "LB_HASH_MOT_DE_PASSE" TEXT,
             "ID_ROLE" BIGINT NOT NULL,
@@ -28,7 +29,9 @@ def upgrade() -> None:
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
             deleted_at TIMESTAMP WITH TIME ZONE,
             CONSTRAINT pk_utilisateur PRIMARY KEY ("ID"),
+            CONSTRAINT ck_utilisateur_ulid_format CHECK ("CD_ULID" ~ '^[0-9A-HJKMNP-TV-Z]{26}$'),
             CONSTRAINT ck_utilisateur_password_unless_anonymised CHECK ("LB_HASH_MOT_DE_PASSE" IS NOT NULL OR "DT_ANONYMISATION" IS NOT NULL),
+            CONSTRAINT uq_utilisateur_cd_ulid UNIQUE ("CD_ULID"),
             CONSTRAINT uq_utilisateur_ln_email UNIQUE ("LN_EMAIL"),
             CONSTRAINT fk_utilisateur_id_role FOREIGN KEY("ID_ROLE") REFERENCES "R_ROLE" ("ID") ON DELETE RESTRICT
         )
@@ -38,7 +41,8 @@ def upgrade() -> None:
     op.execute("CREATE TRIGGER trg_utilisateur_updated_at BEFORE UPDATE ON \"UTILISATEUR\" FOR EACH ROW EXECUTE FUNCTION set_updated_at()")
     op.execute("COMMENT ON TABLE \"UTILISATEUR\" IS 'Compte applicatif, créé à l''inscription ; anonymisé sur demande, jamais supprimé.'")
     op.execute("COMMENT ON COLUMN \"UTILISATEUR\".\"ID\" IS 'Identifiant technique de l''utilisateur.'")
-    op.execute("COMMENT ON COLUMN \"UTILISATEUR\".\"LN_EMAIL\" IS 'Adresse e-mail de connexion, unique ; remplacée à l''anonymisation par anonyme-<ID>@aerosafe.invalid.'")
+    op.execute("COMMENT ON COLUMN \"UTILISATEUR\".\"CD_ULID\" IS 'Identifiant ULID exposé par l''API, généré par l''application.'")
+    op.execute("COMMENT ON COLUMN \"UTILISATEUR\".\"LN_EMAIL\" IS 'Adresse e-mail de connexion, unique ; remplacée à l''anonymisation par anonyme-<CD_ULID>@aerosafe.invalid.'")
     op.execute("COMMENT ON COLUMN \"UTILISATEUR\".\"LB_HASH_MOT_DE_PASSE\" IS 'Empreinte argon2id du mot de passe ; NULL seulement après anonymisation.'")
     op.execute("COMMENT ON COLUMN \"UTILISATEUR\".\"ID_ROLE\" IS 'Rôle de l''utilisateur.'")
     op.execute("COMMENT ON COLUMN \"UTILISATEUR\".\"DT_ANONYMISATION\" IS 'Date d''anonymisation du compte ; NULL si le compte n''est pas anonymisé.'")

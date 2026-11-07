@@ -12,13 +12,21 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from core.models import Base, TimestampMixin, primary_key, table_args
+from core.models import (
+    ULID_PATTERN,
+    Base,
+    PublicIdMixin,
+    TimestampMixin,
+    primary_key,
+    table_args,
+)
 from models.reference import Role
 
 
-class User(TimestampMixin, Base):
+class User(PublicIdMixin, TimestampMixin, Base):
     __tablename__ = "UTILISATEUR"
     __table_args__ = table_args(
+        CheckConstraint(f"\"CD_ULID\" ~ '{ULID_PATTERN}'", name="ulid_format"),
         # Only an anonymised account may lose its password hash.
         CheckConstraint(
             '"LB_HASH_MOT_DE_PASSE" IS NOT NULL OR "DT_ANONYMISATION" IS NOT NULL',
@@ -36,7 +44,7 @@ class User(TimestampMixin, Base):
         unique=True,
         comment=(
             "Adresse e-mail de connexion, unique ; "
-            "remplacée à l'anonymisation par anonyme-<ID>@aerosafe.invalid."
+            "remplacée à l'anonymisation par anonyme-<CD_ULID>@aerosafe.invalid."
         ),
     )
     password_hash: Mapped[str | None] = mapped_column(

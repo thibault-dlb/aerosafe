@@ -15,7 +15,7 @@ This is the logical schema derived from the [class diagram](uml/class-diagram.md
 | Observation | `OBSERVATION` | Business | One OpenSky state vector: last contact, position time, PostGIS position, altitude, speed, heading, on ground |
 | Rule | `REGLE` | Business | Code, description, threshold, unit, default criticality; thresholds editable by the Supervisor (UC-05) |
 | Alert | `ALERTE` | Business | Public ULID, aircraft, rule, trigger time, end of episode, observed value, threshold copied at trigger time, message, criticality, processing |
-| User | `UTILISATEUR` | Business | Email, argon2id password hash, role; anonymised, never deleted (A-06, D-17) |
+| User | `UTILISATEUR` | Business | Public ULID, email, argon2id password hash, role; anonymised, never deleted (A-06, D-17) |
 | RefreshToken | `JETON_RAFRAICHISSEMENT` | Business | Hash of a refresh token, expiry, revocation |
 | Role | `R_ROLE` | Reference | `USER`, `SUPERVISOR` |
 | Criticality | `R_CRITICITE` | Reference | `LOW`, `MEDIUM`, `HIGH` |
@@ -105,6 +105,7 @@ erDiagram
     }
     UTILISATEUR {
         bigint ID PK
+        text CD_ULID UK
         text LN_EMAIL UK
         text LB_HASH_MOT_DE_PASSE
         bigint ID_ROLE FK
@@ -196,7 +197,7 @@ The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, 
 |---|---|
 | All | `ID` is `BIGINT GENERATED ALWAYS AS IDENTITY` |
 | All | Every foreign key is `ON DELETE RESTRICT`. Nothing is deleted physically: business tables use `deleted_at`, reference tables `is_active`, users are anonymised |
-| `AERONEF`, `VOL`, `ALERTE` | `CD_ULID` is unique and has 26 Crockford base 32 characters; the application generates it |
+| `AERONEF`, `VOL`, `ALERTE`, `UTILISATEUR` | `CD_ULID` is unique and has 26 Crockford base 32 characters; the application generates it |
 | `AERONEF` | `CD_ICAO24` is unique and has 6 lowercase hexadecimal characters |
 | `VOL` | `DT_FIN` is on or after `DT_DEBUT` when known, since a flight can hold a single observation |
 | `OBSERVATION` | Unique pair (`ID_AERONEF`, `DT_DERNIER_CONTACT`), so the same state vector is never stored twice |
@@ -255,7 +256,7 @@ These thresholds are a proposal (D-04). The calculation window (10 s ≤ Δt ≤
 
 ## Personal data
 
-Personal data is limited to `UTILISATEUR`: email address and password hash. A deletion request anonymises the row (email replaced by `anonyme-<ID>@aerosafe.invalid`, hash removed, `DT_ANONYMISATION` set, refresh tokens revoked) so that alerts processed by this user stay consistent. See [project terms](project-terms.md).
+Personal data is limited to `UTILISATEUR`: email address and password hash. A deletion request anonymises the row (email replaced by `anonyme-<CD_ULID>@aerosafe.invalid`, hash removed, `DT_ANONYMISATION` set, refresh tokens revoked) so that alerts processed by this user stay consistent. See [project terms](project-terms.md).
 
 The email address is not encrypted: this is an educational project with few accounts, and the password is already hashed.
 
@@ -269,7 +270,7 @@ The email address is not encrypted: this is an educational project with few acco
 | Reference data | Airports, airlines and models move to `R_AEROPORT`, `R_COMPAGNIE` and `R_MODELE` |
 | Search | "Contains" search with `pg_trgm` |
 | Audit | `audit_logs` records threshold changes and anonymisations. Processing an alert is already traced on `ALERTE` |
-| Public identifiers | ULID on `AERONEF`, `VOL` and `ALERTE` |
+| Public identifiers | ULID on `AERONEF`, `VOL`, `ALERTE` and `UTILISATEUR` |
 | Duplicate alerts | `DT_FIN_EPISODE` on `ALERTE` |
 
 ## Points to settle

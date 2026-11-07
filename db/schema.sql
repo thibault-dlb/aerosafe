@@ -140,6 +140,7 @@ CREATE TABLE REGLE (
 
 CREATE TABLE UTILISATEUR (
     ID                   BIGINT      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    CD_ULID              TEXT        NOT NULL UNIQUE CHECK (CD_ULID ~ '^[0-9A-HJKMNP-TV-Z]{26}$'),
     LN_EMAIL             TEXT        NOT NULL UNIQUE,
     LB_HASH_MOT_DE_PASSE TEXT        NULL,
     ID_ROLE              BIGINT      NOT NULL REFERENCES R_ROLE (ID) ON DELETE RESTRICT,
@@ -341,7 +342,8 @@ COMMENT ON COLUMN REGLE.deleted_at IS 'Date de suppression logique ; NULL si la 
 
 COMMENT ON TABLE UTILISATEUR IS 'Compte applicatif, créé à l''inscription ; anonymisé sur demande, jamais supprimé.';
 COMMENT ON COLUMN UTILISATEUR.ID IS 'Identifiant technique de l''utilisateur.';
-COMMENT ON COLUMN UTILISATEUR.LN_EMAIL IS 'Adresse e-mail de connexion, unique ; remplacée à l''anonymisation par anonyme-<ID>@aerosafe.invalid.';
+COMMENT ON COLUMN UTILISATEUR.CD_ULID IS 'Identifiant ULID exposé par l''API, généré par l''application.';
+COMMENT ON COLUMN UTILISATEUR.LN_EMAIL IS 'Adresse e-mail de connexion, unique ; remplacée à l''anonymisation par anonyme-<CD_ULID>@aerosafe.invalid.';
 COMMENT ON COLUMN UTILISATEUR.LB_HASH_MOT_DE_PASSE IS 'Empreinte argon2id du mot de passe ; NULL seulement après anonymisation.';
 COMMENT ON COLUMN UTILISATEUR.ID_ROLE IS 'Rôle de l''utilisateur.';
 COMMENT ON COLUMN UTILISATEUR.DT_ANONYMISATION IS 'Date d''anonymisation du compte ; NULL si le compte n''est pas anonymisé.';
