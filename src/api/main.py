@@ -7,11 +7,15 @@ from config.app import settings as app_settings
 from core.database import database
 from middlewares.requests import RequestLoggingMiddleware
 from routes.router import api_router, health_router
+from services.collection.scheduler import Scheduler
 
 
 @asynccontextmanager
 async def lifespan(_application: FastAPI) -> AsyncGenerator[None, None]:
+    scheduler = Scheduler()
+    await scheduler.start()
     yield
+    await scheduler.stop()
     await database.close()
 
 
