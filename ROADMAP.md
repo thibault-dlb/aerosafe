@@ -1,6 +1,6 @@
 # Roadmap
 
-Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-06.
+Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-07.
 
 Anything flagged `Not in the project sheet` comes from the specifications and is not binding. See [open points](docs/open-points.md).
 
@@ -9,8 +9,8 @@ The work is shared between the five group members in [team work split](docs/team
 ## Current status
 
 - The project sheet defines nine steps and three deliverables. It sets no milestones and no dates.
-- Only the project foundations exist: an API with a health check, an empty web interface, the container stack and the test tooling. No business feature has been developed.
-- Step 2 (design) is incomplete: the UML diagrams, the database design and the module organisation have not been produced.
+- The shared foundation exists: the container stack, the test tooling, the database models and migrations, and empty routes and pages for each work package. No business feature has been developed.
+- Step 2 (design) is in progress: the UML diagrams and the data model are drafted and must be validated.
 - There is no CI pipeline yet (step 7).
 
 ## Steps
@@ -18,8 +18,8 @@ The work is shared between the five group members in [team work split](docs/team
 | # | Step | Tasks (project sheet) | Status |
 | --- | --- | --- | --- |
 | 1 | Analysis and specification | Analyse requirements, identify actors and use cases, define features and business rules | Largely done; several items come from the specifications, not from the sheet |
-| 2 | Design | UML modelling, software architecture, database design, module organisation, technology choices | In progress: technology choices (mapping library, CI tool, authentication) and repository layout set; UML diagrams drafted in `docs/uml/` and to validate; relational schema not produced |
-| 3 | Development | Web application, interface, authentication and role management, alert system | Foundations only |
+| 2 | Design | UML modelling, software architecture, database design, module organisation, technology choices | In progress: technology choices (mapping library, CI tool, authentication) and repository layout set; UML diagrams and data model drafted and to validate; migrations written |
+| 3 | Development | Web application, interface, authentication and role management, alert system | Shared foundation in place; features to develop, see [team work split](docs/team-split.md) |
 | 4 | Testing and quality | Unit tests, integration tests, component checks, fixes and code improvements | Tooling in place (pytest, Vitest, Playwright); no business tests yet |
 | 5 | Documentation and evolution | Technical and functional documentation, maintenance, evolution, new features including AI | In progress: documentation skeleton |
 | 6 | Code and version management | Git, branch management, version management | In place: Git, branching strategy, pull requests |
@@ -43,9 +43,9 @@ The project sheet defines no milestone. The table below comes from the specifica
 From the project sheet:
 
 - [ ] Validate the UML diagrams drafted in `docs/uml/` (step 2, deliverable 1) and confirm the [team decisions](docs/open-points.md) with the supervising teacher
-- [ ] Formalise the data model and the database design (step 2): relational schema, integrity constraints, indexes
+- [x] Formalise the data model and the database design (step 2): relational schema, integrity constraints, indexes
 - [ ] Validate the proposed thresholds and calculations of rules R1 to R5 in [business rules](docs/business-rules.md) (§6: "second stage"; see D-04)
-- [x] Choose the mapping library and the CI/CD tool using a written justification (Leaflet, GitHub Actions; wrapper licence to confirm, D-01)
+- [x] Choose the mapping library and the CI/CD tool using a written justification (Leaflet without its React wrapper, GitHub Actions)
 - [ ] Set up the CI pipeline with GitHub Actions (step 7)
 - [ ] Confirm with the supervising teacher the team's answers to the ambiguities of the sheet (A-01 to A-04 in [open points](docs/open-points.md))
 - [x] Read the OpenSky terms of use (see [OpenSky Network](docs/opensky.md))
@@ -53,7 +53,7 @@ From the project sheet:
 
 Repository housekeeping:
 
-- [ ] Lock `develop` on GitHub so that changes only arrive through pull requests approved by Thibault (the repository owner must do this)
+- [x] Lock `develop` on GitHub so that changes only arrive through pull requests approved by Thibault
 
 Not in the project sheet, to confirm with the supervising teacher:
 

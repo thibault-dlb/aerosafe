@@ -59,6 +59,7 @@ These are the only contact points. The owner implements them. The others call th
 | --- | --- | --- |
 | `get_current_user`, `require_role(...)` in `core/security.py` | Signature: Thibault. Implementation: Louis-Amaury, the only exception to `core/` | Every API work package |
 | Token provider of `ApiClient` | Louis-Amaury | Every frontend work package |
+| `Scheduler.start()`, `Scheduler.stop()` in `services/collection/scheduler.py` | Jules | `main.py`, at application start and stop |
 | `RulesEngine.evaluate(now)` | Sacha | Jules's scheduler, right after each collection |
 | `AlertService.statistics()` | Sacha | Jules's dashboard, which does not query `ALERTE` directly |
 | `components/alerts/AlertTable` | Sacha | Jules's dashboard |
@@ -69,9 +70,10 @@ These are the only contact points. The owner implements them. The others call th
 - **Branches.** Create them from an up-to-date `develop`. Open pull requests to `develop`, approved by Thibault only. Never push to `main` or `develop`.
 - **After a merge.** The branch is deleted, then created again from `develop` if the work package continues. Each member has one active branch at a time.
 - **Short pull requests.** One feature per pull request, to limit conflicts.
+- **Models.** `src/api/models/` only holds columns and relationships. Logic such as marking an alert as processed goes in the services of the work package. Read through `core/repository.py`, which skips soft-deleted rows.
 - **Need something in another member's area?** Ask its owner. Any schema change goes through Thibault, which avoids competing migrations.
 - **New dependency.** Add it in its own small pull request, with its licence in [dependencies](dependencies.md).
-- **Commit scopes.** `data`, `auth`, `collection`, `dashboard`, `rules`, `alerts`, `aircraft`, `flights`, `ci`.
+- **Commit scopes.** `data`, `api`, `front`, `auth`, `collection`, `dashboard`, `rules`, `alerts`, `aircraft`, `flights`, `ci`.
 
 ## Order of work
 
