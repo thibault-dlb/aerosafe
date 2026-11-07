@@ -33,7 +33,7 @@ class AuditAction(Base):
 
 
 class AuditLog(Base):
-    """Append-only: a database trigger rejects every UPDATE and DELETE."""
+    """Append-only: database triggers reject UPDATE, DELETE and TRUNCATE."""
 
     __tablename__ = "audit_logs"
     __table_args__ = table_args(

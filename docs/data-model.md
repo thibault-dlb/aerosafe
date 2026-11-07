@@ -4,7 +4,7 @@ Source: project sheet §4 to §6; specifications §VI.1.2, §VI.1.4, §VI.1.9 an
 
 This is the logical schema derived from the [class diagram](uml/class-diagram.md). It follows the [database conventions](database-conventions.md). The SQL is in [schema.sql](../db/schema.sql).
 
-**Status: draft for team review.** The schema is implemented by the SQLAlchemy models in `src/api/models/` and the Alembic migrations in `src/api/database/migrations/` (one table per migration, each with its `down`, reference data in its own migration). These are now the source of truth. `schema.sql` stays as the reviewed design and is not applied as is. Once a migration is merged it is never changed: a correction is a new migration (conventions §9).
+**Status: draft for team review.** The schema is implemented by the SQLAlchemy models in `src/api/models/` and the Alembic migrations in `src/api/database/migrations/` (one table or reference list per migration, each with its `down`). These are now the source of truth. `schema.sql` stays as the reviewed design and is not applied as is. Once a migration is merged it is never changed: a correction is a new migration (conventions §9).
 
 ## Tables
 
@@ -205,7 +205,7 @@ The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, 
 | `REGLE` | `CD_REGLE` is unique and free text, so R6 can be added with an `INSERT` (NF-06); `NB_SEUIL` ≥ 0 |
 | `ALERTE` | `DT_TRAITEMENT` and `ID_UTILISATEUR` are both set or both empty (C-03) |
 | `ALERTE` | `DT_FIN_EPISODE` is on or after `DT_DECLENCHEMENT`; an aircraft has at most one open alert per rule, so a situation that lasts raises a single alert, also after a restart of the engine |
-| `audit_logs` | Append-only: a trigger rejects `UPDATE` and `DELETE` |
+| `audit_logs` | Append-only: triggers reject `UPDATE`, `DELETE` and `TRUNCATE`, and the application user only has `SELECT` and `INSERT` |
 | `UTILISATEUR` | `LN_EMAIL` is unique; the password hash may only be empty once the account is anonymised |
 | `JETON_RAFRAICHISSEMENT` | `CD_HASH_JETON` is unique; only the hash is stored |
 

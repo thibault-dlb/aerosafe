@@ -36,6 +36,7 @@ def upgrade() -> None:
     op.execute("CREATE INDEX idx_audit_table_record ON audit_logs (table_name, record_id)")
     op.execute("CREATE INDEX idx_audit_user ON audit_logs (user_id)")
     op.execute("CREATE TRIGGER trg_audit_logs_append_only BEFORE UPDATE OR DELETE ON audit_logs FOR EACH ROW EXECUTE FUNCTION reject_audit_change()")
+    op.execute("CREATE TRIGGER trg_audit_logs_no_truncate BEFORE TRUNCATE ON audit_logs FOR EACH STATEMENT EXECUTE FUNCTION reject_audit_change()")
     op.execute("COMMENT ON TABLE audit_logs IS 'Journal d''audit en ajout seul : changements de seuil et anonymisations.'")
     op.execute("COMMENT ON COLUMN audit_logs.id IS 'Identifiant technique de l''événement.'")
     op.execute("COMMENT ON COLUMN audit_logs.table_name IS 'Nom de la table concernée.'")
