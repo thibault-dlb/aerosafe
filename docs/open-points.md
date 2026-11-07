@@ -1,12 +1,12 @@
 # Open points
 
-Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-06.
+Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-07.
 
 ## Pending decisions
 
 | ID | Topic | Status |
 | --- | --- | --- |
-| D-01 | Mapping library | Leaflet, decided on 2026-11-03 and scored against the grid in [technology choices](technology-choices.md#mapping-library-leaflet). Open: the `react-leaflet` wrapper is under the Hippocratic License 2.1, which is not an open-source licence, so Leaflet would be used directly |
+| D-01 | Mapping library | Leaflet, decided on 2026-11-03 and scored against the grid in [technology choices](technology-choices.md#mapping-library-leaflet). The `react-leaflet` wrapper is under the Hippocratic License 2.1, which is not an open-source licence, so Leaflet is used directly through `MapService` |
 | D-04 | Thresholds, units and calculations of rules R1 to R5 | The sheet defers them to "a second stage" (§6). Values proposed in [business rules](business-rules.md), to validate with the team and the supervising teacher |
 | D-14 | Machine learning library (bonus) | Postponed: to be decided when the module starts |
 

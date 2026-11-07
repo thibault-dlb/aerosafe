@@ -2,7 +2,7 @@
 
 The project keeps an up-to-date list of its dependencies and their licences (§V.1). Only libraries whose licence allows educational use and redistribution of the source code may be used (§VII.3).
 
-Nothing is installed yet. This table lists what has been chosen so far. Check each licence against the exact version when it is adopted.
+This table lists what has been chosen so far. Check each licence against the exact version when it is adopted.
 
 | Component | Purpose | Version | Licence |
 | --- | --- | --- | --- |
@@ -12,6 +12,11 @@ Nothing is installed yet. This table lists what has been chosen so far. Check ea
 | SQLAlchemy | ORM | 2.0 (target) | MIT |
 | asyncpg | Asynchronous PostgreSQL driver | `TBD` | Apache-2.0 |
 | Alembic | Database migrations | `TBD` | MIT |
+| GeoAlchemy2 | PostGIS types for SQLAlchemy and Alembic | 0.21 | MIT |
+| python-ulid | Public identifiers | 4.1 | MIT |
+| argon2-cffi | Password hashing | 25.1 | MIT |
+| PyJWT | Access tokens | 2.15 | MIT |
+| APScheduler | Periodic collection and rule evaluation | 3.11 | MIT |
 | React | Frontend | 19 (target) | MIT |
 | TypeScript | Frontend language | `TBD` | Apache-2.0 |
 | Vite | Frontend build tool | `TBD` | MIT |
@@ -34,7 +39,8 @@ Nothing is installed yet. This table lists what has been chosen so far. Check ea
 | pnpm | Frontend package manager | 12 | MIT |
 | Nginx | Gateway and static file server | 1.27 | BSD-2-Clause |
 | Docker | Containers | `TBD` | `TBD` |
-| Leaflet | Trajectory map | `TBD` | BSD-2-Clause |
+| Leaflet | Trajectory map, used directly without `react-leaflet` (D-01) | 1.9 | BSD-2-Clause |
+| @types/leaflet | Leaflet type definitions | 1.9 | MIT |
 
 ## Data source
 
