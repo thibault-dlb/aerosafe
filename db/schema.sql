@@ -1,8 +1,7 @@
 -- AeroSafe database schema (PostgreSQL 17 + PostGIS)
--- Draft for team review. See docs/data-model.md.
+-- Reviewed design, not applied as is. The source of truth is now src/api/models and
+-- src/api/database/migrations, which quote the uppercase names. See docs/data-model.md.
 -- Follows docs/database-conventions.md and the team decisions of 2026-11-03 (docs/team-decisions).
--- Once validated it becomes Alembic migrations: one change per migration, each with its down,
--- and the reference data in a separate migration.
 
 -- PostGIS needs a superuser: src/api/docker/init-db.sh creates both extensions first,
 -- so these lines change nothing there.

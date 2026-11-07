@@ -4,7 +4,7 @@ Source: project sheet §4 to §6; specifications §VI.1.2, §VI.1.4, §VI.1.9 an
 
 This is the logical schema derived from the [class diagram](uml/class-diagram.md). It follows the [database conventions](database-conventions.md). The SQL is in [schema.sql](../db/schema.sql).
 
-**Status: draft for team review.** Once validated, `schema.sql` is split into Alembic migrations in `src/api/database/migrations/` (one change per migration, each with its `down`, reference data in its own migration). It is not applied as is.
+**Status: draft for team review.** The schema is implemented by the SQLAlchemy models in `src/api/models/` and the Alembic migrations in `src/api/database/migrations/` (one table per migration, each with its `down`, reference data in its own migration). These are now the source of truth. `schema.sql` stays as the reviewed design and is not applied as is. Once a migration is merged it is never changed: a correction is a new migration (conventions §9).
 
 ## Tables
 
@@ -278,3 +278,4 @@ The email address is not encrypted: this is an educational project with few acco
 |---|---|
 | `on_ground` | The team rules use it but the class diagram does not list it. Added here as `BL_AU_SOL`; the class diagram should be updated |
 | Default criticality per rule | The class diagram links criticality to the alert only. `REGLE.ID_CRITICITE` is added so the engine knows which criticality to copy |
+| Uppercase names | PostgreSQL folds unquoted names to lowercase, so `schema.sql` as written would create `r_role`, not `R_ROLE`. The conventions require uppercase, so the migrations and the models quote every uppercase name. Raw SQL must quote them too: `SELECT "CD_ROLE" FROM "R_ROLE"`. Technical names stay lowercase and unquoted |

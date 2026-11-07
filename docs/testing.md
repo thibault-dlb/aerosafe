@@ -19,6 +19,7 @@ Both unit test suites fail below 80% coverage. The CI tool is `TBD`.
 | `./run_tests.ps1` or `./run_tests.sh` | Repository root | Python test runner with a report per suite (4 workers by default). Options: `-Local` / `--local`, `-Suite unit\|api` / `--suite unit\|api`, `-Verbose` / `--verbose`. Uses the API container when it runs, otherwise uv |
 | `uv run pytest` | `src/api` | Python tests with coverage |
 | `uv run ruff check .` | `src/api` | Python linting |
+| `uv run alembic check` | `src/api` | Compares the models with the migrations; the database must be running |
 | `pnpm test:unit` | `src/front` | Frontend unit tests with coverage |
 | `pnpm lint` | `src/front` | Frontend linting |
 | `pnpm typecheck` | `src/front` | TypeScript type check |
