@@ -4,7 +4,7 @@ Source: project sheet §4 to §6; specifications §VI.1.2, §VI.1.4, §VI.1.9 an
 
 This is the logical schema derived from the [class diagram](uml/class-diagram.md). It follows the [database conventions](database-conventions.md). The SQL is in [schema.sql](../db/schema.sql).
 
-**Status: draft for team review.** Once validated, `schema.sql` is split into Alembic migrations in `src/api/database/migrations/` (one change per migration, each with its `down`, reference data in its own migration). It is not applied as is.
+**Status: draft for team review.** The schema is implemented by the SQLAlchemy models in `src/api/models/` and the Alembic migrations in `src/api/database/migrations/` (one table or reference list per migration, each with its `down`). These are now the source of truth. `schema.sql` stays as the reviewed design and is not applied as is. Once a migration is merged it is never changed: a correction is a new migration (conventions §9).
 
 ## Tables
 
@@ -15,7 +15,7 @@ This is the logical schema derived from the [class diagram](uml/class-diagram.md
 | Observation | `OBSERVATION` | Business | One OpenSky state vector: last contact, position time, PostGIS position, altitude, speed, heading, on ground |
 | Rule | `REGLE` | Business | Code, description, threshold, unit, default criticality; thresholds editable by the Supervisor (UC-05) |
 | Alert | `ALERTE` | Business | Public ULID, aircraft, rule, trigger time, end of episode, observed value, threshold copied at trigger time, message, criticality, processing |
-| User | `UTILISATEUR` | Business | Email, argon2id password hash, role; anonymised, never deleted (A-06, D-17) |
+| User | `UTILISATEUR` | Business | Public ULID, email, argon2id password hash, role; anonymised, never deleted (A-06, D-17) |
 | RefreshToken | `JETON_RAFRAICHISSEMENT` | Business | Hash of a refresh token, expiry, revocation |
 | Role | `R_ROLE` | Reference | `USER`, `SUPERVISOR` |
 | Criticality | `R_CRITICITE` | Reference | `LOW`, `MEDIUM`, `HIGH` |
@@ -105,6 +105,7 @@ erDiagram
     }
     UTILISATEUR {
         bigint ID PK
+        text CD_ULID UK
         text LN_EMAIL UK
         text LB_HASH_MOT_DE_PASSE
         bigint ID_ROLE FK
@@ -196,7 +197,7 @@ The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, 
 |---|---|
 | All | `ID` is `BIGINT GENERATED ALWAYS AS IDENTITY` |
 | All | Every foreign key is `ON DELETE RESTRICT`. Nothing is deleted physically: business tables use `deleted_at`, reference tables `is_active`, users are anonymised |
-| `AERONEF`, `VOL`, `ALERTE` | `CD_ULID` is unique and has 26 Crockford base 32 characters; the application generates it |
+| `AERONEF`, `VOL`, `ALERTE`, `UTILISATEUR` | `CD_ULID` is unique and has 26 Crockford base 32 characters; the application generates it |
 | `AERONEF` | `CD_ICAO24` is unique and has 6 lowercase hexadecimal characters |
 | `VOL` | `DT_FIN` is on or after `DT_DEBUT` when known, since a flight can hold a single observation |
 | `OBSERVATION` | Unique pair (`ID_AERONEF`, `DT_DERNIER_CONTACT`), so the same state vector is never stored twice |
@@ -205,7 +206,7 @@ The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, 
 | `REGLE` | `CD_REGLE` is unique and free text, so R6 can be added with an `INSERT` (NF-06); `NB_SEUIL` ≥ 0 |
 | `ALERTE` | `DT_TRAITEMENT` and `ID_UTILISATEUR` are both set or both empty (C-03) |
 | `ALERTE` | `DT_FIN_EPISODE` is on or after `DT_DECLENCHEMENT`; an aircraft has at most one open alert per rule, so a situation that lasts raises a single alert, also after a restart of the engine |
-| `audit_logs` | Append-only: a trigger rejects `UPDATE` and `DELETE` |
+| `audit_logs` | Append-only: triggers reject `UPDATE`, `DELETE` and `TRUNCATE`, and the application user only has `SELECT` and `INSERT` |
 | `UTILISATEUR` | `LN_EMAIL` is unique; the password hash may only be empty once the account is anonymised |
 | `JETON_RAFRAICHISSEMENT` | `CD_HASH_JETON` is unique; only the hash is stored |
 
@@ -255,7 +256,7 @@ These thresholds are a proposal (D-04). The calculation window (10 s ≤ Δt ≤
 
 ## Personal data
 
-Personal data is limited to `UTILISATEUR`: email address and password hash. A deletion request anonymises the row (email replaced by `anonyme-<ID>@aerosafe.invalid`, hash removed, `DT_ANONYMISATION` set, refresh tokens revoked) so that alerts processed by this user stay consistent. See [project terms](project-terms.md).
+Personal data is limited to `UTILISATEUR`: email address and password hash. A deletion request anonymises the row (email replaced by `anonyme-<CD_ULID>@aerosafe.invalid`, hash removed, `DT_ANONYMISATION` set, refresh tokens revoked) so that alerts processed by this user stay consistent. See [project terms](project-terms.md).
 
 The email address is not encrypted: this is an educational project with few accounts, and the password is already hashed.
 
@@ -269,7 +270,7 @@ The email address is not encrypted: this is an educational project with few acco
 | Reference data | Airports, airlines and models move to `R_AEROPORT`, `R_COMPAGNIE` and `R_MODELE` |
 | Search | "Contains" search with `pg_trgm` |
 | Audit | `audit_logs` records threshold changes and anonymisations. Processing an alert is already traced on `ALERTE` |
-| Public identifiers | ULID on `AERONEF`, `VOL` and `ALERTE` |
+| Public identifiers | ULID on `AERONEF`, `VOL`, `ALERTE` and `UTILISATEUR` |
 | Duplicate alerts | `DT_FIN_EPISODE` on `ALERTE` |
 
 ## Points to settle
@@ -278,3 +279,4 @@ The email address is not encrypted: this is an educational project with few acco
 |---|---|
 | `on_ground` | The team rules use it but the class diagram does not list it. Added here as `BL_AU_SOL`; the class diagram should be updated |
 | Default criticality per rule | The class diagram links criticality to the alert only. `REGLE.ID_CRITICITE` is added so the engine knows which criticality to copy |
+| Uppercase names | PostgreSQL folds unquoted names to lowercase, so `schema.sql` as written would create `r_role`, not `R_ROLE`. The conventions require uppercase, so the migrations and the models quote every uppercase name. Raw SQL must quote them too: `SELECT "CD_ROLE" FROM "R_ROLE"`. Technical names stay lowercase and unquoted |

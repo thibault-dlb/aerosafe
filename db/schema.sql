@@ -1,8 +1,7 @@
 -- AeroSafe database schema (PostgreSQL 17 + PostGIS)
--- Draft for team review. See docs/data-model.md.
+-- Reviewed design, not applied as is. The source of truth is now src/api/models and
+-- src/api/database/migrations, which quote the uppercase names. See docs/data-model.md.
 -- Follows docs/database-conventions.md and the team decisions of 2026-11-03 (docs/team-decisions).
--- Once validated it becomes Alembic migrations: one change per migration, each with its down,
--- and the reference data in a separate migration.
 
 -- PostGIS needs a superuser: src/api/docker/init-db.sh creates both extensions first,
 -- so these lines change nothing there.
@@ -141,6 +140,7 @@ CREATE TABLE REGLE (
 
 CREATE TABLE UTILISATEUR (
     ID                   BIGINT      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    CD_ULID              TEXT        NOT NULL UNIQUE CHECK (CD_ULID ~ '^[0-9A-HJKMNP-TV-Z]{26}$'),
     LN_EMAIL             TEXT        NOT NULL UNIQUE,
     LB_HASH_MOT_DE_PASSE TEXT        NULL,
     ID_ROLE              BIGINT      NOT NULL REFERENCES R_ROLE (ID) ON DELETE RESTRICT,
@@ -208,6 +208,7 @@ CREATE TABLE audit_logs (
 );
 
 CREATE TRIGGER trg_audit_logs_append_only BEFORE UPDATE OR DELETE ON audit_logs FOR EACH ROW EXECUTE FUNCTION reject_audit_change();
+CREATE TRIGGER trg_audit_logs_no_truncate BEFORE TRUNCATE ON audit_logs FOR EACH STATEMENT EXECUTE FUNCTION reject_audit_change();
 
 CREATE TRIGGER trg_aeronef_updated_at     BEFORE UPDATE ON AERONEF     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_vol_updated_at         BEFORE UPDATE ON VOL         FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -341,7 +342,8 @@ COMMENT ON COLUMN REGLE.deleted_at IS 'Date de suppression logique ; NULL si la 
 
 COMMENT ON TABLE UTILISATEUR IS 'Compte applicatif, créé à l''inscription ; anonymisé sur demande, jamais supprimé.';
 COMMENT ON COLUMN UTILISATEUR.ID IS 'Identifiant technique de l''utilisateur.';
-COMMENT ON COLUMN UTILISATEUR.LN_EMAIL IS 'Adresse e-mail de connexion, unique ; remplacée à l''anonymisation par anonyme-<ID>@aerosafe.invalid.';
+COMMENT ON COLUMN UTILISATEUR.CD_ULID IS 'Identifiant ULID exposé par l''API, généré par l''application.';
+COMMENT ON COLUMN UTILISATEUR.LN_EMAIL IS 'Adresse e-mail de connexion, unique ; remplacée à l''anonymisation par anonyme-<CD_ULID>@aerosafe.invalid.';
 COMMENT ON COLUMN UTILISATEUR.LB_HASH_MOT_DE_PASSE IS 'Empreinte argon2id du mot de passe ; NULL seulement après anonymisation.';
 COMMENT ON COLUMN UTILISATEUR.ID_ROLE IS 'Rôle de l''utilisateur.';
 COMMENT ON COLUMN UTILISATEUR.DT_ANONYMISATION IS 'Date d''anonymisation du compte ; NULL si le compte n''est pas anonymisé.';

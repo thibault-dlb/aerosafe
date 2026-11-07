@@ -27,6 +27,8 @@ Technical and organisational choices are judged against these weighted criteria.
 | Frontend | React 19, TypeScript, Vite | Decided on 2026-11-02 | See below |
 | ORM | SQLAlchemy 2.0 (async) with asyncpg | Decided on 2026-11-03 | See below |
 | Database migrations | Alembic | Decided on 2026-11-03 | See below |
+| PostGIS with SQLAlchemy | GeoAlchemy2 | Decided on 2026-11-07 | Maintained library for the `GEO_POSITION` column |
+| Scheduler | APScheduler | Decided on 2026-11-07 | Scheduled tasks run inside the API process, so no extra container is needed |
 | Python tests and linting | pytest, ruff | Decided on 2026-11-02 | No detailed assessment recorded |
 | Frontend linting | ESLint with typescript-eslint | Decided on 2026-11-03 | Marine Nationale standard |
 | Gateway | Nginx | Decided on 2026-11-03 | Marine Nationale standard |
@@ -35,7 +37,7 @@ Technical and organisational choices are judged against these weighted criteria.
 | Frontend tests | Vitest and Testing Library (unit), Playwright (end to end) | Decided on 2026-11-03 | See below |
 | Authentication | Built in the API: FastAPI, short-lived JWT, refresh token, argon2id | Decided on 2026-11-03 | The project sheet lists it as a development task, see below |
 | Cache | Redis | Deferred | Adopted only if a need appears, see below |
-| Mapping library | Leaflet (BSD-2-Clause) | Decided on 2026-11-03, scored grid added | See below. The react-leaflet wrapper is still to confirm (licence) |
+| Mapping library | Leaflet (BSD-2-Clause) | Decided on 2026-11-03, scored grid added | See below. Used directly, without the react-leaflet wrapper (licence) |
 | CI/CD tool | GitHub Actions | Decided on 2026-11-03, scored grid added | See below |
 | AI library (bonus) | `TBD` | Postponed | To be decided when the module starts |
 
@@ -86,7 +88,7 @@ On 2026-11-03 the team chose to build authentication in the API. An identity pro
 | Passwords | argon2id | OWASP recommendation; never stored or logged in clear text (NF-02) |
 | Access token | JWT, valid about 15 minutes | Signed by the API; carries the user identifier and the role |
 | Refresh token | Opaque random value in an `HttpOnly` cookie | Only its hash is stored in the database, so it can be revoked (logout, deactivated or anonymised account) |
-| API | FastAPI security utilities, JWT handled with a maintained library | Library `TBD` when implemented (`python-jose` is no longer actively maintained) |
+| API | FastAPI security utilities, JWT handled with a maintained library | PyJWT, since `python-jose` is no longer actively maintained |
 | Frontend | Login form, access token kept in memory | Refreshed silently through the cookie before it expires |
 | Roles | `User` and `Supervisor`, from the `R_ROLE` reference table | Read from the token and checked by each restricted endpoint (BF-02) |
 
@@ -115,7 +117,7 @@ Scores from 1 (poor) to 5 (excellent), weighted with the grid. Total out of 5. T
 
 **Trade-off:** no 3D view. If a 3D trajectory view is wanted later, MapLibre GL JS is the fallback.
 
-**Licence point to settle (open):** the team chose Leaflet "with react-leaflet" on 2026-11-03. Leaflet is BSD-2-Clause, but `react-leaflet` 5.0.0 and `@react-leaflet/core` 3.0.0 are published under the Hippocratic License 2.1. That is an ethical-source licence: it is not an OSI-approved open-source licence and it restricts some uses. The specifications ask for an open-source mapping library and for libraries that allow redistribution of the source code (§IV.2, §VII.3). Proposal: use Leaflet directly, wrapped in one TypeScript class (for example a map service that draws markers and trajectories) called from a small React component. This also fits the rule that everything outside components uses classes. Record the final choice and its licence in [dependencies](dependencies.md).
+**Licence point (settled):** the team chose Leaflet "with react-leaflet" on 2026-11-03. Leaflet is BSD-2-Clause, but `react-leaflet` 5.0.0 and `@react-leaflet/core` 3.0.0 are published under the Hippocratic License 2.1. That is an ethical-source licence: it is not an OSI-approved open-source licence and it restricts some uses. The specifications ask for an open-source mapping library and for libraries that allow redistribution of the source code (§IV.2, §VII.3). Decision: use Leaflet directly, wrapped in one TypeScript class (for example a map service that draws markers and trajectories) called from a small React component. This also fits the rule that everything outside components uses classes. Record the final choice and its licence in [dependencies](dependencies.md).
 
 ## CI/CD tool: GitHub Actions
 

@@ -4,16 +4,15 @@ import sys
 from logging.config import fileConfig
 
 from alembic import context
+from geoalchemy2.alembic_helpers import include_object
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 sys.path.append(os.getcwd())
 
+import models  # noqa: E402, F401  (registers every table on the metadata)
 from config.database import settings as db_settings  # noqa: E402
 from core.models import Base  # noqa: E402
-
-# Import every model module here so that Alembic sees its tables, for example:
-# import models.aircraft  # noqa: F401
 
 config = context.config
 
@@ -38,7 +37,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 
