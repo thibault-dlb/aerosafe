@@ -1,6 +1,6 @@
 # API
 
-`TBD`: the API does not exist yet. This page lists what the project sheet and the specifications require of it, and will be completed during development.
+The API only has its health check and empty routers so far. This page lists what the project sheet and the specifications require of it, and will be completed during development.
 
 The API documentation is kept in the repository as Markdown and/or generated automatically (§VIII.2).
 
@@ -31,8 +31,40 @@ Token claims, endpoint paths and environment variables are `TBD` until implement
 
 ## Endpoints
 
+Every work package has its router in `src/api/routes/v1/`, already included under `/api/v1`. Restricted endpoints use the `require_role` dependency of `core/security.py`. Each section below is completed by the owner of the router (see [team work split](team-split.md)).
+
+### Authentication (`/api/v1/auth`)
+
+`TBD`.
+
+### Accounts (`/api/v1/users`)
+
+`TBD`.
+
+### Aircraft (`/api/v1/aircraft`)
+
+`TBD`.
+
+### Flights (`/api/v1/flights`)
+
+`TBD`.
+
+### Rules (`/api/v1/rules`)
+
+`TBD`.
+
+### Alerts (`/api/v1/alerts`)
+
+`TBD`.
+
+### Dashboard (`/api/v1/dashboard`)
+
+`TBD`.
+
+### Collection (`/api/v1/collection`)
+
 `TBD`.
 
 ## Errors
 
-`TBD`.
+Errors use the default FastAPI body: `{"detail": "message"}`. The other error conventions are `TBD`.
