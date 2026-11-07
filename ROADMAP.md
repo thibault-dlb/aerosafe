@@ -4,6 +4,8 @@ Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only s
 
 Anything flagged `Not in the project sheet` comes from the specifications and is not binding. See [open points](docs/open-points.md).
 
+The work is shared between the five group members in [team work split](docs/team-split.md).
+
 ## Current status
 
 - The project sheet defines nine steps and three deliverables. It sets no milestones and no dates.
