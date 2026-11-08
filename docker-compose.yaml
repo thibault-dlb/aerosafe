@@ -1,3 +1,7 @@
+# Fixed project name, whatever the folder the repository is cloned into: images, volumes and
+# networks are always prefixed with "aerosafe", so they can be found and removed reliably.
+name: aerosafe
+
 services:
   postgres:
     image: docker.io/postgis/postgis:17-3.7-alpine
