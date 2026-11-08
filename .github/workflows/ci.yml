@@ -1,0 +1,46 @@
+# Continuous integration: lint, tests, Docker stack, migrations and end-to-end tests.
+# The repository is private, so GitHub Actions minutes are limited: the pipeline runs on
+# pull requests and on the long-lived branches only, and a newer run cancels an older one.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src/api
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          # Same Python version as src/api/Dockerfile.
+          python-version: "3.11"
+          enable-cache: true
+          cache-dependency-glob: src/api/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --all-groups --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      # Coverage and its 80% threshold are configured in pyproject.toml.
+      - name: Test
+        run: uv run pytest
