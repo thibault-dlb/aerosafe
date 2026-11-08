@@ -139,4 +139,4 @@ Same scale and weights as above.
 - frontend: `pnpm lint`, `pnpm typecheck` and `pnpm test:unit` with the 80% coverage threshold;
 - end-to-end tests (Playwright) and the Docker build, if the free minutes allow.
 
-**Trade-off:** free minutes are limited for private repositories, so the pipeline stays short and the slowest jobs can be limited to pull requests to `develop`. The workflow file does not exist yet: `.github/` only holds `CODEOWNERS`.
+**Trade-off:** free minutes are limited for private repositories, so the pipeline only runs on pull requests and on pushes to `develop` and `main`, and the Docker build and the end-to-end tests share one job. The workflow is `.github/workflows/ci.yml`, described in [testing](testing.md#continuous-integration).
