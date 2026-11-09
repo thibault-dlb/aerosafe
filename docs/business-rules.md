@@ -41,7 +41,7 @@ Reasoning behind the values:
 ### Scope and deduplication
 
 - Rules apply to aircraft that are **airborne** (`on_ground` false). R1 and R2 also stop being evaluated for an aircraft silent for more than 30 minutes, so that an aircraft which left the coverage zone does not raise alerts forever.
-- An aircraft does not raise the same rule twice while the situation lasts: a new alert for the same aircraft and rule is generated only after the previous episode ended (the value went back under the threshold).
+- An aircraft does not raise the same rule twice while the situation lasts: a new alert for the same aircraft and rule is generated only after the previous episode ended. An episode ends when the value goes back under the threshold, when the aircraft lands or is silent for more than 30 minutes, or when the rule is disabled. It stays open while an airborne aircraft lacks the data the rule needs (no position, no previous observation in the same flight).
 - Observations that belong to no flight are not used for R3 to R5, since a rate needs two points of the same flight (D-06).
 - An observation with a missing value (altitude, speed or heading) is skipped by the rule that needs it.
 

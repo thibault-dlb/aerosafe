@@ -122,3 +122,18 @@ async def test_the_database_refuses_two_open_episodes(session: AsyncSession) -> 
     session.add(Alert(aircraft_id=alert.aircraft_id, rule_id=alert.rule_id, message="duplicate"))
     with pytest.raises(IntegrityError):
         await session.flush()
+
+
+async def test_the_episode_of_an_aircraft_that_landed_ends(session: AsyncSession) -> None:
+    aircraft = secrets.token_hex(3)
+    await save(session, state(aircraft, 420))
+    await RulesEngine(session).evaluate(NOW)
+    [(_, alert)] = await alerts_of(session, aircraft)
+
+    later = NOW + timedelta(seconds=60)
+    landed = replace(state(aircraft, 0), last_contact_at=later, position_at=later, on_ground=True)
+    await save(session, landed)
+    await RulesEngine(session).evaluate(later)
+
+    await session.refresh(alert)
+    assert alert.episode_ended_at == later

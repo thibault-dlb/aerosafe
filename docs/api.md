@@ -174,7 +174,7 @@ Body of `PATCH /rules/{code}`. Every field is optional, and a missing field keep
 | Field | Rule |
 | --- | --- |
 | `threshold` | Number from 0 to 9 999 999.999, in the unit of the rule |
-| `is_active` | `false` stops the evaluation of the rule; its open alerts stay as they are |
+| `is_active` | `false` stops the evaluation of the rule; the next evaluation ends its open episodes |
 | `criticality` | `LOW`, `MEDIUM`, `HIGH`, or `null` to remove it; 422 if the level is disabled in `R_CRITICITE`. It is copied into the alerts raised afterwards |
 
 The engine reads the rules on every evaluation, so a change applies at the next one. Alerts already raised keep the threshold in force when they were triggered. Every change is written to `audit_logs` with the old values, the new values and the Supervisor.

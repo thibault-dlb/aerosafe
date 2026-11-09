@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.logger import get_logger
 from core.repository import Repository
 from models import Alert, Rule
-from services.rules.base import BusinessRule
+from services.rules.base import AircraftSnapshot, BusinessRule
 from services.rules.observations import SnapshotReader
 from services.rules.registry import RuleRegistry
 
@@ -29,8 +29,9 @@ class RulesEngine:
 
     An aircraft raises a rule once per episode: while an alert of the same rule is still open
     for it, no new alert is created. The episode ends at the first evaluation where the value
-    is back under the threshold. When a rule cannot be evaluated (missing data, aircraft on
-    the ground or no longer heard), its open episode is left as it is.
+    is back under the threshold, or where the situation can no longer last: the aircraft is on
+    the ground or no longer heard, or the rule is disabled. When an airborne aircraft lacks
+    the data a rule needs (no position, no previous observation), its episode stays open.
     """
 
     def __init__(
@@ -50,16 +51,19 @@ class RulesEngine:
         evaluation never makes the data look older than it is. The caller commits.
         """
         rules = await self._active_rules()
-        if not rules:
-            logger.info("Rule evaluation at {}: no active rule", now.isoformat())
-            return EvaluationReport()
-        snapshots = await self._reader.read(now)
-        if not snapshots:
-            logger.info("Rule evaluation at {}: no aircraft to evaluate", now.isoformat())
-            return EvaluationReport(rules=len(rules))
-        episodes = await self._open_episodes([model.id for model, _ in rules])
+        snapshots = await self._reader.read(now) if rules else []
+        episodes = await self._open_episodes()
+        closed = self._end_finished_episodes(episodes, rules, snapshots, now)
+        if not rules or not snapshots:
+            if closed:
+                await self._session.flush()
+            reason = "no active rule" if not rules else "no aircraft to evaluate"
+            logger.info(
+                "Rule evaluation at {}: {}, {} episode(s) ended", now.isoformat(), reason, closed
+            )
+            return EvaluationReport(rules=len(rules), closed=closed)
 
-        created = closed = 0
+        created = 0
         for model, rule in rules:
             threshold = float(model.threshold)
             for snapshot in snapshots:
@@ -91,7 +95,7 @@ class RulesEngine:
                         rule.unit,
                     )
                 elif not outcome.triggered and episode is not None:
-                    episode.episode_ended_at = now
+                    self._end(episode, now)
                     del episodes[(snapshot.aircraft_id, model.id)]
                     closed += 1
                     logger.info("Rule {} back to normal for {}", model.code, snapshot.icao24)
@@ -131,11 +135,42 @@ class RulesEngine:
             rules.append((model, rule))
         return rules
 
-    async def _open_episodes(self, rule_ids: list[int]) -> dict[tuple[int, int], Alert]:
+    async def _open_episodes(self) -> dict[tuple[int, int], Alert]:
+        """Every open episode. Episodes end when their aircraft stops being evaluated, so this
+        set stays bounded by the aircraft in flight."""
         statement = (
-            Repository(self._session, Alert)
-            .select()
-            .where(Alert.episode_ended_at.is_(None), Alert.rule_id.in_(rule_ids))
+            Repository(self._session, Alert).select().where(Alert.episode_ended_at.is_(None))
         )
         alerts = (await self._session.scalars(statement)).all()
         return {(alert.aircraft_id, alert.rule_id): alert for alert in alerts}
+
+    @classmethod
+    def _end_finished_episodes(
+        cls,
+        episodes: dict[tuple[int, int], Alert],
+        rules: list[tuple[Rule, BusinessRule]],
+        snapshots: list[AircraftSnapshot],
+        now: datetime,
+    ) -> int:
+        """End the episodes that cannot last any more, and remove them from `episodes`.
+
+        Otherwise an aircraft that landed, went silent or saw its rule disabled would keep an
+        alert active for ever, and that alert would block the next one of the same rule.
+        """
+        active_rules = {model.id for model, _ in rules}
+        airborne = {snapshot.aircraft_id for snapshot in snapshots if snapshot.airborne}
+        finished = [key for key in episodes if key[0] not in airborne or key[1] not in active_rules]
+        for key in finished:
+            cls._end(episodes.pop(key), now)
+            logger.info(
+                "Episode of rule id {} ended for aircraft id {}: no longer evaluated",
+                key[1],
+                key[0],
+            )
+        return len(finished)
+
+    @staticmethod
+    def _end(episode: Alert, now: datetime) -> None:
+        # Never before the trigger, which the table forbids, even when an evaluation is
+        # replayed at an earlier time.
+        episode.episode_ended_at = max(now, episode.triggered_at) if episode.triggered_at else now

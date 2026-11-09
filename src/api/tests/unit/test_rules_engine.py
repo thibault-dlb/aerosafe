@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
@@ -8,6 +9,7 @@ from services.rules.engine import RulesEngine
 from services.rules.registry import RuleRegistry
 
 NOW = datetime(2026, 11, 9, 12, 0, tzinfo=UTC)
+HOUR = timedelta(hours=1)
 
 
 def rule(code: str, threshold: str, rule_id: int, criticality_id: int | None = 2) -> Rule:
@@ -102,16 +104,71 @@ async def test_ends_the_episode_when_the_value_is_back_under_the_threshold() -> 
     session.add.assert_not_called()
 
 
-async def test_keeps_the_episode_open_when_the_rule_cannot_be_evaluated() -> None:
-    open_alert = Alert(aircraft_id=10, rule_id=1, message="R1")
-    rules_engine, _ = engine(
-        [rule("R1", "300", 1)], [snapshot(10, 30, on_ground=True)], [open_alert]
-    )
+async def test_keeps_the_episode_open_when_an_airborne_aircraft_lacks_data() -> None:
+    open_alert = Alert(aircraft_id=10, rule_id=2, message="R2")
+    without_position = replace(snapshot(10, 30), latest_with_position=None)
+    rules_engine, _ = engine([rule("R2", "600", 2)], [without_position], [open_alert])
 
     report = await rules_engine.evaluate(NOW)
 
     assert open_alert.episode_ended_at is None
     assert report.closed == 0
+
+
+async def test_ends_the_episode_of_an_aircraft_on_the_ground() -> None:
+    open_alert = Alert(aircraft_id=10, rule_id=1, message="R1", triggered_at=NOW - HOUR)
+    rules_engine, session = engine(
+        [rule("R1", "300", 1)], [snapshot(10, 30, on_ground=True)], [open_alert]
+    )
+
+    report = await rules_engine.evaluate(NOW)
+
+    assert open_alert.episode_ended_at == NOW
+    assert report.closed == 1
+    session.flush.assert_awaited_once()
+
+
+async def test_ends_the_episode_of_an_aircraft_no_longer_heard() -> None:
+    silent = Alert(aircraft_id=10, rule_id=1, message="R1", triggered_at=NOW - HOUR)
+    rules_engine, session = engine([rule("R1", "300", 1)], [], [silent])
+
+    report = await rules_engine.evaluate(NOW)
+
+    assert silent.episode_ended_at == NOW
+    assert report.closed == 1
+    session.flush.assert_awaited_once()
+
+
+async def test_ends_the_episodes_of_a_disabled_rule() -> None:
+    disabled = Alert(aircraft_id=10, rule_id=3, message="R3", triggered_at=NOW - HOUR)
+    rules_engine, session = engine([rule("R1", "300", 1)], [snapshot(10, 420)], [disabled])
+
+    report = await rules_engine.evaluate(NOW)
+
+    assert disabled.episode_ended_at == NOW
+    assert report.closed == 1
+    [alert] = added_alerts(session)
+    assert alert.rule_id == 1
+
+
+async def test_ends_every_episode_without_active_rule() -> None:
+    open_alert = Alert(aircraft_id=10, rule_id=1, message="R1", triggered_at=NOW - HOUR)
+    rules_engine, session = engine([], [snapshot(10, 420)], [open_alert])
+
+    report = await rules_engine.evaluate(NOW)
+
+    assert open_alert.episode_ended_at == NOW
+    assert report.closed == 1
+    session.flush.assert_awaited_once()
+
+
+async def test_an_episode_never_ends_before_its_trigger() -> None:
+    later = Alert(aircraft_id=10, rule_id=1, message="R1", triggered_at=NOW + HOUR)
+    rules_engine, _ = engine([rule("R1", "300", 1)], [], [later])
+
+    await rules_engine.evaluate(NOW)
+
+    assert later.episode_ended_at == NOW + HOUR
 
 
 async def test_an_episode_of_one_rule_does_not_block_another_rule() -> None:
@@ -150,7 +207,7 @@ async def test_stops_early_without_active_rule() -> None:
     report = await rules_engine.evaluate(NOW)
 
     assert report.rules == 0
-    session.scalars.assert_awaited_once()
+    assert session.scalars.await_count == 2
     session.flush.assert_not_called()
 
 
