@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -91,11 +91,19 @@ async def test_runs_are_listed_newest_first_with_paging(
     client: httpx.AsyncClient, store: InMemoryCollectionStateStore
 ) -> None:
     for stored in range(3):
-        await store.record(CollectionRunResult(NOW, NOW, RunStatus.SUCCESS, "X", stored=stored))
+        started_at = NOW + timedelta(minutes=stored)
+        await store.record(
+            CollectionRunResult(started_at, started_at, RunStatus.SUCCESS, "X", stored=stored)
+        )
 
-    response = await client.get("/api/v1/collection/runs", params={"limit": 2, "offset": 1})
+    first = (await client.get("/api/v1/collection/runs", params={"limit": 2})).json()
+    after = first[-1]["started_at"]
+    second = (
+        await client.get("/api/v1/collection/runs", params={"limit": 2, "before": after})
+    ).json()
 
-    assert [run["stored"] for run in response.json()] == [1, 0]
+    assert [run["stored"] for run in first] == [2, 1]
+    assert [run["stored"] for run in second] == [0]
 
 
 async def test_the_page_size_is_bounded(client: httpx.AsyncClient) -> None:

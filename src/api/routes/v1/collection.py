@@ -66,10 +66,10 @@ async def list_runs(
     _user: Supervisor,
     store: StateStore,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    before: Annotated[datetime | None, Query()] = None,
 ) -> list[CollectionRunOut]:
-    """Latest collection runs, newest first."""
-    return [CollectionRunOut.model_validate(run) for run in await store.runs(limit, offset)]
+    """Latest collection runs, newest first; `before` is the `started_at` of the last one seen."""
+    return [CollectionRunOut.model_validate(run) for run in await store.runs(limit, before)]
 
 
 @router.post("/run")

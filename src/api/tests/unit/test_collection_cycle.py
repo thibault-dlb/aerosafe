@@ -279,7 +279,7 @@ async def test_the_memory_store_keeps_the_latest_runs_first() -> None:
         await store.record(run)
 
     assert await store.runs(10) == [runs[2], runs[1]]
-    assert await store.runs(1, offset=1) == [runs[1]]
+    assert await store.runs(1, before=runs[2].started_at) == [runs[1]]
     assert await store.last_success() is None
 
 

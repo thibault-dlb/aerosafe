@@ -7,9 +7,12 @@ from services.collection.normalizer import NormalizedState
 
 @dataclass(frozen=True)
 class OpenFlight:
-    """The current flight of an aircraft, with the time of its latest observation."""
+    """The current flight of an aircraft, with the time of its latest observation.
 
-    flight_id: int
+    `flight_id` is None for a flight added in this collection and not inserted yet.
+    """
+
+    flight_id: int | None
     callsign: str | None
     last_seen_at: datetime
 

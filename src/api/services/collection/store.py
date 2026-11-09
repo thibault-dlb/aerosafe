@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import Any
 
 from geoalchemy2 import WKTElement
-from sqlalchemy import func, select, update
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import BigInteger, ColumnElement, Text, any_, func, literal, select, update
+from sqlalchemy.dialects.postgresql import ARRAY, insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.types import TypeEngine
 
 from core.models import new_ulid
 from core.repository import Repository
@@ -14,6 +16,11 @@ from services.collection.flight_grouper import FlightDecision, FlightGrouper, Op
 from services.collection.normalizer import NormalizedState
 
 WGS84 = 4326
+
+
+def _any_of(values: list[Any], item_type: TypeEngine[Any]) -> ColumnElement[Any]:
+    """`= ANY(:values)` with one array parameter, instead of one parameter per value."""
+    return any_(literal(values, ARRAY(item_type)))
 
 
 class ObservationStore:
@@ -32,11 +39,15 @@ class ObservationStore:
         aircraft_ids = await self._ensure_aircraft({state.icao24 for state in states})
         open_flights = await self._open_flights(list(aircraft_ids.values()))
 
-        rows = []
-        for state in states:
-            aircraft_id = aircraft_ids[state.icao24]
-            flight_id = await self._flight_for(aircraft_id, open_flights, state)
-            rows.append(self._observation_row(aircraft_id, flight_id, state))
+        # Every flight is decided first; the new ones are then inserted in one flush.
+        flights = [
+            self._flight_for(aircraft_ids[state.icao24], open_flights, state) for state in states
+        ]
+        await self._session.flush()
+        rows = [
+            self._observation_row(aircraft_ids[state.icao24], flight.id, state)
+            for state, flight in zip(states, flights, strict=True)
+        ]
 
         statement = (
             insert(Observation)
@@ -54,7 +65,11 @@ class ObservationStore:
                 func.max(Observation.last_contact_at).label("last_seen_at"),
             )
             .join(Flight, Flight.id == Observation.flight_id)
-            .where(Flight.ended_at.is_(None), Flight.deleted_at.is_(None))
+            .where(
+                Flight.ended_at.is_(None),
+                Flight.deleted_at.is_(None),
+                Observation.deleted_at.is_(None),
+            )
             .group_by(Observation.flight_id)
             .subquery()
         )
@@ -81,14 +96,17 @@ class ObservationStore:
             insert(Aircraft).on_conflict_do_nothing(index_elements=["CD_ICAO24"]),
             [{"icao24": icao24, "public_id": new_ulid()} for icao24 in sorted(icao24s)],
         )
-        statement = self._aircraft.select(include_deleted=True).where(Aircraft.icao24.in_(icao24s))
+        statement = self._aircraft.select(include_deleted=True).where(
+            Aircraft.icao24 == _any_of(sorted(icao24s), Text())
+        )
         return {aircraft.icao24: aircraft.id for aircraft in await self._session.scalars(statement)}
 
     async def _open_flights(self, aircraft_ids: list[int]) -> dict[int, tuple[Flight, OpenFlight]]:
         flights = list(
             await self._session.scalars(
                 self._flights.select().where(
-                    Flight.aircraft_id.in_(aircraft_ids), Flight.ended_at.is_(None)
+                    Flight.aircraft_id == _any_of(aircraft_ids, BigInteger()),
+                    Flight.ended_at.is_(None),
                 )
             )
         )
@@ -98,7 +116,10 @@ class ObservationStore:
             (
                 await self._session.execute(
                     select(Observation.flight_id, func.max(Observation.last_contact_at))
-                    .where(Observation.flight_id.in_([flight.id for flight in flights]))
+                    .where(
+                        Observation.flight_id == _any_of([f.id for f in flights], BigInteger()),
+                        Observation.deleted_at.is_(None),
+                    )
                     .group_by(Observation.flight_id)
                 )
             ).all()
@@ -112,19 +133,20 @@ class ObservationStore:
             )
         return open_flights
 
-    async def _flight_for(
+    def _flight_for(
         self,
         aircraft_id: int,
         open_flights: dict[int, tuple[Flight, OpenFlight]],
         state: NormalizedState,
-    ) -> int:
+    ) -> Flight:
+        """The flight of the state; a new one is added to the session, not flushed yet."""
         current = open_flights.get(aircraft_id)
         decision = self._grouper.decide(current[1] if current else None, state)
         if decision is FlightDecision.JOIN and current:
             flight, _ = current
             if flight.callsign is None and state.callsign:
                 flight.callsign = state.callsign
-            return flight.id
+            return flight
 
         if current:
             previous, summary = current
@@ -135,12 +157,11 @@ class ObservationStore:
             started_at=state.last_contact_at,
         )
         self._session.add(flight)
-        await self._session.flush()
         open_flights[aircraft_id] = (
             flight,
-            OpenFlight(flight.id, flight.callsign, state.last_contact_at),
+            OpenFlight(None, flight.callsign, state.last_contact_at),
         )
-        return flight.id
+        return flight
 
     @staticmethod
     def _observation_row(

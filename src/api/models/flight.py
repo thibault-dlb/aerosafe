@@ -8,6 +8,7 @@ from sqlalchemy import (
     Index,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,6 +33,7 @@ class Flight(PublicIdMixin, TimestampMixin, Base):
         # Target of the composite foreign key from OBSERVATION.
         UniqueConstraint("ID", "ID_AERONEF"),
         Index("idx_vol_aeronef", "ID_AERONEF", "DT_DEBUT"),
+        Index("idx_vol_aeronef_ouvert", "ID_AERONEF", postgresql_where=text('"DT_FIN" IS NULL')),
         Index("idx_vol_aeroport_origine", "ID_AEROPORT_ORIGINE"),
         Index("idx_vol_aeroport_destination", "ID_AEROPORT_DESTINATION"),
         comment="Vol d'un aéronef : observations successives séparées d'au plus N minutes (D-06).",

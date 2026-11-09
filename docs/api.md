@@ -148,7 +148,7 @@ Every endpoint needs the Supervisor role (401 without a token, 403 with another 
 | Method and path | Purpose | Answer |
 | --- | --- | --- |
 | `GET /collection/status` | State of the collection: enabled on this instance, paused, cycle running, profile, period, credits per day and daily quota, anonymous or authenticated access, wait after a 429, last run and last successful run | `200` |
-| `GET /collection/runs?limit=20&offset=0` | Latest runs, newest first. `limit` from 1 to 100 | `200`, `422` if out of range |
+| `GET /collection/runs?limit=20&before=<started_at>` | Latest runs, newest first. `limit` from 1 to 100. For the next page, `before` is the `started_at` of the last run received (keyset paging: cycles never overlap, so `started_at` is unique) | `200`, `422` if out of range |
 | `POST /collection/run` | Runs one cycle now and returns it, even when the collection is paused. It uses OpenSky credits | `200`, `409` when the collection is disabled on this instance, a cycle is already running, or OpenSky answered 429 and its delay is not over |
 | `POST /collection/pause` | Suspends the periodic collection, without stopping the API. Later cycles are recorded as `SKIPPED` | `200` with the status |
 | `POST /collection/resume` | Resumes the periodic collection | `200` with the status |

@@ -265,13 +265,16 @@ Every foreign key is indexed, except `OBSERVATION.ID_AERONEF`, which is the firs
 | `OBSERVATION` (`ID_VOL`, `DT_POSITION`) | Trajectory of a flight (BF-05, BF-07), consecutive points for R3 to R5 |
 | `OBSERVATION` (`DT_DERNIER_CONTACT`) | The engine reads the latest observations after each collection (BF-09) |
 | `OBSERVATION` GiST (`GEO_POSITION`) | Search by area (UC-01, D-18) |
+| `OBSERVATION` (`ID_VOL`, `DT_DERNIER_CONTACT`) | Latest contact of each open flight, read at each collection to group the observations and close the stale flights (D-06) |
 | `VOL` (`ID_AERONEF`, `DT_DEBUT`) | Flights of one aircraft |
+| `VOL` (`ID_AERONEF`), on open flights only (`DT_FIN IS NULL`) | Open flights of the aircraft received, read at each collection |
 | `VOL` (`ID`, `ID_AERONEF`), unique | Target of the composite foreign key from `OBSERVATION` |
 | `AERONEF` GIN (`LB_IMMATRICULATION`), `R_COMPAGNIE` GIN (`LB_COMPAGNIE`), with `pg_trgm` | "Contains" search on aircraft (BF-04) |
 | `ALERTE` (`ID_AERONEF`, `ID_REGLE`), unique, on open alerts only | One open episode per aircraft and rule |
 | `audit_logs` (`table_name`, `record_id`), and one per foreign key | History of one row |
 | `ALERTE` (`DT_DECLENCHEMENT`), and one per foreign key | Filter and sort alerts on the dashboard (BF-12) |
-| `EXECUTION_COLLECTE` (`DT_DEBUT`) | Latest cycle on the dashboard and history newest first; PostgreSQL reads the B-tree backwards for `ORDER BY "DT_DEBUT" DESC` |
+| `EXECUTION_COLLECTE` (`DT_DEBUT`) | Latest cycle on the dashboard and history newest first, paged by `DT_DEBUT` (keyset); PostgreSQL reads the B-tree backwards for `ORDER BY "DT_DEBUT" DESC` |
+| `EXECUTION_COLLECTE` (`ID_STATUT_COLLECTE`, `DT_DEBUT`) | Latest successful cycle, without reading back through the skipped ones; also indexes the foreign key to `R_STATUT_COLLECTE` |
 | One per foreign key on `AERONEF`, `VOL`, `REGLE`, `UTILISATEUR`, `JETON_RAFRAICHISSEMENT`, `EXECUTION_COLLECTE`, `PARAMETRE_COLLECTE` | Conventions: foreign keys are never indexed automatically |
 
 ## Initial data

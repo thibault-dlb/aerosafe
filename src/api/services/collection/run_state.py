@@ -46,7 +46,8 @@ class CollectionStateStore(Protocol):
 
     async def record(self, run: CollectionRunResult) -> None: ...
 
-    async def runs(self, limit: int, offset: int = 0) -> list[CollectionRunResult]: ...
+    async def runs(self, limit: int, before: datetime | None = None) -> list[CollectionRunResult]:
+        """The latest runs started before `before` (all when None), newest first."""
 
     async def last_success(self) -> CollectionRunResult | None: ...
 
@@ -67,8 +68,9 @@ class InMemoryCollectionStateStore:
         self._runs.insert(0, run)
         del self._runs[self._capacity :]
 
-    async def runs(self, limit: int, offset: int = 0) -> list[CollectionRunResult]:
-        return self._runs[offset : offset + limit]
+    async def runs(self, limit: int, before: datetime | None = None) -> list[CollectionRunResult]:
+        older = [run for run in self._runs if before is None or run.started_at < before]
+        return older[:limit]
 
     async def last_success(self) -> CollectionRunResult | None:
         return next((run for run in self._runs if run.status in RunStatus.COLLECTED), None)

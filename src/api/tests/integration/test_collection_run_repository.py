@@ -61,8 +61,9 @@ async def test_runs_come_newest_first_with_paging(session: AsyncSession) -> None
     for offset in range(3):
         await store.record(run(offset, stored=offset))
 
-    assert [r.stored for r in await store.runs(2)] == [2, 1]
-    assert [r.stored for r in await store.runs(1, offset=2)] == [0]
+    first_page = await store.runs(2)
+    assert [r.stored for r in first_page] == [2, 1]
+    assert [r.stored for r in await store.runs(2, before=first_page[-1].started_at)][0] == 0
 
 
 async def test_the_last_success_skips_failed_and_skipped_runs(session: AsyncSession) -> None:

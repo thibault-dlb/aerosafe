@@ -45,9 +45,12 @@ class DatabaseCollectionStateStore:
             )
             await session.commit()
 
-    async def runs(self, limit: int, offset: int = 0) -> list[CollectionRunResult]:
+    async def runs(self, limit: int, before: datetime | None = None) -> list[CollectionRunResult]:
         async with self._session_factory() as session:
-            statement = self._runs(session).offset(offset).limit(limit)
+            # Keyset paging on DT_DEBUT: the cycles never overlap, so it is unique.
+            statement = self._runs(session).limit(limit)
+            if before is not None:
+                statement = statement.where(CollectionRun.started_at < before)
             return [self._to_result(run) for run in await session.scalars(statement)]
 
     async def last_success(self) -> CollectionRunResult | None:
@@ -89,10 +92,16 @@ class DatabaseCollectionStateStore:
         # The migrations insert the single row; there is never a second one.
         return (await session.scalars(select(CollectionParameter))).one()
 
-    async def _id_of(self, session: AsyncSession, model: type, code: str) -> int:
+    async def _id_of(
+        self,
+        session: AsyncSession,
+        model: type[CollectionStatus] | type[CollectionProfileRef],
+        code: str,
+    ) -> int:
+        """Key of an active reference row; an inactive or unknown code raises."""
         key = (model, code)
         if key not in self._reference_ids:
-            statement = select(model.id).where(model.code == code)  # type: ignore[attr-defined]
+            statement = select(model.id).where(model.code == code, model.is_active.is_(True))
             self._reference_ids[key] = (await session.execute(statement)).scalar_one()
         return self._reference_ids[key]
 
