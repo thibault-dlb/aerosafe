@@ -19,7 +19,7 @@ def table_ids() -> list[str]:
 
 
 def test_every_table_of_the_data_model_is_declared() -> None:
-    assert len(TABLES) == 15
+    assert len(TABLES) == 19
 
 
 @pytest.mark.parametrize("table", TABLES, ids=table_ids())
