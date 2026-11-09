@@ -143,7 +143,31 @@ Flight summary, also returned by `GET /aircraft/{aircraft_id}/flights`:
 
 ### Collection (`/api/v1/collection`)
 
-`TBD`.
+Every endpoint needs the Supervisor role (401 without a token, 403 with another role). Run times are UTC.
+
+| Method and path | Purpose | Answer |
+| --- | --- | --- |
+| `GET /collection/status` | State of the collection: enabled on this instance, paused, cycle running, profile, period, credits per day and daily quota, anonymous or authenticated access, wait after a 429, last run and last successful run | `200` |
+| `GET /collection/runs?limit=20&offset=0` | Latest runs, newest first. `limit` from 1 to 100 | `200`, `422` if out of range |
+| `POST /collection/run` | Runs one cycle now and returns it. It uses OpenSky credits | `200`, `409` when the collection is disabled on this instance or a cycle is already running |
+| `POST /collection/pause` | Suspends the periodic collection, without stopping the API. Later cycles are recorded as `SKIPPED` | `200` with the status |
+| `POST /collection/resume` | Resumes the periodic collection | `200` with the status |
+
+A run has `started_at` (also the `now` given to the rules engine), `ended_at`, `status` (`SUCCESS`, `PARTIAL` when some state vectors were rejected, `FAILED`, `RATE_LIMITED`, `SKIPPED`), `profile`, `received`, `stored` (new observations), `rejected`, `remaining_credits` (from OpenSky), `error` and `evaluation_error` (a failure of the rules engine, which never cancels the collection).
+
+Runs and the pause are kept in memory until the `EXECUTION_COLLECTE` and `PARAMETRE_COLLECTE` tables exist, so they are lost when the API restarts.
+
+Configuration, in `.env`:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `COLLECTION_ENABLED` | `false` | Whether this instance collects. Only one instance collects with the group account at a time |
+| `COLLECTION_PROFILE` | `ILE_DE_FRANCE` | `ILE_DE_FRANCE` (every 30 s) or `FRANCE` (every 120 s), see [architecture](architecture.md#data-source) |
+| `COLLECTION_FLIGHT_GAP_MINUTES` | `30` | Maximum gap between two observations of the same flight (D-06) |
+| `COLLECTION_BBOX_ILE_DE_FRANCE`, `COLLECTION_BBOX_FRANCE` | see [OpenSky Network](opensky.md#collection) | Areas, as `lat_min,lat_max,lon_min,lon_max` |
+| `OPENSKY_CLIENT_ID`, `OPENSKY_CLIENT_SECRET` | empty | OAuth2 API client of the group account; empty means anonymous access |
+
+The API refuses to start when the profile would use more than the 4 000 daily credits of an account. With anonymous access the credits run out after a few hours; OpenSky then answers 429 and the collection waits for the delay it announces.
 
 ## Errors
 

@@ -71,6 +71,17 @@ Each state vector gives, among others, the fields below. They map to the `Observ
 
 Both times must be stored: R1 uses `lastContactAt` and R2 `positionAt`. The rules also use `onGround` to ignore aircraft on the ground. The barometric altitude feeds `altitude`, and the geometric altitude only when the barometric one is missing (team decision of 2026-11-09, see [open points](open-points.md#team-decisions-pending-confirmation)).
 
+### Cleaning
+
+The collector (`services/collection/normalizer.py`) applies these rules before storing:
+
+- a state vector is rejected only when its ICAO24 address is not 6 hexadecimal characters or its `last_contact` is missing; any other invalid field is stored empty, and the rules skip missing values;
+- the ICAO24 address is lowercased and the callsign trimmed;
+- a position is kept only with both coordinates in range and a `time_position` no later than `last_contact`; coordinates are rounded to 6 decimals;
+- the heading is rounded to 2 decimals and 360 becomes 0; a negative speed or a value too large for its column is dropped;
+- aircraft on the ground are stored, with `on_ground` true;
+- the same aircraft twice in one answer keeps its most recent state, and a state vector already stored is ignored.
+
 ## Collection
 
 The two collection profiles (Île-de-France every 30 s, metropolitan France every 120 s) are set in [architecture](architecture.md#data-source) (D-05). The terms add these constraints, a team proposal to validate:
@@ -79,3 +90,12 @@ The two collection profiles (Île-de-France every 30 s, metropolitan France ever
 - **Only one instance collects with the group account at a time**, for example the demonstration machine. The high frequency profile uses 2 880 credits per day, so two instances at once would need 5 760 and exceed the 4 000 of the account.
 - Members developing locally use anonymous access (400 credits, about 3 hours at one call every 30 s) or a demo dataset kept out of any public repository.
 - Everything collected is stored in PostgreSQL, so the demonstration still works when OpenSky is down (NF-04).
+
+Areas of the two profiles (team decision of 2026-11-09), as `lat_min,lat_max,lon_min,lon_max`, and both can be overridden in `.env`:
+
+| Profile | Area | Square degrees | Credits per request |
+| --- | --- | --- | --- |
+| Île-de-France | `48.0,49.3,1.4,3.6` | 2.9 | 1 |
+| Metropolitan France | `41.3,51.1,-5.2,9.6` | 145 | 3 |
+
+Flights: an observation joins the open flight of its aircraft when at most 30 minutes separate it from the previous one and the callsign has not changed; otherwise the open flight is closed at its latest observation and a new one starts (D-06). Each cycle also closes the open flights whose latest observation is more than 30 minutes old. Origin and destination airports and the aircraft metadata (registration, model, airline) are not filled yet.
