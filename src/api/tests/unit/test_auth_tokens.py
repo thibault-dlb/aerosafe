@@ -79,4 +79,34 @@ def test_the_throttle_prunes_expired_pairs(monkeypatch: pytest.MonkeyPatch) -> N
 
     throttle.record_failure("g@h.i", "ip", NOW + timedelta(hours=1))
 
-    assert list(throttle._failures) == [("g@h.i", "ip")]
+    assert list(throttle._pairs) == [("g@h.i", "ip")]
+
+
+def test_the_block_lasts_the_whole_lock() -> None:
+    throttle = LoginThrottle(5, timedelta(minutes=15))
+    throttle.record_failure("a@b.c", "ip", NOW)
+    for second in (56, 57, 58, 59):
+        throttle.record_failure("a@b.c", "ip", NOW + timedelta(minutes=14, seconds=second))
+    blocked_at = NOW + timedelta(minutes=14, seconds=59)
+
+    # The first failure leaves the window at 15:00, but the block keeps running.
+    assert throttle.is_blocked("a@b.c", "ip", NOW + timedelta(minutes=15))
+    assert throttle.is_blocked("a@b.c", "ip", blocked_at + timedelta(minutes=14, seconds=59))
+    assert not throttle.is_blocked("a@b.c", "ip", blocked_at + timedelta(minutes=15))
+
+
+def test_failures_spread_over_more_than_the_lock_do_not_block() -> None:
+    throttle = LoginThrottle(2, timedelta(minutes=15))
+    throttle.record_failure("a@b.c", "ip", NOW)
+    throttle.record_failure("a@b.c", "ip", NOW + timedelta(minutes=15))
+
+    assert not throttle.is_blocked("a@b.c", "ip", NOW + timedelta(minutes=15))
+
+
+def test_the_oldest_live_pair_is_dropped_past_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("services.auth.throttle.MAX_TRACKED_PAIRS", 2)
+    throttle = LoginThrottle(5, timedelta(minutes=15))
+    for minute, email in enumerate(("a@b.c", "d@e.f", "g@h.i")):
+        throttle.record_failure(email, "ip", NOW + timedelta(minutes=minute))
+
+    assert list(throttle._pairs) == [("d@e.f", "ip"), ("g@h.i", "ip")]
