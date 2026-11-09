@@ -17,7 +17,12 @@ Source: project sheet step 8; specifications §VII.1, §VIII.2 and §IX.2 for th
 
 ## Installation
 
-1. Copy `.env.example` to `.env` and replace the passwords.
+1. Copy `.env.example` to `.env` and replace the passwords and `AUTH_JWT_SECRET`.
+2. Once the stack runs, create the first Supervisor. Sign-up only creates User accounts. The command asks for the password, or promotes the account if the e-mail is already registered:
+
+   ```bash
+   docker compose exec api python -m services.auth.cli chief@example.com
+   ```
 
 ## Launch
 

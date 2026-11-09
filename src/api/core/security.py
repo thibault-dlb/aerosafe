@@ -5,6 +5,10 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from config.auth import settings as auth_settings
+from services.auth.store import UserStore, get_user_store
+from services.auth.tokens import AccessTokenCodec, InvalidTokenError
+
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
@@ -29,18 +33,29 @@ class CurrentUser:
 
 
 async def get_current_user(
-    _credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    store: Annotated[UserStore, Depends(get_user_store)],
 ) -> CurrentUser:
     """Return the caller, or answer 401.
 
-    Frozen signature. The `feat/auth-accounts` work package implements the token check.
-    Until then every request is refused, so no endpoint is open by mistake.
+    The account is read on every request, so a deactivated or anonymised account loses
+    access at once, and the role comes from the database rather than from the token.
     """
-    raise HTTPException(
+    unauthorised = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Authentication required",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if credentials is None:
+        raise unauthorised
+    try:
+        claims = AccessTokenCodec(auth_settings).decode(credentials.credentials)
+    except InvalidTokenError as error:
+        raise unauthorised from error
+    user = await store.get_by_public_id(claims.public_id)
+    if not UserStore.can_log_in(user):
+        raise unauthorised
+    return CurrentUser(id=user.id, public_id=user.public_id, role=user.role.code)
 
 
 def require_role(*roles: str) -> Callable[..., Awaitable[CurrentUser]]:

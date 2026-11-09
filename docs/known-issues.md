@@ -6,7 +6,9 @@ Register of issues not fixed by the defence date, with their severity and any wo
 
 | ID | Description | Severity | Workaround |
 | --- | --- | --- | --- |
-| None yet | | | |
+| K-01 | Login throttling counts failures per e-mail and client address, but behind nginx the API sees the proxy address, so anyone can lock an account for 15 minutes with wrong passwords | Minor | Wait 15 minutes. Fix: start uvicorn with `--proxy-headers --forwarded-allow-ips=<nginx address>` |
+| K-02 | Login throttling counters live in memory: they reset when the API restarts and are not shared between API processes | Minor | None needed while the API runs as one process |
+| K-03 | A refresh token used twice is refused, but the newer token issued from it stays valid (no token family revocation) | Minor | The refresh cookie is `HttpOnly` and `SameSite=Strict`, which limits theft |
 
 ## Severity levels
 
