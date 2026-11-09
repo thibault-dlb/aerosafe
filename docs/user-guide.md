@@ -12,10 +12,32 @@ Coverage of air traffic depends on the OpenSky Network receiver network and is n
 
 | Task | Use case | Instructions |
 | --- | --- | --- |
-| Search for an aircraft by ICAO24, registration, airline or area | UC-01 | `TBD` |
-| View an aircraft record and its observation history | UC-01 | `TBD` |
-| View a flight trajectory on a map, with altitude and speed profiles | UC-02 | `TBD` |
-| View flight statistics | UC-02 | `TBD` |
+| Search for an aircraft by ICAO24, registration, airline or area | UC-01 | See [Searching for an aircraft](#searching-for-an-aircraft) |
+| View an aircraft record and its observation history | UC-01 | See [Aircraft record](#aircraft-record) |
+| View a flight trajectory on a map, with altitude and speed profiles | UC-02 | See [Flight trajectory](#flight-trajectory) |
+| View flight statistics | UC-02 | See [Flight trajectory](#flight-trajectory) |
+
+### Searching for an aircraft
+
+1. Open **Aircraft** in the navigation bar.
+2. Fill one or more criteria: the start of the ICAO24 address (for example `3c64`), part of the registration (`F-GK`), part of the airline name or code (`Air France`, `AFR`). Case does not matter.
+3. To search an area, fill its four bounds in degrees: south and north latitudes, west and east longitudes. The area applies to the latest known position of each aircraft.
+4. Select **Search**. The matching aircraft are listed with their model, airline and last contact, and those with a known position are shown on the map.
+5. Select an aircraft to open its record.
+
+If nothing matches, the page says so: broaden the criteria, for example by shortening the address or removing a criterion.
+
+### Aircraft record
+
+The record shows the address, registration, model, airline and last contact of the aircraft, its latest position on the map, its flights and its latest 50 observations, newest first: time, altitude (m), speed (m/s), heading (°), position and whether the aircraft was on the ground. A dash means OpenSky did not send the value. Select a flight to open its trajectory.
+
+### Flight trajectory
+
+The flight page shows the trajectory on the map, with the latest position marked, then the statistics (duration, distance, mean and maximum altitude and speed, number of observations) and the altitude and speed profiles.
+
+When observations are missing for more than 5 minutes, the trajectory is partial: the page lists the missing segments and the map does not join the points on either side of a gap. The distance leaves those segments out.
+
+The map shows OpenStreetMap tiles. The aircraft data comes from the OpenSky Network, credited on the map.
 
 ## Supervisor
 

@@ -43,11 +43,91 @@ Every work package has its router in `src/api/routes/v1/`, already included unde
 
 ### Aircraft (`/api/v1/aircraft`)
 
-`TBD`.
+Work package `feat/aircraft-lookup` (BF-04 to BF-07, UC-01). Every endpoint needs an authenticated caller, User or Supervisor; without a valid token it answers 401. Identifiers in paths and responses are the public ULIDs, never the internal keys.
+
+| Method and path | Purpose | Answers |
+| --- | --- | --- |
+| `GET /aircraft` | Search aircraft | 200 with a list, possibly empty; 422 for invalid criteria |
+| `GET /aircraft/{aircraft_id}` | Aircraft record | 200; 404 if unknown or deleted |
+| `GET /aircraft/{aircraft_id}/observations` | Observation history | 200, oldest first; 404; 422 |
+| `GET /aircraft/{aircraft_id}/flights` | Flights of the aircraft | 200, most recent first; 404 |
+
+Query parameters of `GET /aircraft`. Every criterion is optional and they are combined (AND). Results are sorted by ICAO24 address.
+
+| Parameter | Rule |
+| --- | --- |
+| `icao24` | Start of the address, 1 to 6 hexadecimal characters, case ignored |
+| `registration` | Part of the registration, case ignored |
+| `airline` | Part of the airline name or code, case ignored |
+| `south`, `west`, `north`, `east` | Area in degrees (WGS 84), all four or none. It applies to the latest known position of each aircraft |
+| `limit` | 1 to 200, default 50 |
+
+Aircraft (search result and record):
+
+```json
+{
+  "id": "01JC5Z8N0Q3V9X2K7M4T6B1R8D",
+  "icao24": "3c6444",
+  "registration": "D-AIBD",
+  "model": "Airbus A319",
+  "airline": "Lufthansa",
+  "last_contact_at": "2026-11-09T10:00:00Z",
+  "latitude": 48.85,
+  "longitude": 2.35
+}
+```
+
+`model`, `airline` and `registration` are `null` when unknown; the last contact and the position are `null` when the aircraft never sent any.
+
+`GET /aircraft/{aircraft_id}/observations` takes `start` and `end` (ISO 8601, inclusive, both optional; `start` must not be after `end`) and `limit` (1 to 5 000, default 500). It returns the latest `limit` observations of the period, in chronological order:
+
+```json
+{
+  "last_contact_at": "2026-11-09T10:00:00Z",
+  "position_at": "2026-11-09T09:59:58Z",
+  "latitude": 48.85,
+  "longitude": 2.35,
+  "altitude": 10000.0,
+  "speed": 230.5,
+  "heading": 90.0,
+  "on_ground": false,
+  "flight_id": "01JC5Z9A2B3C4D5E6F7G8H9J0K"
+}
+```
+
+Units: altitude in metres, speed in metres per second, heading in degrees clockwise from north. Any measured value is `null` when OpenSky did not send it; `flight_id` is `null` for an observation that belongs to no flight.
+
+`GET /aircraft/{aircraft_id}/flights` takes `limit` (1 to 200, default 50) and returns flight summaries, described below.
 
 ### Flights (`/api/v1/flights`)
 
-`TBD`.
+Work package `feat/aircraft-lookup` (BF-07, BF-08, UC-02). Users and Supervisors can both view trajectories (team decision C-06).
+
+| Method and path | Purpose | Answers |
+| --- | --- | --- |
+| `GET /flights/{flight_id}` | Trajectory, missing segments and statistics of a flight | 200; 404 if unknown or deleted; 401 |
+
+Flight summary, also returned by `GET /aircraft/{aircraft_id}/flights`:
+
+```json
+{
+  "id": "01JC5Z9A2B3C4D5E6F7G8H9J0K",
+  "aircraft_id": "01JC5Z8N0Q3V9X2K7M4T6B1R8D",
+  "icao24": "3c6444",
+  "registration": "D-AIBD",
+  "callsign": "DLH4AB",
+  "started_at": "2026-11-09T09:00:00Z",
+  "ended_at": null,
+  "origin": "Frankfurt",
+  "destination": null
+}
+```
+
+`ended_at` is `null` while the flight goes on. `GET /flights/{flight_id}` adds:
+
+- `trajectory`: the observations of the flight, oldest first, in the format above (at most 10 000);
+- `gaps`: the missing segments, `{"start", "end", "duration_seconds"}`. Two consecutive positions more than 300 seconds apart are not joined, which is the upper bound of the window of rules R3 to R5. The partial trajectory is still returned (UC-02, alternative flow 2a);
+- `statistics`: `observation_count`, `duration_seconds` (first to last observation), `distance_km` (great-circle length, gaps excluded), `mean_altitude` and `max_altitude` in metres, `mean_speed` and `max_speed` in metres per second. A mean or maximum is `null` when no observation has the value.
 
 ### Rules (`/api/v1/rules`)
 
