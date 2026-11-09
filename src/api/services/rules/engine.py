@@ -104,23 +104,14 @@ class RulesEngine:
         report = EvaluationReport(
             aircraft=len(snapshots), rules=len(rules), created=created, closed=closed
         )
-        if created == 0:
-            logger.info(
-                "Rule evaluation at {}: {} aircraft, {} rules, no alert, {} episode(s) ended",
-                now.isoformat(),
-                report.aircraft,
-                report.rules,
-                closed,
-            )
-        else:
-            logger.info(
-                "Rule evaluation at {}: {} aircraft, {} rules, {} alert(s), {} episode(s) ended",
-                now.isoformat(),
-                report.aircraft,
-                report.rules,
-                created,
-                closed,
-            )
+        logger.info(
+            "Rule evaluation at {}: {} aircraft, {} rules, {} alert(s), {} episode(s) ended",
+            now.isoformat(),
+            report.aircraft,
+            report.rules,
+            created,
+            closed,
+        )
         return report
 
     async def _active_rules(self) -> list[tuple[Rule, BusinessRule]]:

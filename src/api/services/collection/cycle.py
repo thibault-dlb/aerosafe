@@ -104,9 +104,6 @@ class CollectionCycle:
             async with self._session_factory() as session:
                 await self._engine_factory(session).evaluate(collected_at)
                 await session.commit()
-        except NotImplementedError:
-            logger.info("Rules engine not implemented yet, evaluation skipped")
-            return "Rules engine not implemented"
         except Exception as error:
             logger.exception("Rule evaluation failed")
             return repr(error)
