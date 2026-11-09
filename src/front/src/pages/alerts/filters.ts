@@ -2,7 +2,6 @@ import type { Criticality } from "@/models/Alert";
 import type { AlertFilters, AlertSort, AlertStatus } from "@/services/AlertService";
 
 export const PAGE_SIZE = 25;
-export const RULE_CODES = ["R1", "R2", "R3", "R4", "R5"];
 
 /** Values of the alert filter form. Dates come from `datetime-local` inputs. */
 export interface Criteria {

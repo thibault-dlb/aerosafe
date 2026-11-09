@@ -3,8 +3,10 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { Alert, AlertPage } from "@/models/Alert";
+import { Rule } from "@/models/Rule";
 import { ApiError } from "@/services/ApiClient";
 import type { AlertService } from "@/services/AlertService";
+import type { RuleService } from "@/services/RuleService";
 
 import Alerts from "./Alerts";
 import { errorMessage } from "./errorMessage";
@@ -31,6 +33,10 @@ function alert(id: string, processedAt: Date | null = null): Alert {
   );
 }
 
+const RULES = ["R1", "R3", "R6"].map(
+  (code) => new Rule(code, code, 1, "s", null, true, TRIGGERED),
+);
+
 function renderWith(
   search: AlertService["search"],
   process: AlertService["process"] = async (id) => alert(id, TRIGGERED),
@@ -39,9 +45,10 @@ function renderWith(
     search: vi.fn(search),
     process: vi.fn(process),
   } as unknown as AlertService;
+  const ruleService = { list: vi.fn(async () => RULES) } as unknown as RuleService;
   render(
     <MemoryRouter>
-      <Alerts service={service} />
+      <Alerts service={service} ruleService={ruleService} />
     </MemoryRouter>,
   );
   return {
@@ -106,9 +113,18 @@ describe("Alerts", () => {
     expect(await screen.findByText("No alert matches these criteria.")).toBeInTheDocument();
   });
 
+  it("offers the rules read from the API", async () => {
+    renderWith(async () => new AlertPage([], 0));
+
+    expect(await screen.findByRole("option", { name: "R6" })).toBeInTheDocument();
+    const options = screen.getAllByRole("option").map((option) => option.textContent);
+    expect(options.slice(0, 4)).toEqual(["All rules", "R1", "R3", "R6"]);
+  });
+
   it("applies the filters", async () => {
     const { search } = renderWith(async () => new AlertPage([], 0));
     await screen.findByText("No alert matches these criteria.");
+    await screen.findByRole("option", { name: "R3" });
 
     fireEvent.change(screen.getByLabelText("Rule"), { target: { value: "R3" } });
     fireEvent.change(screen.getByLabelText("Status"), { target: { value: "" } });
@@ -178,6 +194,7 @@ describe("Alerts", () => {
           }),
     );
 
+    await screen.findByRole("option", { name: "R3" });
     fireEvent.change(screen.getByLabelText("Rule"), { target: { value: "R3" } });
     // Submitted while the first search runs (the Apply button is then disabled).
     fireEvent.submit(screen.getByRole("form", { name: "Alert filters" }));

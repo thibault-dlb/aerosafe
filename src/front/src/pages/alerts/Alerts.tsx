@@ -5,6 +5,7 @@ import AlertTable from "@/components/alerts/AlertTable";
 import { formatValue, statusLabel } from "@/components/alerts/format";
 import type { Alert, AlertPage } from "@/models/Alert";
 import { AlertService, type AlertSort } from "@/services/AlertService";
+import { RuleService } from "@/services/RuleService";
 
 import { errorMessage } from "./errorMessage";
 import {
@@ -12,17 +13,20 @@ import {
   DEFAULT_CRITERIA,
   PAGE_SIZE,
   periodReversed,
-  RULE_CODES,
   toFilters,
 } from "./filters";
 
 export interface AlertsProps {
   service?: AlertService;
+  ruleService?: RuleService;
 }
 
 /** UC-04: view, filter and sort alerts, open their details and mark them as processed. */
-export default function Alerts({ service }: AlertsProps) {
+export default function Alerts({ service, ruleService }: AlertsProps) {
   const api = useMemo(() => service ?? new AlertService(), [service]);
+  const rulesApi = useMemo(() => ruleService ?? new RuleService(), [ruleService]);
+  // Read from the API, so a rule added to REGLE shows up without changing this page (NF-06).
+  const [ruleCodes, setRuleCodes] = useState<string[]>([]);
   const [criteria, setCriteria] = useState<Criteria>(DEFAULT_CRITERIA);
   const [applied, setApplied] = useState<Criteria>(DEFAULT_CRITERIA);
   const [offset, setOffset] = useState(0);
@@ -64,6 +68,20 @@ export default function Alerts({ service }: AlertsProps) {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    let cancelled = false;
+    rulesApi.list().then(
+      (rules) => {
+        if (!cancelled) setRuleCodes(rules.map((rule) => rule.code));
+      },
+      // Without the list, the filter still offers "All rules"; the alert list says why.
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [rulesApi]);
+
   function update<K extends keyof Criteria>(key: K, value: Criteria[K]) {
     setCriteria((current) => ({ ...current, [key]: value }));
   }
@@ -104,7 +122,7 @@ export default function Alerts({ service }: AlertsProps) {
           Rule
           <select value={criteria.rule} onChange={(event) => update("rule", event.target.value)}>
             <option value="">All rules</option>
-            {RULE_CODES.map((code) => (
+            {ruleCodes.map((code) => (
               <option key={code} value={code}>
                 {code}
               </option>
