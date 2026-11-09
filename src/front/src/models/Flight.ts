@@ -145,4 +145,23 @@ export class FlightDetail extends Flight {
   get isPartial(): boolean {
     return this.gaps.length > 0;
   }
+
+  /**
+   * The positions of the trajectory, split at each missing segment, so a map never joins
+   * two points across a gap.
+   */
+  segments(): Observation[][] {
+    const segments: Observation[][] = [[]];
+    const gapEnds = this.gaps.map((gap) => gap.end.getTime()).sort((a, b) => a - b);
+    let nextGap = 0;
+    for (const point of this.trajectory.filter((observation) => observation.hasPosition)) {
+      const time = point.lastContactAt.getTime();
+      if (nextGap < gapEnds.length && time >= gapEnds[nextGap]) {
+        while (nextGap < gapEnds.length && time >= gapEnds[nextGap]) nextGap += 1;
+        segments.push([]);
+      }
+      segments[segments.length - 1].push(point);
+    }
+    return segments.filter((segment) => segment.length > 0);
+  }
 }
