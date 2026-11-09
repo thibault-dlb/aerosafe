@@ -16,12 +16,11 @@ from services.collection.opensky_client import (
     StatesResponse,
 )
 from services.collection.profiles import BoundingBox, CollectionProfile, ProfileCode
+from services.collection.run_repository import get_state_store, state_store
 from services.collection.run_state import (
     CollectionRunResult,
     InMemoryCollectionStateStore,
     RunStatus,
-    get_state_store,
-    state_store,
 )
 from services.collection.scheduler import CollectionBusy, CollectionDisabled, Scheduler
 
@@ -129,6 +128,32 @@ async def test_a_successful_cycle_collects_then_evaluates_at_the_collection_time
     assert engine.calls == [NOW]
     assert await store.runs(10) == [result]
     assert await store.last_success() == result
+
+
+async def test_the_run_ends_after_the_evaluation() -> None:
+    class SlowEngine(Engine):
+        def __init__(self, clock: Clock) -> None:
+            super().__init__()
+            self.clock = clock
+
+        async def evaluate(self, now: datetime) -> None:
+            await super().evaluate(now)
+            self.clock.now = NOW + timedelta(seconds=7)
+
+    clock = Clock()
+    store = InMemoryCollectionStateStore()
+    run_cycle = CollectionCycle(
+        collector(StatesResponse(time=1, states=[VALID]), clock),
+        store,
+        session_factory=Sessions(),
+        engine_factory=SlowEngine(clock),  # type: ignore[arg-type]
+        clock=clock,
+    )
+
+    result = await run_cycle.run()
+
+    assert (result.started_at, result.ended_at) == (NOW, NOW + timedelta(seconds=7))
+    assert (await store.runs(1))[0].ended_at == NOW + timedelta(seconds=7)
 
 
 async def test_rejected_states_make_a_partial_run() -> None:

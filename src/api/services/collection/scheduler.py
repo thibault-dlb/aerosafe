@@ -12,7 +12,8 @@ from services.collection.collector import DataCollector
 from services.collection.cycle import CollectionCycle
 from services.collection.flight_grouper import FlightGrouper
 from services.collection.opensky_client import OpenSkyClient, TokenProvider
-from services.collection.run_state import CollectionRunResult, state_store
+from services.collection.run_repository import state_store
+from services.collection.run_state import CollectionRunResult
 
 logger = get_logger()
 

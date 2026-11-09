@@ -1,26 +1,19 @@
-from collections.abc import AsyncIterator, Callable
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database import database
 from core.logger import get_logger
 from services.collection.collector import DataCollector, utc_now
 from services.collection.opensky_client import OpenSkyRateLimited, OpenSkyUnavailable
 from services.collection.run_state import CollectionRunResult, CollectionStateStore, RunStatus
+from services.collection.sessions import SessionFactory, database_session
 from services.rules.engine import RulesEngine
 
 logger = get_logger()
 
-SessionFactory = Callable[[], AbstractAsyncContextManager[AsyncSession]]
 EngineFactory = Callable[[AsyncSession], RulesEngine]
-
-
-@asynccontextmanager
-async def database_session() -> AsyncIterator[AsyncSession]:
-    async for session in database.get_session():
-        yield session
 
 
 class CollectionCycle:
@@ -54,6 +47,8 @@ class CollectionCycle:
         result = await self._collect(started_at)
         if result.status in RunStatus.COLLECTED:
             result = result.with_evaluation_error(await self._evaluate(started_at))
+        # The end is set last, after the evaluation: the recorded row is final.
+        result = replace(result, ended_at=self._clock())
         await self._record(result)
         return result
 

@@ -9,11 +9,11 @@ from core.models import new_ulid
 from core.security import CurrentUser, RoleCode, get_current_user
 from main import app
 from routes.v1.collection import get_scheduler
+from services.collection.run_repository import get_state_store
 from services.collection.run_state import (
     CollectionRunResult,
     InMemoryCollectionStateStore,
     RunStatus,
-    get_state_store,
 )
 from services.collection.scheduler import CollectionBusy, CollectionDisabled, Scheduler
 

@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from core.logger import get_logger
 from core.security import CurrentUser, RoleCode, require_role
 from schemas.collection import CollectionRunOut, CollectionStatusOut
-from services.collection.run_state import CollectionStateStore, get_state_store
+from services.collection.run_repository import get_state_store
+from services.collection.run_state import CollectionStateStore
 from services.collection.scheduler import CollectionBusy, CollectionDisabled, Scheduler
 
 logger = get_logger()

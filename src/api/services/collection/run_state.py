@@ -42,11 +42,7 @@ class PauseState:
 
 
 class CollectionStateStore(Protocol):
-    """Where runs and the pause are kept.
-
-    Today in memory. It moves to `EXECUTION_COLLECTE` and `PARAMETRE_COLLECTE` once their
-    migrations are merged, without changing the callers.
-    """
+    """Where runs and the pause are kept: the database in the application, memory in tests."""
 
     async def record(self, run: CollectionRunResult) -> None: ...
 
@@ -60,7 +56,7 @@ class CollectionStateStore(Protocol):
 
 
 class InMemoryCollectionStateStore:
-    """Keeps the latest runs of this process; lost on restart."""
+    """Keeps the latest runs of this process; for tests and tools without a database."""
 
     def __init__(self, capacity: int = 1_000) -> None:
         self._capacity = capacity
@@ -83,11 +79,3 @@ class InMemoryCollectionStateStore:
     async def set_paused(self, paused: bool, at: datetime, user_id: int | None) -> PauseState:
         self._pause = PauseState(paused, at, user_id)
         return self._pause
-
-
-state_store: CollectionStateStore = InMemoryCollectionStateStore()
-
-
-def get_state_store() -> CollectionStateStore:
-    """FastAPI dependency, overridden in tests."""
-    return state_store
