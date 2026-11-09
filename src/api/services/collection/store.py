@@ -72,12 +72,16 @@ class ObservationStore:
         return result.rowcount or 0
 
     async def _ensure_aircraft(self, icao24s: set[str]) -> dict[str, int]:
-        """Create the aircraft seen for the first time, then map every ICAO24 to its key."""
+        """Create the aircraft seen for the first time, then map every ICAO24 to its key.
+
+        A soft-deleted aircraft keeps its row, so the insert skips it: it is read back with
+        the others and its observations are still stored.
+        """
         await self._session.execute(
             insert(Aircraft).on_conflict_do_nothing(index_elements=["CD_ICAO24"]),
             [{"icao24": icao24, "public_id": new_ulid()} for icao24 in sorted(icao24s)],
         )
-        statement = self._aircraft.select().where(Aircraft.icao24.in_(icao24s))
+        statement = self._aircraft.select(include_deleted=True).where(Aircraft.icao24.in_(icao24s))
         return {aircraft.icao24: aircraft.id for aircraft in await self._session.scalars(statement)}
 
     async def _open_flights(self, aircraft_ids: list[int]) -> dict[int, tuple[Flight, OpenFlight]]:

@@ -134,5 +134,22 @@ async def test_stale_flights_are_closed_at_their_last_observation(session: Async
     assert flight.ended_at == T0 + timedelta(minutes=5)
 
 
+async def test_a_soft_deleted_aircraft_does_not_block_the_collection(
+    session: AsyncSession,
+) -> None:
+    aircraft = icao24()
+    await store(session).save([state(aircraft, T0)])
+    deleted = await session.scalar(select(Aircraft).where(Aircraft.icao24 == aircraft))
+    assert deleted is not None
+    deleted.deleted_at = T0
+    await session.flush()
+
+    stored = await store(session).save(
+        [state(aircraft, T0 + timedelta(minutes=1)), state(icao24(), T0)]
+    )
+
+    assert stored == 2
+
+
 async def test_an_empty_collection_stores_nothing(session: AsyncSession) -> None:
     assert await store(session).save([]) == 0
