@@ -140,3 +140,55 @@ class Airport(Base):
         "LB_AEROPORT", Text, nullable=False, comment="Nom de l'aéroport."
     )
     is_active: Mapped[bool] = _is_active("Indique si l'aéroport peut encore être utilisé.")
+
+
+class CollectionStatus(Base):
+    __tablename__ = "R_STATUT_COLLECTE"
+    __table_args__ = table_args(
+        comment=(
+            "Référentiel des statuts d'un cycle de collecte OpenSky "
+            "(succès, partiel, échec, quota atteint, ignoré)."
+        )
+    )
+
+    id: Mapped[int] = primary_key("Identifiant technique du statut de collecte.")
+    code: Mapped[str] = mapped_column(
+        "CD_STATUT_COLLECTE",
+        Text,
+        nullable=False,
+        unique=True,
+        comment="Code stable du statut, utilisé par le collecteur.",
+    )
+    label: Mapped[str] = mapped_column(
+        "LB_STATUT_COLLECTE",
+        Text,
+        nullable=False,
+        comment="Libellé du statut affiché sur le tableau de bord.",
+    )
+    is_active: Mapped[bool] = _is_active("Indique si le statut peut encore être utilisé.")
+
+
+class CollectionProfile(Base):
+    __tablename__ = "R_PROFIL_COLLECTE"
+    __table_args__ = table_args(
+        comment=(
+            "Référentiel des profils de collecte OpenSky (zone couverte et fréquence), "
+            "choisis par configuration."
+        )
+    )
+
+    id: Mapped[int] = primary_key("Identifiant technique du profil de collecte.")
+    code: Mapped[str] = mapped_column(
+        "CD_PROFIL_COLLECTE",
+        Text,
+        nullable=False,
+        unique=True,
+        comment="Code stable du profil, valeur du paramètre COLLECTION_PROFILE.",
+    )
+    label: Mapped[str] = mapped_column(
+        "LB_PROFIL_COLLECTE",
+        Text,
+        nullable=False,
+        comment="Libellé du profil affiché sur le tableau de bord.",
+    )
+    is_active: Mapped[bool] = _is_active("Indique si le profil peut encore être utilisé.")

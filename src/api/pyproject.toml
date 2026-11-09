@@ -37,6 +37,10 @@ pythonpath = ["."]
 testpaths = ["tests"]
 # Coverage is enabled by default; its scope is defined in [tool.coverage.run].
 addopts = "-n 4 --cov --cov-report=term-missing"
+# Skip the database tests locally with `-m "not integration"`; CI runs them.
+markers = [
+    "integration: needs a PostgreSQL database with the migrations applied (DB_* settings)",
+]
 
 [tool.coverage.run]
 # `source` makes coverage count files that no test imports.

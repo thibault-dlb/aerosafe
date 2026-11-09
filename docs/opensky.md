@@ -69,7 +69,7 @@ Each state vector gives, among others, the fields below. They map to the `Observ
 | `true_track` | `heading` | Heading, clockwise from north (0°) | ° |
 | `on_ground` | `onGround` | True if the position comes from a surface position report | Boolean |
 
-Both times must be stored: R1 uses `lastContactAt` and R2 `positionAt`. The rules also use `onGround` to ignore aircraft on the ground. Which altitude (barometric or geometric) feeds `altitude` is `TBD`.
+Both times must be stored: R1 uses `lastContactAt` and R2 `positionAt`. The rules also use `onGround` to ignore aircraft on the ground. The barometric altitude feeds `altitude`, and the geometric altitude only when the barometric one is missing (team decision of 2026-11-09, see [open points](open-points.md#team-decisions-pending-confirmation)).
 
 ## Collection
 
