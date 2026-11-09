@@ -12,7 +12,7 @@ export default function AlertTable({ alerts }: AlertTableProps) {
         {alerts.map((alert) => (
           <tr key={alert.id}>
             <td>{alert.ruleCode}</td>
-            <td>{alert.triggeredAt}</td>
+            <td>{alert.triggeredAt.toLocaleString()}</td>
             <td>{alert.message}</td>
           </tr>
         ))}
