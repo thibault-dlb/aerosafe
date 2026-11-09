@@ -24,9 +24,7 @@ class Repository(Generic[ModelT]):
         return statement.where(self._model.deleted_at.is_(None))
 
     async def get(self, identifier: int, *, include_deleted: bool = False) -> ModelT | None:
-        statement = self.select(include_deleted=include_deleted).where(
-            self._model.id == identifier
-        )
+        statement = self.select(include_deleted=include_deleted).where(self._model.id == identifier)
         return await self._session.scalar(statement)
 
     async def soft_delete(self, instance: ModelT) -> None:
