@@ -37,7 +37,8 @@ class CollectionRun(TimestampMixin, Base):
         ),
         # A B-tree index is read in both directions, so it also serves "newest first".
         Index("idx_execution_collecte_debut", "DT_DEBUT"),
-        Index("idx_execution_collecte_statut", "ID_STATUT_COLLECTE"),
+        # Also indexes the foreign key: ID_STATUT_COLLECTE comes first.
+        Index("idx_execution_collecte_statut_debut", "ID_STATUT_COLLECTE", "DT_DEBUT"),
         Index("idx_execution_collecte_profil", "ID_PROFIL_COLLECTE"),
         comment=(
             "Cycle de collecte OpenSky, une ligne par cycle créée par le collecteur ; "

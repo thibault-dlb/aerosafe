@@ -36,6 +36,7 @@ class Observation(TimestampMixin, Base):
         CheckConstraint('"NB_VITESSE" >= 0', name="speed_positive"),
         CheckConstraint('"NB_CAP" >= 0 AND "NB_CAP" < 360', name="heading_range"),
         Index("idx_observation_vol", "ID_VOL", "DT_POSITION"),
+        Index("idx_observation_vol_contact", "ID_VOL", "DT_DERNIER_CONTACT"),
         Index("idx_observation_contact", "DT_DERNIER_CONTACT"),
         Index("idx_observation_position", "GEO_POSITION", postgresql_using="gist"),
         comment=(
