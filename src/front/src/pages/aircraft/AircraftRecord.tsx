@@ -5,9 +5,10 @@ import AircraftMap from "@/components/map/AircraftMap";
 import type { Aircraft, Observation } from "@/models/Aircraft";
 import type { Flight } from "@/models/Flight";
 import { AircraftService } from "@/services/AircraftService";
+import { ErrorMessages } from "@/services/ErrorMessages";
+import { Formatter } from "@/services/Formatter";
 
-import { errorMessage } from "./errorMessage";
-import { formatDate, formatNumber } from "./format";
+const ERRORS = ErrorMessages.AIRCRAFT.withNotFound("This aircraft does not exist.");
 
 /** Number of latest observations shown on the record. */
 export const HISTORY_SIZE = 50;
@@ -42,7 +43,7 @@ export default function AircraftRecord({ service }: AircraftRecordProps) {
         if (active) setData({ aircraft, observations, flights });
       })
       .catch((failure: unknown) => {
-        if (active) setError(errorMessage(failure, "This aircraft does not exist."));
+        if (active) setError(ERRORS.describe(failure));
       });
     return () => {
       active = false;
@@ -95,7 +96,7 @@ export default function AircraftRecord({ service }: AircraftRecordProps) {
         <dt>Airline</dt>
         <dd>{aircraft.airline ?? "Unknown"}</dd>
         <dt>Last contact</dt>
-        <dd>{aircraft.lastContactAt ? formatDate(aircraft.lastContactAt) : "Never"}</dd>
+        <dd>{aircraft.lastContactAt ? Formatter.date(aircraft.lastContactAt) : "Never"}</dd>
       </dl>
 
       {position.length > 0 ? (
@@ -113,7 +114,7 @@ export default function AircraftRecord({ service }: AircraftRecordProps) {
             {flights.map((flight) => (
               <li key={flight.id}>
                 <Link to={`/flights/${flight.id}`}>{flight.displayName}</Link>{" "}
-                {formatDate(flight.startedAt)} → {flight.inProgress ? "in progress" : formatDate(flight.endedAt)}
+                {Formatter.date(flight.startedAt)} → {flight.inProgress ? "in progress" : Formatter.date(flight.endedAt)}
                 {flight.origin || flight.destination
                   ? ` (${flight.origin ?? "?"} → ${flight.destination ?? "?"})`
                   : ""}
@@ -143,10 +144,10 @@ export default function AircraftRecord({ service }: AircraftRecordProps) {
             <tbody>
               {latestFirst.map((observation) => (
                 <tr key={observation.lastContactAt.toISOString()}>
-                  <td>{formatDate(observation.lastContactAt)}</td>
-                  <td>{formatNumber(observation.altitude, "m")}</td>
-                  <td>{formatNumber(observation.speed, "m/s")}</td>
-                  <td>{formatNumber(observation.heading, "°")}</td>
+                  <td>{Formatter.date(observation.lastContactAt)}</td>
+                  <td>{Formatter.number(observation.altitude, "m")}</td>
+                  <td>{Formatter.number(observation.speed, "m/s")}</td>
+                  <td>{Formatter.number(observation.heading, "°")}</td>
                   <td>
                     {observation.hasPosition
                       ? `${observation.latitude?.toFixed(4)}, ${observation.longitude?.toFixed(4)}`

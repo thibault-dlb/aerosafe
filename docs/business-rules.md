@@ -18,7 +18,7 @@ AeroSafe initially includes five business rules to detect unusual situations.
 
 ### Proposed calculations
 
-Notation: `now` is the time of the collection that has just run, not the time the engine runs, so a delay in the evaluation never makes the data look older than it is; for an aircraft, `p1` and `p2` are its two latest consecutive observations of the same flight, `Δt = p2.positionAt − p1.positionAt`. OpenSky gives altitude in metres, speed in m/s and heading in degrees (see [fields used by the rules](opensky.md#fields-used-by-the-rules)).
+Notation: `now` is the time of the collection that has just run, not the time the engine runs, so a delay in the evaluation never makes the data look older than it is. The observations stored by that collection are evaluated even when their contact is a few seconds after `now` (time of the request, clock difference with OpenSky): R1 and R2 then count no delay. For an aircraft, `p1` and `p2` are its two latest consecutive observations of the same flight, `Δt = p2.positionAt − p1.positionAt`. OpenSky gives altitude in metres, speed in m/s and heading in degrees (see [fields used by the rules](opensky.md#fields-used-by-the-rules)).
 
 | Rule | Observed value | Triggers when |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ Reasoning behind the values:
 ### Scope and deduplication
 
 - Rules apply to aircraft that are **airborne** (`on_ground` false). R1 and R2 also stop being evaluated for an aircraft silent for more than 30 minutes, so that an aircraft which left the coverage zone does not raise alerts forever.
-- An aircraft does not raise the same rule twice while the situation lasts: a new alert for the same aircraft and rule is generated only after the previous episode ended (the value went back under the threshold).
+- An aircraft does not raise the same rule twice while the situation lasts: a new alert for the same aircraft and rule is generated only after the previous episode ended. An episode ends when the value goes back under the threshold, when the aircraft lands or is silent for more than 30 minutes, or when the rule is disabled. It stays open while an airborne aircraft lacks the data the rule needs (no position, no previous observation in the same flight).
 - Observations that belong to no flight are not used for R3 to R5, since a rate needs two points of the same flight (D-06).
 - An observation with a missing value (altitude, speed or heading) is skipped by the rule that needs it.
 

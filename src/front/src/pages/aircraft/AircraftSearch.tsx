@@ -4,10 +4,10 @@ import { Link } from "react-router-dom";
 import AircraftMap from "@/components/map/AircraftMap";
 import type { Aircraft } from "@/models/Aircraft";
 import { type AircraftSearch as Criteria, AircraftService } from "@/services/AircraftService";
+import { ErrorMessages } from "@/services/ErrorMessages";
 import type { MapPosition } from "@/services/MapService";
 
 import { AREA_FIELDS, type AreaField, parseArea } from "./area";
-import { errorMessage } from "./errorMessage";
 
 export interface AircraftSearchProps {
   service?: AircraftService;
@@ -55,7 +55,7 @@ export default function AircraftSearch({ service }: AircraftSearchProps) {
       setResults(await api.search(criteria));
     } catch (failure) {
       setResults(null);
-      setError(errorMessage(failure));
+      setError(ErrorMessages.AIRCRAFT.describe(failure));
     } finally {
       setLoading(false);
     }

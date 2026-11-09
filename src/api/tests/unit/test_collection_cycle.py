@@ -245,7 +245,8 @@ async def test_a_manual_run_collects_even_when_paused() -> None:
 @pytest.mark.parametrize(
     ("error", "message"),
     [
-        (NotImplementedError(), "Rules engine not implemented"),
+        # A rule that is not finished is a failure like any other, not a missing engine.
+        (NotImplementedError("R9"), "NotImplementedError('R9')"),
         (RuntimeError("bug"), "RuntimeError('bug')"),
     ],
 )

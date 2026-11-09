@@ -4,12 +4,14 @@ import { Link, useParams } from "react-router-dom";
 import AircraftMap from "@/components/map/AircraftMap";
 import type { Observation } from "@/models/Aircraft";
 import type { FlightDetail as Flight } from "@/models/Flight";
-import { errorMessage } from "@/pages/aircraft/errorMessage";
-import { formatDate, formatDuration, formatNumber } from "@/pages/aircraft/format";
 import { AircraftService } from "@/services/AircraftService";
+import { ErrorMessages } from "@/services/ErrorMessages";
+import { Formatter } from "@/services/Formatter";
 import type { MapPosition } from "@/services/MapService";
 
 import Profile, { type ProfilePoint } from "./Profile";
+
+const ERRORS = ErrorMessages.AIRCRAFT.withNotFound("This flight does not exist.");
 
 function toPosition(point: Observation): MapPosition {
   return { latitude: point.latitude as number, longitude: point.longitude as number };
@@ -43,7 +45,7 @@ export default function FlightDetail({ service }: FlightDetailProps) {
         if (active) setFlight(detail);
       })
       .catch((failure: unknown) => {
-        if (active) setError(errorMessage(failure, "This flight does not exist."));
+        if (active) setError(ERRORS.describe(failure));
       });
     return () => {
       active = false;
@@ -86,7 +88,7 @@ export default function FlightDetail({ service }: FlightDetailProps) {
         {" · "}
         {flight.origin ?? "Unknown origin"} → {flight.destination ?? "unknown destination"}
         {" · "}
-        {formatDate(flight.startedAt)} → {flight.inProgress ? "in progress" : formatDate(flight.endedAt)}
+        {Formatter.date(flight.startedAt)} → {flight.inProgress ? "in progress" : Formatter.date(flight.endedAt)}
       </p>
 
       {flight.isPartial && (
@@ -98,7 +100,7 @@ export default function FlightDetail({ service }: FlightDetailProps) {
           <ul>
             {flight.gaps.map((gap) => (
               <li key={gap.start.toISOString()}>
-                {formatDate(gap.start)} → {formatDate(gap.end)} ({formatDuration(gap.durationSeconds)})
+                {Formatter.date(gap.start)} → {Formatter.date(gap.end)} ({Formatter.duration(gap.durationSeconds)})
               </li>
             ))}
           </ul>
@@ -115,17 +117,17 @@ export default function FlightDetail({ service }: FlightDetailProps) {
         <h2 id="statistics-title">Statistics</h2>
         <dl>
           <dt>Duration</dt>
-          <dd>{formatDuration(stats.durationSeconds)}</dd>
+          <dd>{Formatter.duration(stats.durationSeconds)}</dd>
           <dt>Distance</dt>
-          <dd>{formatNumber(stats.distanceKm, "km", 1)}</dd>
+          <dd>{Formatter.number(stats.distanceKm, "km", 1)}</dd>
           <dt>Mean altitude</dt>
-          <dd>{formatNumber(stats.meanAltitude, "m")}</dd>
+          <dd>{Formatter.number(stats.meanAltitude, "m")}</dd>
           <dt>Maximum altitude</dt>
-          <dd>{formatNumber(stats.maxAltitude, "m")}</dd>
+          <dd>{Formatter.number(stats.maxAltitude, "m")}</dd>
           <dt>Mean speed</dt>
-          <dd>{formatNumber(stats.meanSpeed, "m/s")}</dd>
+          <dd>{Formatter.number(stats.meanSpeed, "m/s")}</dd>
           <dt>Maximum speed</dt>
-          <dd>{formatNumber(stats.maxSpeed, "m/s")}</dd>
+          <dd>{Formatter.number(stats.maxSpeed, "m/s")}</dd>
           <dt>Observations</dt>
           <dd>{stats.observationCount}</dd>
         </dl>

@@ -147,11 +147,89 @@ Flight summary, also returned by `GET /aircraft/{aircraft_id}/flights`:
 
 ### Rules (`/api/v1/rules`)
 
-`TBD`.
+Work package `feat/rules-alerts` (BF-13, UC-05). Every endpoint needs the Supervisor role (401 without a token, 403 with another role). A rule is identified by its code.
+
+| Method and path | Purpose | Answers |
+| --- | --- | --- |
+| `GET /rules` | Every rule with its settings, sorted by code | 200 |
+| `GET /rules/{code}` | One rule | 200; 404 if unknown |
+| `PATCH /rules/{code}` | Change the threshold, the activation or the criticality | 200 with the rule; 404; 422 for an invalid value or an unknown field |
+
+A rule:
+
+```json
+{
+  "code": "R1",
+  "description": "Délai trop long depuis le dernier contact",
+  "threshold": 300.0,
+  "unit": "s",
+  "criticality": "MEDIUM",
+  "is_active": true,
+  "updated_at": "2026-11-09T10:00:00Z"
+}
+```
+
+Body of `PATCH /rules/{code}`. Every field is optional, and a missing field keeps its value:
+
+| Field | Rule |
+| --- | --- |
+| `threshold` | Number from 0 to 9 999 999.999, in the unit of the rule |
+| `is_active` | `false` stops the evaluation of the rule; the next evaluation ends its open episodes |
+| `criticality` | `LOW`, `MEDIUM`, `HIGH`, or `null` to remove it; 422 if the level is disabled in `R_CRITICITE`. It is copied into the alerts raised afterwards |
+
+The engine reads the rules on every evaluation, so a change applies at the next one. Alerts already raised keep the threshold in force when they were triggered. Every change is written to `audit_logs` with the old values, the new values and the Supervisor.
 
 ### Alerts (`/api/v1/alerts`)
 
-`TBD`.
+Work package `feat/rules-alerts` (BF-10, BF-12, UC-03, UC-04). Every endpoint needs the Supervisor role (401 without a token, 403 with another role). Identifiers are public ULIDs.
+
+| Method and path | Purpose | Answers |
+| --- | --- | --- |
+| `GET /alerts` | Alerts matching the filters, sorted, one page at a time | 200 with `{"items", "total"}`; 422 for invalid criteria |
+| `GET /alerts/statistics` | Number of alerts per rule over a period | 200; 422 if the start is after the end |
+| `GET /alerts/{alert_id}` | Details of one alert | 200; 404 if unknown or deleted |
+| `POST /alerts/{alert_id}/process` | Mark the alert as processed by the caller | 200 with the alert; 404; 409 if already processed |
+
+Query parameters of `GET /alerts`. Every criterion is optional and they are combined (AND). `total` counts every alert that matches, all pages included. It is an exact count, run with each page: filtered through indexed columns on a table of a few thousand rows, it stays cheap, and the page needs it for its navigation.
+
+| Parameter | Rule |
+| --- | --- |
+| `rule` | Code of the rule, such as `R3` |
+| `status` | `active` (the situation still lasts), `unprocessed` or `processed` |
+| `criticality` | `LOW`, `MEDIUM` or `HIGH` |
+| `icao24` | Start of the address, 1 to 6 hexadecimal characters, case ignored |
+| `start`, `end` | Trigger time, inclusive bounds (ISO 8601 with a time zone, such as `Z`; 422 without one) |
+| `sort` | `triggered_at` (default), `criticality` or `rule`. Ties are sorted by trigger time, the latest first |
+| `order` | `desc` (default) or `asc` |
+| `limit` | 1 to 200, default 50 |
+| `offset` | 0 to 10 000, default 0. OFFSET paging reads every skipped row, so it is bounded; narrow the period or the filters to reach older alerts |
+
+An alert:
+
+```json
+{
+  "id": "01JC5ZB0K8M2N4P6Q8R0S2T4V6",
+  "aircraft_id": "01JC5Z8N0Q3V9X2K7M4T6B1R8D",
+  "icao24": "3c6444",
+  "registration": "D-AIBD",
+  "rule_code": "R3",
+  "rule_description": "Variation importante d'altitude",
+  "triggered_at": "2026-11-09T10:00:00Z",
+  "episode_ended_at": null,
+  "observed_value": 40.0,
+  "threshold": 30.0,
+  "unit": "m/s",
+  "message": "R3 vertical rate for 3c6444: 40.0 m/s above the threshold of 30 m/s",
+  "criticality": "HIGH",
+  "processed_at": null
+}
+```
+
+- `triggered_at` is the time of the collection that triggered the rule, not the time the engine ran.
+- `episode_ended_at` is `null` while the situation lasts. The aircraft raises no new alert for the same rule until then (see [business rules](business-rules.md#scope-and-deduplication)).
+- `processed_at` is `null` until a Supervisor marks the alert as processed. The Supervisor is stored but not returned.
+
+`GET /alerts/statistics?start=&end=` returns `{"start", "end", "total", "per_rule": {"R1": 4, "R3": 1}}`. Both bounds are optional and need a time zone: `end` defaults to now and `start` to 24 hours before `end`. Rules without alerts in the period are absent from `per_rule`. The dashboard reads the same counts through `AlertService.statistics()`.
 
 ### Dashboard (`/api/v1/dashboard`)
 

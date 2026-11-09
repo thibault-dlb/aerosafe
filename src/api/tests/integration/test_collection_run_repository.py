@@ -46,7 +46,7 @@ async def test_a_run_is_stored_complete_and_read_back(session: AsyncSession) -> 
         stored=55,
         rejected=1,
         remaining_credits=280,
-        evaluation_error="Rules engine not implemented",
+        evaluation_error="RuntimeError('bug')",
     )
 
     await store.record(recorded)
