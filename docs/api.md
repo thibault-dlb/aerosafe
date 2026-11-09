@@ -155,7 +155,7 @@ Every endpoint needs the Supervisor role (401 without a token, 403 with another 
 
 A run has `started_at` (also the `now` given to the rules engine), `ended_at`, `status` (`SUCCESS`, `PARTIAL` when some state vectors were rejected, `FAILED`, `RATE_LIMITED`, `SKIPPED`), `profile`, `received`, `stored` (new observations), `rejected`, `remaining_credits` (from OpenSky), `error` and `evaluation_error` (a failure of the rules engine, which never cancels the collection).
 
-Runs and the pause are kept in memory until the `EXECUTION_COLLECTE` and `PARAMETRE_COLLECTE` tables exist, so they are lost when the API restarts.
+Each run is written once to `EXECUTION_COLLECTE`, complete, with its end set after the rules evaluation. The pause is kept in `PARAMETRE_COLLECTE`, so it survives a restart of the API.
 
 Configuration, in `.env`:
 
