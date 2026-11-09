@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from itertools import count
+from unittest.mock import AsyncMock
 
 from sqlalchemy.exc import IntegrityError
 
@@ -21,6 +22,7 @@ PASSWORD = "correct horse battery"
 
 class FakeUserStore(UserStore):
     def __init__(self) -> None:
+        super().__init__(AsyncMock())  # every method is overridden, so the session stays unused
         self.roles = {
             code: Role(id=i, code=code, label=code)
             for i, code in enumerate((RoleCode.USER, RoleCode.SUPERVISOR), start=1)
