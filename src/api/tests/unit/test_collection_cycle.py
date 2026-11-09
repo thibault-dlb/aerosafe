@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -368,6 +369,47 @@ async def test_the_scheduler_builds_its_own_cycle_with_credentials() -> None:
         assert scheduler.settings is settings
         assert scheduler._cycle is not None
         assert scheduler._cycle._collector.authenticated
+    finally:
+        await scheduler.stop()
+
+
+async def test_stop_waits_for_the_running_cycle() -> None:
+    run_cycle, store, _ = cycle(StatesResponse(time=1, states=[VALID]))
+    release = asyncio.Event()
+    collect = run_cycle._collector.run
+
+    async def slow_run(session: Any, started_at: datetime) -> CollectionRunResult:
+        await release.wait()
+        return await collect(session, started_at)
+
+    run_cycle._collector.run = slow_run  # type: ignore[method-assign]
+    scheduler = Scheduler(enabled_settings(), run_cycle)
+    await scheduler.start()
+    running = asyncio.create_task(scheduler.run_now())
+    await asyncio.sleep(0)
+    assert scheduler.busy
+
+    stopping = asyncio.create_task(scheduler.stop())
+    await asyncio.sleep(0)
+    assert not stopping.done()
+
+    release.set()
+    await stopping
+    assert (await running).status == RunStatus.SUCCESS
+    assert len(await store.runs(10)) == 1
+
+
+async def test_a_restarted_scheduler_builds_a_new_cycle() -> None:
+    scheduler = Scheduler(enabled_settings())
+    await scheduler.start()
+    first = scheduler._cycle
+    await scheduler.stop()
+    assert scheduler._cycle is None
+
+    await scheduler.start()
+    try:
+        assert scheduler._cycle is not None and scheduler._cycle is not first
+        assert scheduler._http is not None and not scheduler._http.is_closed
     finally:
         await scheduler.stop()
 

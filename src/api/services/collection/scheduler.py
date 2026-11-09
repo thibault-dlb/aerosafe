@@ -108,13 +108,17 @@ class Scheduler:
         )
 
     async def stop(self) -> None:
-        """Stop the periodic cycles and close the OpenSky connection."""
+        """Stop the periodic cycles, let a running one finish, then close the OpenSky connection."""
         if self._jobs is not None:
             self._jobs.shutdown(wait=False)
             self._jobs = None
-        if self._http is not None:
-            await self._http.aclose()
-            self._http = None
+        # A cycle still running uses the HTTP client and the database: wait for its end.
+        async with self._lock:
+            if self._http is not None:
+                await self._http.aclose()
+                self._http = None
+                # The cycle was built on the closed client: the next start builds a new one.
+                self._cycle = None
         if Scheduler._current is self:
             Scheduler._current = None
 
