@@ -50,9 +50,12 @@ async def test_a_refresh_token_is_checked_and_revoked_in_one_update() -> None:
     assert 'RETURNING "JETON_RAFRAICHISSEMENT"."ID_UTILISATEUR"' in statement
 
 
-async def test_a_missing_role_is_an_error() -> None:
+async def test_a_missing_or_inactive_role_is_an_error() -> None:
+    session = session_returning(None)
+
     with pytest.raises(LookupError):
-        await UserStore(session_returning(None)).get_role("USER")
+        await UserStore(session).get_role("USER")
+    assert '"R_ROLE".is_active IS true' in sql(session)
 
 
 async def test_writes_flush_then_commit() -> None:

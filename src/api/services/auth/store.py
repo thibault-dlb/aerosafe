@@ -25,9 +25,11 @@ class UserStore:
         return await self._get_user(User.public_id == public_id)
 
     async def get_role(self, code: str) -> Role:
-        role = await self._session.scalar(select(Role).where(Role.code == code))
+        # An inactive role can no longer be given to an account.
+        statement = select(Role).where(Role.code == code, Role.is_active.is_(True))
+        role = await self._session.scalar(statement)
         if role is None:
-            raise LookupError(f"Role {code} is missing from R_ROLE")
+            raise LookupError(f"Role {code} is missing from R_ROLE or inactive")
         return role
 
     async def add_user(self, email: str, password_hash: str, role: Role) -> User:
