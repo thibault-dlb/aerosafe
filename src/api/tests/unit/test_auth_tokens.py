@@ -23,9 +23,17 @@ def test_an_access_token_round_trips() -> None:
     assert codec.decode(codec.encode(claims, NOW)) == claims
 
 
-def test_a_short_secret_is_refused() -> None:
-    with pytest.raises(RuntimeError):
-        AccessTokenCodec(AuthSettings(AUTH_JWT_SECRET="short"))
+@pytest.mark.parametrize(
+    "secret, message",
+    [
+        ("short", "at least 32 characters"),
+        ("changeme-changeme-changeme-changeme", "placeholder"),
+        ("ChangeMe-and-pad-it-to-32-characters", "placeholder"),
+    ],
+)
+def test_a_weak_secret_is_refused(secret: str, message: str) -> None:
+    with pytest.raises(RuntimeError, match=message):
+        AccessTokenCodec(AuthSettings(AUTH_JWT_SECRET=secret))
 
 
 @pytest.mark.parametrize(

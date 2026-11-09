@@ -10,6 +10,8 @@ from config.auth import AuthSettings
 ALGORITHM = "HS256"
 # HS256 needs a key at least as long as its 256-bit output (RFC 7518 §3.2).
 MIN_SECRET_LENGTH = 32
+# The value of .env.example: long enough, but public.
+SECRET_PLACEHOLDER = "changeme"
 
 
 class InvalidTokenError(Exception):
@@ -26,10 +28,19 @@ class AccessTokenCodec:
     """Signs and checks the short-lived access token (JWT)."""
 
     def __init__(self, settings: AuthSettings) -> None:
-        if len(settings.AUTH_JWT_SECRET) < MIN_SECRET_LENGTH:
-            raise RuntimeError(f"AUTH_JWT_SECRET must hold at least {MIN_SECRET_LENGTH} characters")
+        self.check_secret(settings.AUTH_JWT_SECRET)
         self._secret = settings.AUTH_JWT_SECRET
         self.lifetime = timedelta(minutes=settings.AUTH_ACCESS_TOKEN_MINUTES)
+
+    @staticmethod
+    def check_secret(secret: str) -> None:
+        """Refuse a key too short for HS256, or one that still holds the .env.example value."""
+        if len(secret) < MIN_SECRET_LENGTH:
+            raise RuntimeError(f"AUTH_JWT_SECRET must hold at least {MIN_SECRET_LENGTH} characters")
+        if SECRET_PLACEHOLDER in secret.lower():
+            raise RuntimeError(
+                "AUTH_JWT_SECRET still holds the .env.example placeholder; generate a random one"
+            )
 
     def encode(self, claims: AccessClaims, now: datetime) -> str:
         payload = {
