@@ -144,6 +144,7 @@ async def test_list_passes_the_filters(api: httpx.AsyncClient, alerts: FakeAlert
         {"limit": 201},
         {"offset": -1},
         {"start": "2026-11-09T10:00:00Z", "end": "2026-11-09T09:00:00Z"},
+        {"start": "2026-11-09T10:00:00", "end": "2026-11-10T00:00:00Z"},
     ],
 )
 async def test_list_rejects_invalid_criteria(api: httpx.AsyncClient, params: dict) -> None:
@@ -199,4 +200,12 @@ async def test_statistics_use_the_given_period(
 
     reversed_period = {"start": params["end"], "end": params["start"]}
     response = await api.get("/api/v1/alerts/statistics", params=reversed_period)
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("params", [{"start": "2026-11-09T10:00:00"}, {"end": "2026-11-09T10:00"}])
+async def test_statistics_reject_a_date_without_time_zone(
+    api: httpx.AsyncClient, params: dict
+) -> None:
+    response = await api.get("/api/v1/alerts/statistics", params=params)
     assert response.status_code == 422

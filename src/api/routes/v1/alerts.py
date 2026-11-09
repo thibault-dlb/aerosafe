@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import AwareDatetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -56,8 +57,12 @@ async def list_alerts(
         str | None,
         Query(pattern="^[0-9a-fA-F]{1,6}$", description="Start of the ICAO24 address"),
     ] = None,
-    start: Annotated[datetime | None, Query(description="Triggered at or after")] = None,
-    end: Annotated[datetime | None, Query(description="Triggered at or before")] = None,
+    start: Annotated[
+        AwareDatetime | None, Query(description="Triggered at or after, with a time zone")
+    ] = None,
+    end: Annotated[
+        AwareDatetime | None, Query(description="Triggered at or before, with a time zone")
+    ] = None,
     sort: Annotated[AlertSort, Query(description="Sort key")] = AlertSort.TRIGGERED_AT,
     order: Annotated[str, Query(pattern="^(asc|desc)$")] = "desc",
     limit: Annotated[int, Query(ge=1, le=MAX_RESULTS)] = 50,
@@ -86,8 +91,13 @@ async def list_alerts(
 async def alert_statistics(
     service: Service,
     _supervisor: Supervisor,
-    start: Annotated[datetime | None, Query(description="Default: 24 hours before end")] = None,
-    end: Annotated[datetime | None, Query(description="Default: now")] = None,
+    start: Annotated[
+        AwareDatetime | None,
+        Query(description="With a time zone. Default: 24 hours before end"),
+    ] = None,
+    end: Annotated[
+        AwareDatetime | None, Query(description="With a time zone. Default: now")
+    ] = None,
 ) -> AlertStatisticsOut:
     """Number of alerts triggered in the period, in total and per rule (team decision A-04)."""
     end = end or datetime.now(UTC)

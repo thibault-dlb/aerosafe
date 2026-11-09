@@ -198,7 +198,7 @@ Query parameters of `GET /alerts`. Every criterion is optional and they are comb
 | `status` | `active` (the situation still lasts), `unprocessed` or `processed` |
 | `criticality` | `LOW`, `MEDIUM` or `HIGH` |
 | `icao24` | Start of the address, 1 to 6 hexadecimal characters, case ignored |
-| `start`, `end` | Trigger time, inclusive bounds (ISO 8601) |
+| `start`, `end` | Trigger time, inclusive bounds (ISO 8601 with a time zone, such as `Z`; 422 without one) |
 | `sort` | `triggered_at` (default), `criticality` or `rule`. Ties are sorted by trigger time, the latest first |
 | `order` | `desc` (default) or `asc` |
 | `limit` | 1 to 200, default 50 |
@@ -229,7 +229,7 @@ An alert:
 - `episode_ended_at` is `null` while the situation lasts. The aircraft raises no new alert for the same rule until then (see [business rules](business-rules.md#scope-and-deduplication)).
 - `processed_at` is `null` until a Supervisor marks the alert as processed. The Supervisor is stored but not returned.
 
-`GET /alerts/statistics?start=&end=` returns `{"start", "end", "total", "per_rule": {"R1": 4, "R3": 1}}`. Both bounds are optional: `end` defaults to now and `start` to 24 hours before `end`. Rules without alerts in the period are absent from `per_rule`. The dashboard reads the same counts through `AlertService.statistics()`.
+`GET /alerts/statistics?start=&end=` returns `{"start", "end", "total", "per_rule": {"R1": 4, "R3": 1}}`. Both bounds are optional and need a time zone: `end` defaults to now and `start` to 24 hours before `end`. Rules without alerts in the period are absent from `per_rule`. The dashboard reads the same counts through `AlertService.statistics()`.
 
 ### Dashboard (`/api/v1/dashboard`)
 
