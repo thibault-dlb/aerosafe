@@ -4,6 +4,9 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 CriticalityCode = Literal["LOW", "MEDIUM", "HIGH"]
+# Largest value of NUMERIC(10, 3). A bound on the value itself, not before rounding: a value
+# just under 10 000 000 would round to 10 000 000.000, which the column cannot store.
+MAX_THRESHOLD = 9_999_999.999
 
 
 class RuleOut(BaseModel):
@@ -30,7 +33,6 @@ class RuleUpdate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # NUMERIC(10, 3) in the database.
-    threshold: Annotated[float, Field(ge=0, lt=10_000_000)] | None = None
+    threshold: Annotated[float, Field(ge=0, le=MAX_THRESHOLD)] | None = None
     is_active: bool | None = None
     criticality: CriticalityCode | None = None

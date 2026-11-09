@@ -1,14 +1,14 @@
 """RuleService against a real PostgreSQL, on the rules R1 to R5 inserted by the migrations."""
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.security import RoleCode
-from models import AuditLog, Rule
+from models import AuditLog, Criticality, Rule
 from schemas.rule import RuleUpdate
 from services.auth.store import UserStore
-from services.rules.service import RuleNotFound, RuleService
+from services.rules.service import CriticalityUnavailable, RuleNotFound, RuleService
 
 pytestmark = pytest.mark.integration
 
@@ -54,6 +54,17 @@ async def test_a_threshold_change_is_stored_and_audited(session: AsyncSession) -
     assert entry.new_values["threshold"] == "35.500"
 
 
+async def test_the_largest_threshold_fits_the_column(session: AsyncSession) -> None:
+    user_id = await supervisor_id(session, "rules-largest@example.com")
+    service = RuleService(session)
+    before = await service.get("R4")
+
+    updated = await service.update("R4", RuleUpdate(threshold=9_999_999.999), user_id)
+    assert updated.threshold == 9_999_999.999
+
+    await service.update("R4", RuleUpdate(threshold=before.threshold), user_id)
+
+
 async def test_criticality_and_activation_can_change(session: AsyncSession) -> None:
     user_id = await supervisor_id(session, "rules-criticality@example.com")
     service = RuleService(session)
@@ -64,6 +75,21 @@ async def test_criticality_and_activation_can_change(session: AsyncSession) -> N
     cleared = await service.update("R2", RuleUpdate.model_validate({"criticality": None}), user_id)
     assert cleared.criticality is None
     assert cleared.is_active is False
+
+
+async def test_an_inactive_criticality_is_refused_without_change(session: AsyncSession) -> None:
+    user_id = await supervisor_id(session, "rules-inactive@example.com")
+    service = RuleService(session)
+    before = await service.get("R1")
+    await session.execute(
+        update(Criticality).where(Criticality.code == "LOW").values(is_active=False)
+    )
+
+    with pytest.raises(CriticalityUnavailable):
+        await service.update("R1", RuleUpdate(criticality="LOW"), user_id)
+    await session.rollback()
+
+    assert (await service.get("R1")).criticality == before.criticality
 
 
 async def test_an_unchanged_rule_is_not_audited(session: AsyncSession) -> None:

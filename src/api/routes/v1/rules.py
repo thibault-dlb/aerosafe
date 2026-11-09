@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from core.security import CurrentUser, RoleCode, require_role
 from schemas.rule import RuleOut, RuleUpdate
-from services.rules.service import RuleNotFound, RuleService
+from services.rules.service import CriticalityUnavailable, RuleNotFound, RuleService
 
 router = APIRouter(prefix="/rules", tags=["rules"])
 
@@ -47,4 +47,9 @@ async def update_rule(
     except RuleNotFound as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Rule not found"
+        ) from error
+    except CriticalityUnavailable as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Criticality {error} is not available",
         ) from error

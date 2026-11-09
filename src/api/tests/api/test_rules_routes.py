@@ -8,7 +8,7 @@ from core.security import CurrentUser, RoleCode, get_current_user
 from main import app
 from routes.v1.rules import get_rule_service
 from schemas.rule import RuleOut, RuleUpdate
-from services.rules.service import RuleNotFound
+from services.rules.service import CriticalityUnavailable, RuleNotFound
 
 T0 = datetime(2026, 11, 9, 10, 0, tzinfo=UTC)
 R1 = RuleOut(
@@ -37,6 +37,8 @@ class FakeRuleService:
     async def update(self, code: str, changes: RuleUpdate, user_id: int) -> RuleOut:
         if code != "R1":
             raise RuleNotFound(code)
+        if changes.criticality == "LOW":
+            raise CriticalityUnavailable(changes.criticality)
         self.changes, self.user_id = changes, user_id
         return R1.model_copy(update=changes.model_dump(exclude_unset=True))
 
@@ -112,6 +114,13 @@ async def test_update_can_clear_the_criticality(
     assert "criticality" in rules.changes.model_fields_set
 
 
+async def test_update_answers_422_for_an_unavailable_criticality(api: httpx.AsyncClient) -> None:
+    response = await api.patch("/api/v1/rules/R1", json={"criticality": "LOW"})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Criticality LOW is not available"
+
+
 async def test_update_answers_404_for_an_unknown_rule(api: httpx.AsyncClient) -> None:
     assert (await api.patch("/api/v1/rules/R99", json={"threshold": 1})).status_code == 404
 
@@ -121,6 +130,7 @@ async def test_update_answers_404_for_an_unknown_rule(api: httpx.AsyncClient) ->
     [
         {"threshold": -1},
         {"threshold": 10_000_000},
+        {"threshold": 9_999_999.9996},
         {"criticality": "SEVERE"},
         {"is_active": "maybe"},
         {"unit": "km"},

@@ -16,6 +16,10 @@ class RuleNotFound(Exception):
     """No active rule has this code."""
 
 
+class CriticalityUnavailable(Exception):
+    """The criticality asked for is missing from `R_CRITICITE` or no longer active."""
+
+
 class RuleService:
     """Lists the business rules and changes their settings (UC-05).
 
@@ -87,11 +91,15 @@ class RuleService:
         return updated
 
     async def _criticality_id(self, code: str | None) -> int | None:
+        """The identifier of an active criticality; `None` only when no criticality is asked."""
         if code is None:
             return None
-        return await self._session.scalar(
+        criticality_id = await self._session.scalar(
             select(Criticality.id).where(Criticality.code == code, Criticality.is_active.is_(True))
         )
+        if criticality_id is None:
+            raise CriticalityUnavailable(code)
+        return criticality_id
 
     async def _snapshot(self, rule: Rule) -> dict[str, object]:
         criticality = None
