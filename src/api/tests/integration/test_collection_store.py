@@ -1,20 +1,16 @@
 """ObservationStore against a real PostgreSQL with the migrations applied.
 
-Skipped unless AEROSAFE_DB_TESTS=1, since the backend CI job has no database yet. Each test
-runs in a transaction that is rolled back.
+Uses the session fixture of tests/integration/conftest.py, rolled back after each test.
 """
 
-import os
 import secrets
-from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from config.database import DatabaseSettings
 from models.aircraft import Aircraft
 from models.flight import Flight
 from models.observation import Observation
@@ -22,23 +18,10 @@ from services.collection.flight_grouper import FlightGrouper
 from services.collection.normalizer import NormalizedState
 from services.collection.store import ObservationStore
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("AEROSAFE_DB_TESTS") != "1", reason="needs PostgreSQL (AEROSAFE_DB_TESTS=1)"
-)
+pytestmark = pytest.mark.integration
 
 T0 = datetime(2026, 11, 9, 10, tzinfo=UTC)
 GAP = timedelta(minutes=30)
-
-
-@pytest.fixture
-async def session() -> AsyncGenerator[AsyncSession, None]:
-    engine = create_async_engine(DatabaseSettings().DATABASE_ASYNC_URL)
-    async with engine.connect() as connection:
-        transaction = await connection.begin()
-        async with AsyncSession(bind=connection, expire_on_commit=False) as db_session:
-            yield db_session
-        await transaction.rollback()
-    await engine.dispose()
 
 
 def icao24() -> str:
