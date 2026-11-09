@@ -74,9 +74,11 @@ class AuthService:
     async def login(self, email: str, password: str, address: str, now: datetime) -> AuthSession:
         if self._throttle.is_blocked(email, address, now):
             raise TooManyAttemptsError
+        # Counted before the first await: logins sent together cannot all pass the check above.
+        # A matching password clears it.
+        self._throttle.record_attempt(email, address, now)
         user = await self._store.get_by_email(email)
         if not self._password_matches(user, password):
-            self._throttle.record_failure(email, address, now)
             raise InvalidCredentialsError
         self._throttle.reset(email, address)
         return await self._open_session(user, now)

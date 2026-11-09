@@ -1,8 +1,10 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from core.security import RoleCode
+from models import User
 from services.auth.service import (
     EmailTakenError,
     InvalidCredentialsError,
@@ -93,6 +95,26 @@ async def test_login_is_blocked_after_too_many_failures(store: FakeUserStore) ->
 
     with pytest.raises(TooManyAttemptsError):
         await service.login("pilot@example.com", PASSWORD, ADDRESS, NOW)
+
+
+async def test_logins_sent_together_cannot_pass_the_throttle(store: FakeUserStore) -> None:
+    await store.seed("pilot@example.com")
+    read_user = store.get_by_email
+
+    async def slow_read(email: str) -> User | None:
+        await asyncio.sleep(0)  # yields like a database read, so the logins interleave
+        return await read_user(email)
+
+    store.get_by_email = slow_read  # type: ignore[method-assign]
+    service = build_service(store, max_failures=2)
+
+    results = await asyncio.gather(
+        *(service.login("pilot@example.com", "wrong password!", ADDRESS, NOW) for _ in range(10)),
+        return_exceptions=True,
+    )
+
+    assert sum(isinstance(result, InvalidCredentialsError) for result in results) == 2
+    assert sum(isinstance(result, TooManyAttemptsError) for result in results) == 8
 
 
 async def test_a_successful_login_resets_the_failures(store: FakeUserStore) -> None:

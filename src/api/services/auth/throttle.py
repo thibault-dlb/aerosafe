@@ -32,7 +32,8 @@ class LoginThrottle:
         state = self._pairs.get((email, address))
         return state is not None and state.blocked_until is not None and now < state.blocked_until
 
-    def record_failure(self, email: str, address: str, now: datetime) -> None:
+    def record_attempt(self, email: str, address: str, now: datetime) -> None:
+        """Count an attempt as a failure; `reset` clears it once the password matches."""
         key = (email, address)
         state = self._pairs.pop(key, None) or _PairState(self._max_failures)
         state.failures.append(now)

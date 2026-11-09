@@ -63,8 +63,8 @@ def test_refresh_tokens_are_random_and_hashed() -> None:
 
 def test_the_throttle_forgets_old_failures() -> None:
     throttle = LoginThrottle(2, timedelta(minutes=15))
-    throttle.record_failure("a@b.c", "ip", NOW)
-    throttle.record_failure("a@b.c", "ip", NOW)
+    throttle.record_attempt("a@b.c", "ip", NOW)
+    throttle.record_attempt("a@b.c", "ip", NOW)
 
     assert throttle.is_blocked("a@b.c", "ip", NOW)
     assert not throttle.is_blocked("a@b.c", "other-ip", NOW)
@@ -74,19 +74,19 @@ def test_the_throttle_forgets_old_failures() -> None:
 def test_the_throttle_prunes_expired_pairs(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("services.auth.throttle.MAX_TRACKED_PAIRS", 2)
     throttle = LoginThrottle(5, timedelta(minutes=15))
-    throttle.record_failure("a@b.c", "ip", NOW)
-    throttle.record_failure("d@e.f", "ip", NOW)
+    throttle.record_attempt("a@b.c", "ip", NOW)
+    throttle.record_attempt("d@e.f", "ip", NOW)
 
-    throttle.record_failure("g@h.i", "ip", NOW + timedelta(hours=1))
+    throttle.record_attempt("g@h.i", "ip", NOW + timedelta(hours=1))
 
     assert list(throttle._pairs) == [("g@h.i", "ip")]
 
 
 def test_the_block_lasts_the_whole_lock() -> None:
     throttle = LoginThrottle(5, timedelta(minutes=15))
-    throttle.record_failure("a@b.c", "ip", NOW)
+    throttle.record_attempt("a@b.c", "ip", NOW)
     for second in (56, 57, 58, 59):
-        throttle.record_failure("a@b.c", "ip", NOW + timedelta(minutes=14, seconds=second))
+        throttle.record_attempt("a@b.c", "ip", NOW + timedelta(minutes=14, seconds=second))
     blocked_at = NOW + timedelta(minutes=14, seconds=59)
 
     # The first failure leaves the window at 15:00, but the block keeps running.
@@ -97,8 +97,8 @@ def test_the_block_lasts_the_whole_lock() -> None:
 
 def test_failures_spread_over_more_than_the_lock_do_not_block() -> None:
     throttle = LoginThrottle(2, timedelta(minutes=15))
-    throttle.record_failure("a@b.c", "ip", NOW)
-    throttle.record_failure("a@b.c", "ip", NOW + timedelta(minutes=15))
+    throttle.record_attempt("a@b.c", "ip", NOW)
+    throttle.record_attempt("a@b.c", "ip", NOW + timedelta(minutes=15))
 
     assert not throttle.is_blocked("a@b.c", "ip", NOW + timedelta(minutes=15))
 
@@ -107,6 +107,6 @@ def test_the_oldest_live_pair_is_dropped_past_the_limit(monkeypatch: pytest.Monk
     monkeypatch.setattr("services.auth.throttle.MAX_TRACKED_PAIRS", 2)
     throttle = LoginThrottle(5, timedelta(minutes=15))
     for minute, email in enumerate(("a@b.c", "d@e.f", "g@h.i")):
-        throttle.record_failure(email, "ip", NOW + timedelta(minutes=minute))
+        throttle.record_attempt(email, "ip", NOW + timedelta(minutes=minute))
 
     assert list(throttle._pairs) == [("d@e.f", "ip"), ("g@h.i", "ip")]
