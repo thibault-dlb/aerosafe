@@ -70,6 +70,8 @@ def test_a_complete_state_is_cleaned() -> None:
         {"last_contact": "soon"},
         {"last_contact": True},
         {"last_contact": 0},
+        {"last_contact": 1e20},
+        {"last_contact": 10**400},
     ],
 )
 def test_a_state_without_aircraft_or_contact_is_rejected(changes: dict[str, Any]) -> None:
@@ -78,6 +80,38 @@ def test_a_state_without_aircraft_or_contact_is_rejected(changes: dict[str, Any]
 
 def test_a_short_vector_is_rejected() -> None:
     assert normalizer.normalize_one(["3c6444"]) is None
+
+
+@pytest.mark.parametrize("raw", [{"icao24": "3c6444"}, "3c6444", None])
+def test_a_state_that_is_not_a_list_is_rejected(raw: Any) -> None:
+    assert normalizer.normalize_one(raw) is None
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"baro_altitude": 1e30, "geo_altitude": None},
+        {"velocity": 1e30},
+        {"velocity": 10**400},
+        {"time_position": 1e20},
+        {"latitude": 10**400},
+    ],
+)
+def test_an_extreme_value_empties_its_field_without_rejecting_the_state(
+    changes: dict[str, Any],
+) -> None:
+    state = one(**changes)
+
+    assert state.icao24 == "3c6444"
+
+
+def test_extreme_values_never_fail_the_batch() -> None:
+    result = normalizer.normalize(
+        [raw_state(last_contact=1e20), raw_state(icao24="4ca1fa", velocity=1e30), {"bad": 1}]
+    )
+
+    assert [state.icao24 for state in result.states] == ["4ca1fa"]
+    assert result.rejected == 2
 
 
 def test_the_geometric_altitude_replaces_a_missing_barometric_one() -> None:

@@ -49,7 +49,8 @@ async def test_states_are_read_with_the_remaining_credits() -> None:
     response = await anonymous(handler).fetch_states(BOX)
 
     assert response.time == 1_700_000_005
-    assert response.states == [STATE]
+    # The normaliser rejects what is not a state vector, so the run counts it.
+    assert response.states == [STATE, "not a state"]
     assert response.remaining_credits == 321
     assert seen[0].url.path == "/api/states/all"
     assert seen[0].url.params["lamin"] == "48.0"

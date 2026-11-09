@@ -2,7 +2,7 @@ import math
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 _ICAO24 = re.compile(r"^[0-9a-f]{6}$")
@@ -55,7 +55,11 @@ def _number(value: Any) -> float | None:
     """A finite number, or None. Booleans are not numbers here."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         return None
-    return float(value) if math.isfinite(value) else None
+    try:
+        number = float(value)
+    except OverflowError:  # An integer too large for a float.
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _at(values: list[Any], index: int) -> Any:
@@ -66,11 +70,18 @@ def _timestamp(value: Any) -> datetime | None:
     seconds = _number(value)
     if seconds is None or seconds <= 0:
         return None
-    return datetime.fromtimestamp(int(seconds), tz=UTC)
+    try:
+        return datetime.fromtimestamp(int(seconds), tz=UTC)
+    except (OverflowError, OSError, ValueError):  # Beyond the years a datetime holds.
+        return None
 
 
-def _decimal(value: float, places: str) -> Decimal:
-    return Decimal(str(value)).quantize(Decimal(places), rounding=ROUND_HALF_UP)
+def _decimal(value: float, places: str) -> Decimal | None:
+    """`value` rounded to `places`; None when it has too many digits to be rounded."""
+    try:
+        return Decimal(str(value)).quantize(Decimal(places), rounding=ROUND_HALF_UP)
+    except InvalidOperation:
+        return None
 
 
 class StateVectorNormalizer:
@@ -80,7 +91,7 @@ class StateVectorNormalizer:
     other invalid field becomes empty, and the rules skip missing values.
     """
 
-    def normalize(self, raw_states: list[list[Any]]) -> NormalizationResult:
+    def normalize(self, raw_states: list[Any]) -> NormalizationResult:
         latest: dict[str, NormalizedState] = {}
         rejected = 0
         for raw in raw_states:
@@ -94,7 +105,9 @@ class StateVectorNormalizer:
                 latest[state.icao24] = state
         return NormalizationResult(list(latest.values()), rejected)
 
-    def normalize_one(self, raw: list[Any]) -> NormalizedState | None:
+    def normalize_one(self, raw: Any) -> NormalizedState | None:
+        if not isinstance(raw, list):
+            return None
         icao24 = self._icao24(_at(raw, _ICAO24_INDEX))
         last_contact_at = _timestamp(_at(raw, _LAST_CONTACT))
         if icao24 is None or last_contact_at is None:
@@ -153,7 +166,7 @@ class StateVectorNormalizer:
             number = _number(value)
             if number is not None:
                 altitude = _decimal(number, "0.1")
-                return altitude if abs(altitude) <= _MAX_ALTITUDE else None
+                return altitude if altitude is not None and abs(altitude) <= _MAX_ALTITUDE else None
         return None
 
     @staticmethod
@@ -162,7 +175,7 @@ class StateVectorNormalizer:
         if number is None or number < 0:
             return None
         speed = _decimal(number, "0.01")
-        return speed if speed <= _MAX_SPEED else None
+        return speed if speed is not None and speed <= _MAX_SPEED else None
 
     @staticmethod
     def _heading(value: Any) -> Decimal | None:

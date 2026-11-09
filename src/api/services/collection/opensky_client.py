@@ -29,10 +29,10 @@ class OpenSkyRateLimited(OpenSkyError):
 
 @dataclass(frozen=True)
 class StatesResponse:
-    """Raw answer of /states/all: state vectors are lists, decoded by the normaliser."""
+    """Raw answer of /states/all: the normaliser decodes the state vectors, or rejects them."""
 
     time: int | None
-    states: list[list[Any]] = field(default_factory=list)
+    states: list[Any] = field(default_factory=list)
     remaining_credits: int | None = None
 
 
@@ -142,6 +142,6 @@ class OpenSkyClient:
             raise OpenSkyUnavailable(f"Unreadable OpenSky answer: {error}") from error
         return StatesResponse(
             time=body.get("time"),
-            states=[state for state in states if isinstance(state, list)],
+            states=states,
             remaining_credits=_int_header(response, "X-Rate-Limit-Remaining"),
         )

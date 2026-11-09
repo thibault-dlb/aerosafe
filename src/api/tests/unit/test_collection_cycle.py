@@ -164,6 +164,14 @@ async def test_rejected_states_make_a_partial_run() -> None:
     assert (result.status, result.rejected) == (RunStatus.PARTIAL, 1)
 
 
+async def test_a_state_that_is_not_a_list_is_counted_as_rejected() -> None:
+    run_cycle, _, _ = cycle(StatesResponse(time=1, states=[VALID, {"icao24": "3c6444"}]))
+
+    result = await run_cycle.run()
+
+    assert (result.status, result.received, result.rejected) == (RunStatus.PARTIAL, 2, 1)
+
+
 async def test_an_unavailable_source_fails_the_run_without_evaluation() -> None:
     engine = Engine()
     run_cycle, _, _ = cycle(OpenSkyUnavailable("down"), engine)
