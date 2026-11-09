@@ -129,14 +129,14 @@ Same scale and weights as above.
 | Team skills | 20% | 4: YAML file, many examples | 3: YAML, new platform | 2: server administration |
 | Stack integration | 15% | 5: built into GitHub, ready-made Python, Node and Docker actions | 4: Docker-based | 4: plugins |
 | Maturity and support | 15% | 5 | 5 | 5 |
-| Cost and licence | 15% | 4: free monthly minutes for private repositories | 4: free monthly minutes | 5: free, but needs a server |
+| Cost and licence | 15% | 5: free and unlimited minutes for public repositories | 4: free monthly minutes | 5: free, but needs a server |
 | Portability and deployment | 10% | 5: hosted, nothing to install | 5: hosted | 3: server to host and maintain |
-| **Weighted total** | | **4.65** | 4.05 | 3.80 |
+| **Weighted total** | | **4.80** | 4.05 | 3.80 |
 
 **Why GitHub Actions:** the repository is already on GitHub, so CI runs next to the pull requests with nothing to install, and the pipeline is a YAML file versioned with the code. A workflow in `.github/workflows/` runs on every push and every pull request, since the specifications want the tests run on every change (§VII.1):
 
 - backend: `ruff check` and `pytest` with the 80% coverage threshold;
 - frontend: `pnpm lint`, `pnpm typecheck` and `pnpm test:unit` with the 80% coverage threshold;
-- end-to-end tests (Playwright) and the Docker build, if the free minutes allow.
+- end-to-end tests (Playwright) and the Docker build.
 
-**Trade-off:** free minutes are limited for private repositories, so the pipeline only runs on pull requests and on pushes to `develop` and `main`, and the Docker build and the end-to-end tests share one job. The workflow is `.github/workflows/ci.yml`, described in [testing](testing.md#continuous-integration).
+**Trade-off:** while the repository was private, free minutes were limited, so the pipeline only ran on pull requests and on pushes to `develop` and `main`. Since 2026-11-09 the repository is public and GitHub-hosted runner minutes are free, so the pipeline runs on every push and checks more (formatting, production build, migration round trip, three browsers, CodeQL). The Docker build and the end-to-end tests still share one job so the images are built once. The workflows are in `.github/workflows/`, described in [testing](testing.md#continuous-integration).
