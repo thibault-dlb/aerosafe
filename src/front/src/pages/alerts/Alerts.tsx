@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import AlertTable from "@/components/alerts/AlertTable";
@@ -32,16 +32,22 @@ export default function Alerts({ service }: AlertsProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Number of the latest search: an older answer arriving late must not replace it.
+  const latestSearch = useRef(0);
+
   const load = useCallback(async () => {
+    const search = ++latestSearch.current;
     setLoading(true);
     setError(null);
     try {
-      setPage(await api.search(toFilters(applied, offset)));
+      const result = await api.search(toFilters(applied, offset));
+      if (search === latestSearch.current) setPage(result);
     } catch (failure) {
+      if (search !== latestSearch.current) return;
       setPage(null);
       setError(errorMessage(failure));
     } finally {
-      setLoading(false);
+      if (search === latestSearch.current) setLoading(false);
     }
   }, [api, applied, offset]);
 

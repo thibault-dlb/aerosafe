@@ -168,6 +168,28 @@ describe("Alerts", () => {
     );
   });
 
+  it("ignores the answer of a search replaced by a newer one", async () => {
+    let answerFirstPage: (page: AlertPage) => void = () => undefined;
+    const { search } = renderWith((filters) =>
+      filters?.rule === "R3"
+        ? Promise.resolve(new AlertPage([alert("R3-alert")], 1))
+        : new Promise((resolve) => {
+            answerFirstPage = resolve;
+          }),
+    );
+
+    fireEvent.change(screen.getByLabelText("Rule"), { target: { value: "R3" } });
+    // Submitted while the first search runs (the Apply button is then disabled).
+    fireEvent.submit(screen.getByRole("form", { name: "Alert filters" }));
+    await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("Alerts 1 to 1 of 1")).toBeInTheDocument();
+
+    answerFirstPage(new AlertPage([alert("A1"), alert("A2")], 2));
+
+    await waitFor(() => expect(screen.getByText("Alerts 1 to 1 of 1")).toBeInTheDocument());
+    expect(screen.queryByText("Alerts 1 to 2 of 2")).not.toBeInTheDocument();
+  });
+
   it("opens the details of an alert", async () => {
     renderWith(async () => new AlertPage([alert("A1")], 1));
 
