@@ -28,6 +28,14 @@ class CollectionDisabled(Exception):
     """This instance does not collect (`COLLECTION_ENABLED` is false)."""
 
 
+class CollectionRateLimited(Exception):
+    """OpenSky answered 429 and the delay it announced is not over."""
+
+    def __init__(self, until: datetime | None) -> None:
+        super().__init__(f"OpenSky credits are used up until {until}")
+        self.until = until
+
+
 class Scheduler:
     """Runs the collection, then the rules engine, inside the API process.
 
@@ -111,13 +119,15 @@ class Scheduler:
             Scheduler._current = None
 
     async def run_now(self) -> CollectionRunResult:
-        """Run one cycle immediately, for the Supervisor (it uses credits)."""
+        """Run one cycle immediately, for the Supervisor (it uses credits), even when paused."""
         if not self.enabled or self._cycle is None:
             raise CollectionDisabled
         if self.busy:
             raise CollectionBusy
+        if self._cycle.waiting_for_credits():
+            raise CollectionRateLimited(self._cycle.rate_limited_until)
         async with self._lock:
-            return await self._cycle.run()
+            return await self._cycle.run(manual=True)
 
     async def _tick(self) -> None:
         if self.busy or self._cycle is None:

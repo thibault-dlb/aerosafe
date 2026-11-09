@@ -8,7 +8,12 @@ from core.security import CurrentUser, RoleCode, require_role
 from schemas.collection import CollectionRunOut, CollectionStatusOut
 from services.collection.run_repository import get_state_store
 from services.collection.run_state import CollectionStateStore
-from services.collection.scheduler import CollectionBusy, CollectionDisabled, Scheduler
+from services.collection.scheduler import (
+    CollectionBusy,
+    CollectionDisabled,
+    CollectionRateLimited,
+    Scheduler,
+)
 
 logger = get_logger()
 
@@ -69,7 +74,7 @@ async def list_runs(
 
 @router.post("/run")
 async def run_now(_user: Supervisor, scheduler: SchedulerDep) -> CollectionRunOut:
-    """Run one collection now. It uses OpenSky credits."""
+    """Run one collection now, even when paused. It uses OpenSky credits."""
     try:
         result = await scheduler.run_now()
     except CollectionDisabled as error:
@@ -78,6 +83,8 @@ async def run_now(_user: Supervisor, scheduler: SchedulerDep) -> CollectionRunOu
         ) from error
     except CollectionBusy as error:
         raise HTTPException(status.HTTP_409_CONFLICT, "A collection is already running") from error
+    except CollectionRateLimited as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
     return CollectionRunOut.model_validate(result)
 
 

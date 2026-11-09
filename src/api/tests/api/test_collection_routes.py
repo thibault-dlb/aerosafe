@@ -15,7 +15,12 @@ from services.collection.run_state import (
     InMemoryCollectionStateStore,
     RunStatus,
 )
-from services.collection.scheduler import CollectionBusy, CollectionDisabled, Scheduler
+from services.collection.scheduler import (
+    CollectionBusy,
+    CollectionDisabled,
+    CollectionRateLimited,
+    Scheduler,
+)
 
 NOW = datetime(2026, 11, 9, 12, tzinfo=UTC)
 RUN = CollectionRunResult(NOW, NOW, RunStatus.SUCCESS, "ILE_DE_FRANCE", 3, 3, 0, 390)
@@ -108,7 +113,9 @@ async def test_a_manual_run_returns_its_result(client: httpx.AsyncClient) -> Non
     assert response.json()["stored"] == 3
 
 
-@pytest.mark.parametrize("error", [CollectionDisabled(), CollectionBusy()])
+@pytest.mark.parametrize(
+    "error", [CollectionDisabled(), CollectionBusy(), CollectionRateLimited(NOW)]
+)
 async def test_a_manual_run_conflicts_when_impossible(
     client: httpx.AsyncClient, error: Exception
 ) -> None:

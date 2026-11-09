@@ -20,7 +20,8 @@ class CollectionCycle:
     """One scheduled cycle: collection, then evaluation of the rules (D-05).
 
     Never raises: OpenSky or database failures become a status, so the API stays up (NF-04).
-    A failure of the rules engine is recorded but never cancels the collection.
+    A failure of the rules engine is recorded but never cancels the collection. A scheduled
+    cycle is skipped while a Supervisor pauses the collection; a manual one is not.
     """
 
     def __init__(
@@ -42,9 +43,13 @@ class CollectionCycle:
     def rate_limited_until(self) -> datetime | None:
         return self._rate_limited_until
 
-    async def run(self) -> CollectionRunResult:
+    def waiting_for_credits(self) -> bool:
+        """Whether OpenSky answered 429 and the announced delay is not over."""
+        return self._waiting_for_credits(self._clock())
+
+    async def run(self, manual: bool = False) -> CollectionRunResult:
         started_at = self._clock()
-        result = await self._collect(started_at)
+        result = await self._collect(started_at, manual)
         if result.status in RunStatus.COLLECTED:
             result = result.with_evaluation_error(await self._evaluate(started_at))
         # The end is set last, after the evaluation: the recorded row is final.
@@ -52,10 +57,15 @@ class CollectionCycle:
         await self._record(result)
         return result
 
-    async def _collect(self, started_at: datetime) -> CollectionRunResult:
-        skip_reason = await self._skip_reason(started_at)
-        if skip_reason:
-            return self._result(started_at, RunStatus.SKIPPED, skip_reason)
+    async def _collect(self, started_at: datetime, manual: bool) -> CollectionRunResult:
+        if not manual and await self._paused():
+            return self._result(started_at, RunStatus.SKIPPED, "Collection paused by a Supervisor")
+        if self._waiting_for_credits(started_at):
+            # Still within the delay of a 429: no request, and the status says why.
+            until = self._rate_limited_until.isoformat() if self._rate_limited_until else ""
+            return self._result(
+                started_at, RunStatus.RATE_LIMITED, f"Waiting for OpenSky credits until {until}"
+            )
         try:
             async with self._session_factory() as session:
                 result = await self._collector.run(session, started_at)
@@ -79,15 +89,15 @@ class CollectionCycle:
         )
         return result
 
-    async def _skip_reason(self, now: datetime) -> str | None:
+    async def _paused(self) -> bool:
         try:
-            if (await self._state_store.pause_state()).paused:
-                return "Collection paused by a Supervisor"
+            return (await self._state_store.pause_state()).paused
         except Exception:
             logger.exception("Cannot read the collection pause")
-        if self._rate_limited_until and now < self._rate_limited_until:
-            return f"Waiting for OpenSky credits until {self._rate_limited_until.isoformat()}"
-        return None
+            return False
+
+    def _waiting_for_credits(self, now: datetime) -> bool:
+        return self._rate_limited_until is not None and now < self._rate_limited_until
 
     async def _evaluate(self, collected_at: datetime) -> str | None:
         try:

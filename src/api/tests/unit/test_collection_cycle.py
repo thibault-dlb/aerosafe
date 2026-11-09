@@ -22,7 +22,12 @@ from services.collection.run_state import (
     InMemoryCollectionStateStore,
     RunStatus,
 )
-from services.collection.scheduler import CollectionBusy, CollectionDisabled, Scheduler
+from services.collection.scheduler import (
+    CollectionBusy,
+    CollectionDisabled,
+    CollectionRateLimited,
+    Scheduler,
+)
 
 NOW = datetime(2026, 11, 9, 12, tzinfo=UTC)
 PROFILE = CollectionProfile(ProfileCode.ILE_DE_FRANCE, BoundingBox(48.0, 49.3, 1.4, 3.6), 30)
@@ -198,11 +203,14 @@ async def test_a_429_waits_for_the_announced_delay() -> None:
     assert run_cycle.rate_limited_until == NOW + timedelta(seconds=600)
 
     clock.now = NOW + timedelta(seconds=300)
-    skipped = await run_cycle.run()
-    assert skipped.status == RunStatus.SKIPPED
-    assert "OpenSky credits" in (skipped.error or "")
+    assert run_cycle.waiting_for_credits()
+    waiting = await run_cycle.run()
+    # Recorded as a 429 wait, not as a pause.
+    assert waiting.status == RunStatus.RATE_LIMITED
+    assert "Waiting for OpenSky credits" in (waiting.error or "")
 
     clock.now = NOW + timedelta(seconds=601)
+    assert not run_cycle.waiting_for_credits()
     assert (await run_cycle.run()).status == RunStatus.RATE_LIMITED
 
 
@@ -223,6 +231,14 @@ async def test_a_paused_collection_is_skipped() -> None:
 
     assert result.status == RunStatus.SKIPPED
     assert await store.last_success() is None
+
+
+async def test_a_manual_run_collects_even_when_paused() -> None:
+    store = InMemoryCollectionStateStore()
+    await store.set_paused(True, NOW, user_id=7)
+    run_cycle, _, _ = cycle(StatesResponse(time=1, states=[VALID]), store=store)
+
+    assert (await run_cycle.run(manual=True)).status == RunStatus.SUCCESS
 
 
 @pytest.mark.parametrize(
@@ -320,6 +336,20 @@ async def test_a_second_cycle_is_refused_while_one_runs() -> None:
             with pytest.raises(CollectionBusy):
                 await scheduler.run_now()
             await scheduler._tick()  # Skipped silently.
+    finally:
+        await scheduler.stop()
+
+
+async def test_a_manual_run_is_refused_while_waiting_for_credits() -> None:
+    run_cycle, store, _ = cycle(OpenSkyRateLimited(retry_after_seconds=600))
+    scheduler = Scheduler(enabled_settings(), run_cycle)
+    await scheduler.start()
+    try:
+        await scheduler._tick()
+        with pytest.raises(CollectionRateLimited) as error:
+            await scheduler.run_now()
+        assert error.value.until == NOW + timedelta(seconds=600)
+        assert len(await store.runs(10)) == 1
     finally:
         await scheduler.stop()
 

@@ -149,11 +149,11 @@ Every endpoint needs the Supervisor role (401 without a token, 403 with another 
 | --- | --- | --- |
 | `GET /collection/status` | State of the collection: enabled on this instance, paused, cycle running, profile, period, credits per day and daily quota, anonymous or authenticated access, wait after a 429, last run and last successful run | `200` |
 | `GET /collection/runs?limit=20&offset=0` | Latest runs, newest first. `limit` from 1 to 100 | `200`, `422` if out of range |
-| `POST /collection/run` | Runs one cycle now and returns it. It uses OpenSky credits | `200`, `409` when the collection is disabled on this instance or a cycle is already running |
+| `POST /collection/run` | Runs one cycle now and returns it, even when the collection is paused. It uses OpenSky credits | `200`, `409` when the collection is disabled on this instance, a cycle is already running, or OpenSky answered 429 and its delay is not over |
 | `POST /collection/pause` | Suspends the periodic collection, without stopping the API. Later cycles are recorded as `SKIPPED` | `200` with the status |
 | `POST /collection/resume` | Resumes the periodic collection | `200` with the status |
 
-A run has `started_at` (also the `now` given to the rules engine), `ended_at`, `status` (`SUCCESS`, `PARTIAL` when some state vectors were rejected, `FAILED`, `RATE_LIMITED`, `SKIPPED`), `profile`, `received`, `stored` (new observations), `rejected`, `remaining_credits` (from OpenSky), `error` and `evaluation_error` (a failure of the rules engine, which never cancels the collection).
+A run has `started_at` (also the `now` given to the rules engine), `ended_at`, `status` (`SUCCESS`, `PARTIAL` when some state vectors were rejected, `FAILED`, `RATE_LIMITED` for a 429 and for the cycles during its delay, `SKIPPED` while paused), `profile`, `received`, `stored` (new observations), `rejected`, `remaining_credits` (from OpenSky), `error` and `evaluation_error` (a failure of the rules engine, which never cancels the collection).
 
 Each run is written once to `EXECUTION_COLLECTE`, complete, with its end set after the rules evaluation. The pause is kept in `PARAMETRE_COLLECTE`, so it survives a restart of the API.
 
