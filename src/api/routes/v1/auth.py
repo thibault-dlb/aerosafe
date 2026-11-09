@@ -34,6 +34,9 @@ def to_user_read(user: User) -> UserRead:
 
 
 def open_session(response: Response, service: AuthService, session: AuthSession) -> TokenResponse:
+    # The body holds the access token: no browser or proxy may keep it (RFC 6749 §5.1).
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
     response.set_cookie(
         REFRESH_COOKIE,
         session.refresh_token,

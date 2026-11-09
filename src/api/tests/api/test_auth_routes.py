@@ -92,6 +92,8 @@ async def test_login_sets_a_strict_http_only_cookie(
     assert "httponly" in cookie
     assert "samesite=strict" in cookie
     assert f"path={COOKIE_PATH}" in cookie
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["pragma"] == "no-cache"
 
 
 async def test_a_wrong_password_gets_401(client: httpx.AsyncClient, store: FakeUserStore) -> None:
@@ -140,6 +142,7 @@ async def test_refresh_rotates_the_cookie_and_logout_ends_the_session(
     refreshed = await post_with_cookie("/api/v1/auth/refresh", first)
     assert refreshed.status_code == 200
     second = refreshed.cookies["refresh_token"]
+    assert refreshed.headers["cache-control"] == "no-store"
     assert second != first
 
     replay = await post_with_cookie("/api/v1/auth/refresh", first)
