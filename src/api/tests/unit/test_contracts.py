@@ -9,15 +9,9 @@ from config.auth import settings as auth_settings
 from main import app, lifespan
 from services.alerts.service import AlertService, AlertStatistics
 from services.collection.scheduler import Scheduler
-from services.rules.engine import RulesEngine
 from tests.auth_support import SECRET
 
 NOW = datetime(2026, 11, 7, tzinfo=UTC)
-
-
-async def test_the_rules_engine_is_not_implemented_yet() -> None:
-    with pytest.raises(NotImplementedError):
-        await RulesEngine(AsyncMock()).evaluate(NOW)
 
 
 async def test_alert_statistics_are_not_implemented_yet() -> None:
