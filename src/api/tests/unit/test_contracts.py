@@ -1,22 +1,12 @@
 """Checks the contracts between work packages stay empty but callable."""
 
-from datetime import UTC, datetime
-from unittest.mock import AsyncMock
-
 import pytest
 
 from config.auth import settings as auth_settings
 from main import app, lifespan
-from services.alerts.service import AlertService, AlertStatistics
+from services.alerts.service import AlertStatistics
 from services.collection.scheduler import Scheduler
 from tests.auth_support import SECRET
-
-NOW = datetime(2026, 11, 7, tzinfo=UTC)
-
-
-async def test_alert_statistics_are_not_implemented_yet() -> None:
-    with pytest.raises(NotImplementedError):
-        await AlertService(AsyncMock()).statistics(NOW, NOW)
 
 
 def test_alert_statistics_default_to_no_rule() -> None:
