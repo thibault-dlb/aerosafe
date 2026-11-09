@@ -30,6 +30,31 @@ jobs:
     defaults:
       run:
         working-directory: src/api
+    # Same image as docker-compose.yaml, for the integration tests (pytest marker
+    # `integration`). The values are placeholders, not secrets: the database only lives in
+    # this job.
+    services:
+      postgres:
+        image: docker.io/postgis/postgis:17-3.7-alpine
+        env:
+          POSTGRES_USER: aerosafe_admin
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U aerosafe_admin -d postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USER: aerosafe_user
+      DB_PASS: changeme
+      DB_NAME: aerosafe_db
+      DB_MIGRATION_USER: aerosafe_migrator
+      DB_MIGRATION_PASS: changeme
     steps:
       - uses: actions/checkout@v7
 
@@ -43,6 +68,18 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-groups --frozen
+
+      # A service container starts before the checkout, so it cannot mount init-db.sh as
+      # docker-compose.yaml does. The script is copied in and run the same way instead.
+      - name: Create the database users and the application database
+        run: |
+          docker cp docker/init-db.sh "${{ job.services.postgres.id }}:/tmp/init-db.sh"
+          docker exec \
+            -e DB_USER -e DB_PASS -e DB_NAME -e DB_MIGRATION_USER -e DB_MIGRATION_PASS \
+            "${{ job.services.postgres.id }}" bash /tmp/init-db.sh
+
+      - name: Apply the migrations
+        run: uv run alembic upgrade head
 
       - name: Lint
         run: uv run ruff check .
