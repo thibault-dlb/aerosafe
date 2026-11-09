@@ -29,7 +29,10 @@ class SnapshotReader:
         in each of its flights.
 
         The window bounds the scan: an older previous observation would be more than 300 s
-        away, so R3 to R5 would ignore the pair anyway.
+        away, so R3 to R5 would ignore the pair anyway. It has no upper bound: `now` is the
+        start of the collection, and the contacts that collection stores can be later than
+        it (the time of the request, or a clock a few seconds ahead of ours). Excluding them
+        would evaluate the rules on the previous collection.
         """
         ranked = (
             select(
@@ -60,7 +63,6 @@ class SnapshotReader:
                 Observation.deleted_at.is_(None),
                 Aircraft.deleted_at.is_(None),
                 Observation.last_contact_at > now - self._silence_limit,
-                Observation.last_contact_at <= now,
             )
             .subquery("ranked")
         )
@@ -71,8 +73,9 @@ class SnapshotReader:
         )
 
     @staticmethod
-    def positioned_query(aircraft_ids: list[int], now: datetime) -> Select:
-        """The latest observation with a position of each given aircraft, for R2."""
+    def positioned_query(aircraft_ids: list[int]) -> Select:
+        """The latest observation with a position of each given aircraft, for R2. No upper
+        bound either, for the same reason as `recent_query`."""
         return (
             select(
                 Observation.aircraft_id,
@@ -89,7 +92,6 @@ class SnapshotReader:
                 Observation.deleted_at.is_(None),
                 Observation.aircraft_id.in_(aircraft_ids),
                 Observation.position_at.is_not(None),
-                Observation.last_contact_at <= now,
             )
             .order_by(Observation.aircraft_id, Observation.last_contact_at.desc())
         )
@@ -109,7 +111,7 @@ class SnapshotReader:
         if not latest:
             return []
 
-        positioned_rows = await self._session.execute(self.positioned_query(list(latest), now))
+        positioned_rows = await self._session.execute(self.positioned_query(list(latest)))
         positioned = {row.aircraft_id: self.to_sample(row) for row in positioned_rows.all()}
 
         snapshots = []

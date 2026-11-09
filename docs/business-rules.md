@@ -18,7 +18,7 @@ AeroSafe initially includes five business rules to detect unusual situations.
 
 ### Proposed calculations
 
-Notation: `now` is the time of the collection that has just run, not the time the engine runs, so a delay in the evaluation never makes the data look older than it is; for an aircraft, `p1` and `p2` are its two latest consecutive observations of the same flight, `Δt = p2.positionAt − p1.positionAt`. OpenSky gives altitude in metres, speed in m/s and heading in degrees (see [fields used by the rules](opensky.md#fields-used-by-the-rules)).
+Notation: `now` is the time of the collection that has just run, not the time the engine runs, so a delay in the evaluation never makes the data look older than it is. The observations stored by that collection are evaluated even when their contact is a few seconds after `now` (time of the request, clock difference with OpenSky): R1 and R2 then count no delay. For an aircraft, `p1` and `p2` are its two latest consecutive observations of the same flight, `Δt = p2.positionAt − p1.positionAt`. OpenSky gives altitude in metres, speed in m/s and heading in degrees (see [fields used by the rules](opensky.md#fields-used-by-the-rules)).
 
 | Rule | Observed value | Triggers when |
 | --- | --- | --- |

@@ -137,3 +137,15 @@ async def test_the_episode_of_an_aircraft_that_landed_ends(session: AsyncSession
 
     await session.refresh(alert)
     assert alert.episode_ended_at == later
+
+
+async def test_the_contacts_of_the_current_collection_are_evaluated(
+    session: AsyncSession,
+) -> None:
+    aircraft = secrets.token_hex(3)
+    # Heard 420 s before the collection started, then again 3 s after its start.
+    await save(session, state(aircraft, 420), state(aircraft, -3))
+
+    await RulesEngine(session).evaluate(NOW)
+
+    assert await alerts_of(session, aircraft) == []

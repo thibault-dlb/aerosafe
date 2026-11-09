@@ -54,6 +54,13 @@ class TestLastContactRule:
     def test_ignores_an_aircraft_on_the_ground(self) -> None:
         assert self.rule.check(snapshot(sample(420, on_ground=True)), 300, NOW) is None
 
+    def test_a_contact_after_the_collection_start_counts_as_no_delay(self) -> None:
+        outcome = self.rule.check(snapshot(sample(-5, -5)), 300, NOW)
+
+        assert outcome is not None
+        assert outcome.observed_value == 0
+        assert not outcome.triggered
+
 
 class TestStalePositionRule:
     rule = StalePositionRule()
@@ -93,3 +100,10 @@ class TestStalePositionRule:
         without_time = replace(latest, position_at=None)
 
         assert self.rule.check(snapshot(latest, without_time), 600, NOW) is None
+
+    def test_a_position_after_the_collection_start_counts_as_no_delay(self) -> None:
+        latest = sample(-5, -5)
+        outcome = self.rule.check(snapshot(latest, latest), 600, NOW)
+
+        assert outcome is not None
+        assert outcome.observed_value == 0

@@ -3,6 +3,12 @@ from datetime import datetime
 from services.rules.base import AircraftSnapshot, BusinessRule
 
 
+def delay_since(moment: datetime, now: datetime) -> float:
+    """Seconds from `moment` to `now`. A moment after `now` counts as no delay: the contacts
+    of the collection that started at `now` can be a few seconds later than it."""
+    return max(0.0, (now - moment).total_seconds())
+
+
 class LastContactRule(BusinessRule):
     """R1: too long a delay since the last message received from the aircraft."""
 
@@ -11,7 +17,7 @@ class LastContactRule(BusinessRule):
     label = "delay since the last contact"
 
     def observe(self, snapshot: AircraftSnapshot, now: datetime) -> float | None:
-        return (now - snapshot.latest.last_contact_at).total_seconds()
+        return delay_since(snapshot.latest.last_contact_at, now)
 
 
 class StalePositionRule(BusinessRule):
@@ -29,4 +35,4 @@ class StalePositionRule(BusinessRule):
         sample = snapshot.latest_with_position
         if sample is None or sample.position_at is None:
             return None
-        return (now - sample.position_at).total_seconds()
+        return delay_since(sample.position_at, now)
