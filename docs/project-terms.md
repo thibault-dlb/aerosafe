@@ -19,7 +19,7 @@ The two parties are the sponsor (IPSA, represented by the supervising teacher) a
 - Technical secrets (database credentials, API keys, environment variables) are never committed. They are managed through an environment file excluded from version control.
 - Group members do not publicly share project elements before the supervising teacher has validated them.
 
-**Repository visibility:** the repository has been private since 2026-11-02. Public sharing has not been validated by the supervising teacher, and the repository must stay accessible to them (§VIII.2).
+**Repository visibility:** the repository has been public since 2026-11-09, with the agreement of the supervising teacher. It was private from 2026-11-02 to 2026-11-09. Because it is public, collected OpenSky data, database dumps and seed files built from real observations are never committed (see [OpenSky Network](opensky.md)).
 
 ## Regulatory constraints
 

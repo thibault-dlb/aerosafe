@@ -101,8 +101,7 @@ class Airline(Base):
             postgresql_ops={"LB_COMPAGNIE": "gin_trgm_ops"},
         ),
         comment=(
-            "Référentiel des compagnies exploitantes, "
-            "alimenté par la base de métadonnées OpenSky."
+            "Référentiel des compagnies exploitantes, alimenté par la base de métadonnées OpenSky."
         ),
     )
 

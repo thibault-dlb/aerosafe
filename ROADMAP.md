@@ -1,6 +1,6 @@
 # Roadmap
 
-Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-08.
+Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-09.
 
 Anything flagged `Not in the project sheet` comes from the specifications and is not binding. See [open points](docs/open-points.md).
 
@@ -11,7 +11,8 @@ The work is shared between the five group members in [team work split](docs/team
 - The project sheet defines nine steps and three deliverables. It sets no milestones and no dates.
 - The shared foundation is merged into `develop` (pull request #11): the container stack, the test tooling, the database models and migrations, and empty routes and pages for each work package. No business feature has been developed.
 - Step 2 (design) is in progress: the UML diagrams and the data model are drafted and must be validated.
-- The CI pipeline runs on GitHub Actions (step 7): lint, tests, Docker stack, migrations and end-to-end tests. Deployment is not started.
+- The CI pipeline runs on GitHub Actions on every push (step 7): lint, formatting, tests, production build, Docker stack, migration round trip, end-to-end tests on three browsers and CodeQL. Deployment is not started.
+- The repository is public since 2026-11-09, with the agreement of the supervising teacher.
 
 ## Steps
 
@@ -23,7 +24,7 @@ The work is shared between the five group members in [team work split](docs/team
 | 4 | Testing and quality | Unit tests, integration tests, component checks, fixes and code improvements | Tooling in place (pytest, Vitest, Playwright); no business tests yet |
 | 5 | Documentation and evolution | Technical and functional documentation, maintenance, evolution, new features including AI | In progress: documentation skeleton |
 | 6 | Code and version management | Git, branch management, version management | In place: Git, branching strategy, pull requests |
-| 7 | Automation and integration | Test automation, continuous integration, CI/CD pipeline | In progress: CI on GitHub Actions (lint, tests, Docker stack, migrations, end-to-end tests); continuous deployment not started |
+| 7 | Automation and integration | Test automation, continuous integration, CI/CD pipeline | In progress: CI on GitHub Actions on every push (lint, formatting, tests, build, Docker stack, migration round trip, end-to-end tests on three browsers, CodeQL); continuous deployment not started |
 | 8 | Containers and environments | Docker, development and deployment environments | In place: Docker Compose; environments `TBD` |
 | 9 | Deployment and monitoring | Prepare deployment, deploy, check and monitor operation | Not started |
 
@@ -59,7 +60,7 @@ Repository housekeeping:
 Not in the project sheet, to confirm with the supervising teacher:
 
 - [ ] Whether milestone dates exist, and whether J1 to J4 apply
-- [ ] Give the supervising teacher access to the private repository (specifications §VIII.2; the repository owner must do this)
+- [x] Give the supervising teacher access to the repository (specifications §VIII.2): it is public since 2026-11-09
 - [ ] Confirm that automated collection through the OpenSky REST API is allowed for the course without a written licence (V-01, see [OpenSky Network](docs/opensky.md))
 
 ## Deliverables

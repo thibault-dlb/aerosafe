@@ -27,15 +27,22 @@ Both unit test suites fail below 80% coverage. The CI tool is GitHub Actions, se
 
 ## Continuous integration
 
-The pipeline is `.github/workflows/ci.yml`. It runs on every pull request to `develop` or `main`, and on every push to `develop` or `main`, so after each merge. A newer run on the same branch cancels the older one. The repository is private, so GitHub Actions minutes are limited; that is why the pipeline does not run on pushes to other branches.
+The repository is public, so GitHub-hosted runner minutes are free. Two workflows run in `.github/workflows/`.
 
-| Job | Steps |
-| --- | --- |
-| `backend` | `uv run ruff check .`, then `uv run pytest` with the 80% coverage threshold |
-| `frontend` | `pnpm lint`, `pnpm typecheck`, then `pnpm test:unit` with the 80% coverage thresholds |
-| `stack` | Builds and starts the containers with `.env.example` values, which applies the migrations; runs `alembic check`; runs the Playwright end-to-end tests against `http://localhost:8888`. On failure, it prints the container logs and keeps the Playwright report as an artifact for 7 days |
+`ci.yml` runs on every push to any branch, on every pull request to `develop` or `main`, every Monday at 05:00 UTC and on demand (Actions tab, "Run workflow"). A newer run on the same branch cancels the older one, except on `develop` and `main`, where every merge is checked.
 
-A pull request is merged only when all three jobs pass.
+| Job | Timeout | Steps |
+| --- | --- | --- |
+| `backend` | 20 min | `uv run ruff check .`, `uv run ruff format --check .`, then `uv run pytest` with the 80% coverage threshold |
+| `frontend` | 20 min | `pnpm lint`, `pnpm typecheck`, `pnpm test:unit` with the 80% coverage thresholds, then `pnpm build` |
+| `stack` | 45 min | Builds and starts the containers with `.env.example` values, which applies the migrations; runs `alembic check`; downgrades every migration, upgrades again and reruns `alembic check`; runs the Playwright end-to-end tests against `http://localhost:8888` on Chromium, Firefox and WebKit. On failure, it prints the container logs and keeps the Playwright report as an artifact for 7 days |
+| `dependency-review` | 10 min | Pull requests only: fails when a pull request adds a dependency with a known vulnerability of high severity or more |
+
+`codeql.yml` runs the CodeQL security analysis on Python, TypeScript and the workflows themselves, on pull requests, on pushes to `develop` and `main`, every Monday and on demand. Its results appear in the Security tab of the repository.
+
+Locally, `pnpm test:e2e` runs on Chromium only; set `CI=1` to also run Firefox and WebKit, after `pnpm exec playwright install firefox webkit`. Before pushing, run `uv run ruff format .` from `src/api` so the formatting check passes.
+
+A pull request is merged only when the `backend`, `frontend` and `stack` jobs pass.
 
 ## Test levels
 

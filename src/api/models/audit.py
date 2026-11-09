@@ -12,9 +12,7 @@ class AuditAction(Base):
     """Technical table: English names (D-15)."""
 
     __tablename__ = "audit_actions"
-    __table_args__ = table_args(
-        comment="Référentiel des actions tracées dans le journal d'audit."
-    )
+    __table_args__ = table_args(comment="Référentiel des actions tracées dans le journal d'audit.")
 
     id: Mapped[int] = primary_key("Identifiant technique de l'action.", name="id")
     code: Mapped[str] = mapped_column(

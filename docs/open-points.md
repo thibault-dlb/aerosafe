@@ -86,5 +86,5 @@ Everything below comes from the specifications (`Cahier_Des_Charge_Projet_Fil_Ro
 | ID | Topic | Detail |
 | --- | --- | --- |
 | V-01 | OpenSky Network conditions | Quotas and authentication checked on 2026-11-03 (see [architecture](architecture.md#data-source)); terms of use read on 2026-11-06 (see [OpenSky Network](opensky.md)). Still open: whether automated collection through the REST API counts as "operational use", which needs a written licence from OpenSky (§V.1, §VII.1, §VII.3) |
-| V-02 | Public sharing | Sharing has not been validated by the supervising teacher (§V.2); the repository has been private since 2026-11-02 |
-| V-03 | Teacher access | The supervising teacher needs access to the private repository (§VIII.2); the repository owner must grant it |
+| V-02 | Public sharing | Settled on 2026-11-09: the supervising teacher agreed to make the repository public (§V.2) |
+| V-03 | Teacher access | Settled on 2026-11-09: the repository is public, so the supervising teacher can read it (§VIII.2) |

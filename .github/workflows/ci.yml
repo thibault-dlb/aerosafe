@@ -1,26 +1,32 @@
-# Continuous integration: lint, tests, Docker stack, migrations and end-to-end tests.
-# The repository is private, so GitHub Actions minutes are limited: the pipeline runs on
-# pull requests and on the long-lived branches only, and a newer run cancels an older one.
+# Continuous integration: lint, format, tests, build, Docker stack, migrations and
+# end-to-end tests. The repository is public, so GitHub-hosted runner minutes are free:
+# the pipeline runs on every push to any branch, on pull requests, once a week and on demand.
 name: CI
 
 on:
+  push:
+    branches: ["**"]
   pull_request:
     branches: [develop, main]
-  push:
-    branches: [develop, main]
+  # Weekly run on the default branch, to catch a broken dependency or base image early.
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# A newer run on the same branch cancels the older one, except on develop and main,
+# where every merge must be checked.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/main' }}
 
 jobs:
   backend:
     name: backend
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: src/api
@@ -41,6 +47,9 @@ jobs:
       - name: Lint
         run: uv run ruff check .
 
+      - name: Check the formatting
+        run: uv run ruff format --check .
+
       # Coverage and its 80% threshold are configured in pyproject.toml.
       - name: Test
         run: uv run pytest
@@ -48,7 +57,7 @@ jobs:
   frontend:
     name: frontend
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: src/front
@@ -81,12 +90,15 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
+      - name: Production build
+        run: pnpm build
+
   # Builds and starts the whole stack once, then checks the migrations and runs the
   # end-to-end tests against it, so the images are not built twice.
   stack:
     name: stack
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -97,10 +109,18 @@ jobs:
       # The API entrypoint applies the migrations (alembic upgrade head) before it starts,
       # and --wait relies on the health checks of docker-compose.yaml.
       - name: Build and start the stack
-        run: docker compose up --build --detach --wait --wait-timeout 180
+        run: docker compose up --build --detach --wait --wait-timeout 300
 
       - name: Check that the models match the migrations
         run: docker compose exec -T api /app/.venv/bin/alembic check
+
+      # Every migration must have a working downgrade (docs/database-conventions.md):
+      # undo them all, apply them again, then compare the models with the result.
+      - name: Check the migration round trip
+        run: |
+          docker compose exec -T api /app/.venv/bin/alembic downgrade base
+          docker compose exec -T api /app/.venv/bin/alembic upgrade head
+          docker compose exec -T api /app/.venv/bin/alembic check
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -114,11 +134,12 @@ jobs:
           cache: pnpm
           cache-dependency-path: src/front/pnpm-lock.yaml
 
+      # playwright.config.ts runs Chromium, Firefox and WebKit when CI is set.
       - name: Install the end-to-end dependencies
         working-directory: src/front
         run: |
           pnpm install --frozen-lockfile
-          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright install --with-deps chromium firefox webkit
 
       # playwright.config.ts targets http://localhost:8888, the gateway of the stack.
       - name: End-to-end tests
@@ -142,3 +163,18 @@ jobs:
       - name: Stop the stack
         if: always()
         run: docker compose down --volumes
+
+  # Free for public repositories: flags pull requests that add a dependency with a known
+  # vulnerability.
+  dependency-review:
+    name: dependency-review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Review the dependency changes
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
