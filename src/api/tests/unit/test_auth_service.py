@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -31,6 +32,27 @@ async def test_sign_up_creates_a_user_with_a_hashed_password(store: FakeUserStor
     assert user.password_hash != PASSWORD
     assert hasher.verify(user.password_hash, PASSWORD)
     assert store.commits == 1
+
+
+async def test_passwords_are_hashed_and_checked_off_the_event_loop(
+    store: FakeUserStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str] = []
+    to_thread = asyncio.to_thread
+
+    async def record(function: Callable[..., object], *args: object) -> object:
+        calls.append(function.__name__)
+        return await to_thread(function, *args)
+
+    monkeypatch.setattr("services.auth.service.asyncio.to_thread", record)
+    service = build_service(store)
+
+    await service.sign_up("pilot@example.com", PASSWORD)
+    await service.login("pilot@example.com", PASSWORD, ADDRESS, NOW)
+    with pytest.raises(InvalidCredentialsError):
+        await service.login("nobody@example.com", PASSWORD, ADDRESS, NOW)
+
+    assert calls == ["hash", "_verify", "_verify_dummy"]
 
 
 async def test_sign_up_refuses_a_taken_email(store: FakeUserStore) -> None:

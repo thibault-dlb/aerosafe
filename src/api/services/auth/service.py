@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import cache
@@ -39,7 +40,9 @@ class AuthSession:
     user: User
 
 
-hasher = PasswordHasher()  # argon2id with the library's OWASP-aligned defaults
+# argon2id with the library's OWASP-aligned defaults. One hash or check takes tens of
+# milliseconds of CPU, so the service runs them in a worker thread to keep the event loop free.
+hasher = PasswordHasher()
 
 
 @cache
@@ -65,7 +68,8 @@ class AuthService:
     async def sign_up(self, email: str, password: str) -> User:
         role = await self._store.get_role(RoleCode.USER)
         try:
-            user = await self._store.add_user(email, hasher.hash(password), role)
+            password_hash = await asyncio.to_thread(hasher.hash, password)
+            user = await self._store.add_user(email, password_hash, role)
         except IntegrityError as error:
             raise EmailTakenError from error
         await self._store.commit()
@@ -78,7 +82,7 @@ class AuthService:
         # A matching password clears it.
         self._throttle.record_attempt(email, address, now)
         user = await self._store.get_by_email(email)
-        if not self._password_matches(user, password):
+        if not await self._password_matches(user, password):
             raise InvalidCredentialsError
         self._throttle.reset(email, address)
         return await self._open_session(user, now)
@@ -106,12 +110,11 @@ class AuthService:
         return self._refresh_lifetime
 
     @staticmethod
-    def _password_matches(user: User | None, password: str) -> bool:
+    async def _password_matches(user: User | None, password: str) -> bool:
         if not UserStore.can_log_in(user):
-            # Hash anyway, so an unknown e-mail takes as long as a wrong password.
-            _verify(_dummy_hash(), password)
+            await asyncio.to_thread(_verify_dummy, password)
             return False
-        return _verify(user.password_hash, password)
+        return await asyncio.to_thread(_verify, user.password_hash, password)
 
     async def _open_session(self, user: User, now: datetime) -> AuthSession:
         refresh_token = RefreshTokens.generate()
@@ -128,6 +131,11 @@ def _verify(password_hash: str, password: str) -> bool:
         return hasher.verify(password_hash, password)
     except (VerificationError, InvalidHashError):
         return False
+
+
+def _verify_dummy(password: str) -> None:
+    """Hash anyway, so an unknown e-mail takes as long as a wrong password."""
+    _verify(_dummy_hash(), password)
 
 
 throttle = LoginThrottle(
