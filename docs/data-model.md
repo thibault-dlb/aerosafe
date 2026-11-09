@@ -1,6 +1,6 @@
 # Data model
 
-Source: project sheet §4 to §6; specifications §VI.1.2, §VI.1.4, §VI.1.9 and §V.2 for the entity list; team decisions of 2026-11-03 (A-06, C-03, D-04, D-05, D-06, D-15, D-17, D-18); [decisions of 2026-11-06](#decisions-of-2026-11-06).
+Source: project sheet §4 to §6; specifications §VI.1.2, §VI.1.4, §VI.1.9 and §V.2 for the entity list; team decisions of 2026-11-03 (A-06, C-03, D-04, D-05, D-06, D-15, D-17, D-18); [decisions of 2026-11-06](#decisions-of-2026-11-06); collection decisions of 2026-11-09 in [open points](open-points.md#team-decisions-pending-confirmation).
 
 This is the logical schema derived from the [class diagram](uml/class-diagram.md). It follows the [database conventions](database-conventions.md). The SQL is in [schema.sql](../db/schema.sql).
 
@@ -17,12 +17,16 @@ This is the logical schema derived from the [class diagram](uml/class-diagram.md
 | Alert | `ALERTE` | Business | Public ULID, aircraft, rule, trigger time, end of episode, observed value, threshold copied at trigger time, message, criticality, processing |
 | User | `UTILISATEUR` | Business | Public ULID, email, argon2id password hash, role; anonymised, never deleted (A-06, D-17) |
 | RefreshToken | `JETON_RAFRAICHISSEMENT` | Business | Hash of a refresh token, expiry, revocation |
+| CollectionRun | `EXECUTION_COLLECTE` | Business | One OpenSky collection cycle: start (also the `now` given to the rules engine), end, status, profile, state vectors received, stored and rejected, credits left, collection error, evaluation error |
+| CollectionParameter | `PARAMETRE_COLLECTE` | Business | Single row: whether the Supervisor paused the collection, when, and who |
 | Role | `R_ROLE` | Reference | `USER`, `SUPERVISOR` |
 | Criticality | `R_CRITICITE` | Reference | `LOW`, `MEDIUM`, `HIGH` |
 | Unit | `R_UNITE` | Reference | `s`, `m/s`, `m/s²`, `°/s` |
 | Model | `R_MODELE` | Reference | Aircraft models, from the OpenSky aircraft metadata |
 | Airline | `R_COMPAGNIE` | Reference | Airlines, from the OpenSky aircraft metadata |
 | Airport | `R_AEROPORT` | Reference | Origin and destination airports of flights |
+| CollectionStatus | `R_STATUT_COLLECTE` | Reference | `SUCCESS`, `PARTIAL`, `FAILED`, `RATE_LIMITED`, `SKIPPED` |
+| CollectionProfile | `R_PROFIL_COLLECTE` | Reference | `ILE_DE_FRANCE`, `FRANCE` |
 | None | `audit_actions` | Technical | `create`, `update`, `delete` |
 | None | `audit_logs` | Technical | Append-only log of threshold changes and anonymisations |
 
@@ -49,6 +53,9 @@ erDiagram
     R_COMPAGNIE |o--o{ AERONEF : "operates"
     R_AEROPORT |o--o{ VOL : "origin of"
     R_AEROPORT |o--o{ VOL : "destination of"
+    R_STATUT_COLLECTE ||--o{ EXECUTION_COLLECTE : "ends with"
+    R_PROFIL_COLLECTE ||--o{ EXECUTION_COLLECTE : "configures"
+    UTILISATEUR |o--o| PARAMETRE_COLLECTE : "pauses or resumes"
 
     AERONEF {
         bigint ID PK
@@ -155,6 +162,37 @@ erDiagram
         text LB_AEROPORT
         boolean is_active
     }
+    EXECUTION_COLLECTE {
+        bigint ID PK
+        timestamptz DT_DEBUT
+        timestamptz DT_FIN
+        bigint ID_STATUT_COLLECTE FK
+        bigint ID_PROFIL_COLLECTE FK
+        integer NB_ETATS_RECUS
+        integer NB_ETATS_STOCKES
+        integer NB_ETATS_REJETES
+        integer NB_CREDITS_RESTANTS
+        text LB_ERREUR
+        text LB_ERREUR_EVALUATION
+    }
+    PARAMETRE_COLLECTE {
+        bigint ID PK
+        boolean BL_EN_PAUSE
+        timestamptz DT_CHANGEMENT
+        bigint ID_UTILISATEUR FK
+    }
+    R_STATUT_COLLECTE {
+        bigint ID PK
+        text CD_STATUT_COLLECTE UK
+        text LB_STATUT_COLLECTE
+        boolean is_active
+    }
+    R_PROFIL_COLLECTE {
+        bigint ID PK
+        text CD_PROFIL_COLLECTE UK
+        text LB_PROFIL_COLLECTE
+        boolean is_active
+    }
 ```
 
 ## Cardinalities
@@ -165,6 +203,7 @@ erDiagram
 - A rule has exactly one unit and zero or one default criticality. An alert has zero or one criticality.
 - An alert is processed by zero or one user. A user has exactly one role and owns zero or more refresh tokens.
 - An aircraft has zero or one model and zero or one airline. A flight has zero or one origin airport and zero or one destination airport.
+- A collection cycle has exactly one status and one profile. The single row of `PARAMETRE_COLLECTE` records zero or one Supervisor, the last one who paused or resumed the collection.
 
 ## Table lifecycle
 
@@ -180,6 +219,8 @@ Nothing is deleted physically while the project runs. At the end of the project,
 | `UTILISATEUR` | The API, at registration | The API, including anonymisation on request (A-06) | Never: the row is anonymised | A few dozen accounts (estimate) |
 | `JETON_RAFRAICHISSEMENT` | The API, at login | The API, which revokes it | Automatic task, through `deleted_at`, once the token has expired | One row per login |
 | `audit_logs` | The API, in the transaction of the audited change | Nobody: a trigger rejects any change | Nobody | One row per threshold change or anonymisation |
+| `EXECUTION_COLLECTE` | Collector, at the start of each cycle, also when the collection is paused (status `SKIPPED`) | Collector, during its own cycle only: counts, credits left, status, errors, then `DT_FIN`, written last, after the rules evaluation. Once `DT_FIN` is set, nobody modifies the row | Nobody | One row per cycle: 2 880 a day for Île-de-France every 30 s, 720 for metropolitan France every 120 s |
+| `PARAMETRE_COLLECTE` | A migration, which inserts the single row (not paused) | Supervisor, through the API, to pause or resume the collection; the collector only reads it | Nobody | Exactly one row, enforced by a unique index on a constant |
 
 ## Deviation from the guide
 
@@ -209,6 +250,8 @@ The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, 
 | `audit_logs` | Append-only: triggers reject `UPDATE`, `DELETE` and `TRUNCATE`, and the application user only has `SELECT` and `INSERT` |
 | `UTILISATEUR` | `LN_EMAIL` is unique; the password hash may only be empty once the account is anonymised |
 | `JETON_RAFRAICHISSEMENT` | `CD_HASH_JETON` is unique; only the hash is stored |
+| `EXECUTION_COLLECTE` | `DT_FIN` is on or after `DT_DEBUT` when known; `NB_ETATS_RECUS`, `NB_ETATS_STOCKES` and `NB_ETATS_REJETES` default to 0 and are never negative |
+| `PARAMETRE_COLLECTE` | A single row: the unique index `uq_parametre_collecte_ligne_unique` on the constant `true` rejects any second row |
 
 `updated_at` is kept current by a `BEFORE UPDATE` trigger on every business table.
 
@@ -228,7 +271,8 @@ Every foreign key is indexed, except `OBSERVATION.ID_AERONEF`, which is the firs
 | `ALERTE` (`ID_AERONEF`, `ID_REGLE`), unique, on open alerts only | One open episode per aircraft and rule |
 | `audit_logs` (`table_name`, `record_id`), and one per foreign key | History of one row |
 | `ALERTE` (`DT_DECLENCHEMENT`), and one per foreign key | Filter and sort alerts on the dashboard (BF-12) |
-| One per foreign key on `AERONEF`, `VOL`, `REGLE`, `UTILISATEUR`, `JETON_RAFRAICHISSEMENT` | Conventions: foreign keys are never indexed automatically |
+| `EXECUTION_COLLECTE` (`DT_DEBUT`) | Latest cycle on the dashboard and history newest first; PostgreSQL reads the B-tree backwards for `ORDER BY "DT_DEBUT" DESC` |
+| One per foreign key on `AERONEF`, `VOL`, `REGLE`, `UTILISATEUR`, `JETON_RAFRAICHISSEMENT`, `EXECUTION_COLLECTE`, `PARAMETRE_COLLECTE` | Conventions: foreign keys are never indexed automatically |
 
 ## Initial data
 
@@ -242,17 +286,33 @@ Every foreign key is indexed, except `OBSERVATION.ID_AERONEF`, which is the firs
 
 These thresholds are a proposal (D-04). The calculation window (10 s ≤ Δt ≤ 300 s) and the minimum speed of 50 m/s for R5 are fixed parameters of the rule code, not stored. See [business rules](business-rules.md).
 
+Collection reference rows:
+
+| Table | Code | Label |
+|---|---|---|
+| `R_STATUT_COLLECTE` | `SUCCESS` | Succès |
+| `R_STATUT_COLLECTE` | `PARTIAL` | Partiel |
+| `R_STATUT_COLLECTE` | `FAILED` | Échec |
+| `R_STATUT_COLLECTE` | `RATE_LIMITED` | Quota OpenSky atteint |
+| `R_STATUT_COLLECTE` | `SKIPPED` | Ignorée, collecte en pause |
+| `R_PROFIL_COLLECTE` | `ILE_DE_FRANCE` | Île-de-France, toutes les 30 s |
+| `R_PROFIL_COLLECTE` | `FRANCE` | France métropolitaine, toutes les 120 s |
+
+The period and the bounding box of each profile are settings of the collector, not columns: the table only lets each cycle record which profile it used. `PARAMETRE_COLLECTE` starts with one row, not paused.
+
 ## Data rules
 
 - Source: data comes from the OpenSky Network. The collector cleans and validates it (§VII.1), then stores it.
 - History: stored history allows trajectory reconstruction and analysis even when OpenSky is unavailable (NF-04).
 - Units: altitude in metres, speed in metres per second, heading in degrees, as provided by OpenSky. Positions in WGS 84 (SRID 4326).
 - Positions: the collector rounds coordinates to 6 decimals, about 11 cm.
-- Aircraft details: the registration, model and airline come from the OpenSky aircraft metadata, joined on the ICAO24 address. Its terms of use are to be checked before the import.
+- Altitude: `NB_ALTITUDE` holds the barometric altitude, or the geometric altitude when the barometric one is missing (decided on 2026-11-09).
+- Aircraft on the ground are stored like the others; the rules decide whether to ignore them (decided on 2026-11-09).
+- Aircraft details: the registration, model and airline come from the OpenSky aircraft metadata, joined on the ICAO24 address. Its terms of use are to be checked before the import. The import, like the origin and destination airports of flights, is postponed until after the first collection pull request (decided on 2026-11-09).
 - Reading data: a base repository class on SQLAlchemy excludes soft-deleted rows from every read. Reading a deleted row must be requested explicitly.
 - Public identifiers: the API exposes `CD_ULID`, never `ID`. The `BIGINT` key stays internal and is used for joins.
 - Heading: `NB_CAP` keeps 2 decimals and stays under 360. The collector rounds the heading to 2 decimals, then turns 360 into 0, since both are the same heading. Otherwise a value such as 359.996 is rounded to 360.00 by the column and the whole observation is rejected.
-- Flights: an observation joins the current flight of its aircraft when at most N minutes separate it from the previous one; otherwise a new flight starts (D-06). N is a setting of the collector.
+- Flights: an observation joins the current flight of its aircraft when at most N minutes separate it from the previous one; otherwise a new flight starts (D-06). N is a setting of the collector, `COLLECTION_FLIGHT_GAP_MINUTES`, set to 30 minutes (decided on 2026-11-09).
 
 ## Personal data
 

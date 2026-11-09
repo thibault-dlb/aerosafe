@@ -17,7 +17,8 @@ Both unit test suites fail below 80% coverage. The CI tool is GitHub Actions, se
 | Command | Where | What it does |
 | --- | --- | --- |
 | `./run_tests.ps1` or `./run_tests.sh` | Repository root | Python test runner with a report per suite (4 workers by default). Options: `-Local` / `--local`, `-Suite unit\|api` / `--suite unit\|api`, `-Verbose` / `--verbose`. Uses the API container when it runs, otherwise uv |
-| `uv run pytest` | `src/api` | Python tests with coverage |
+| `uv run pytest` | `src/api` | Python tests with coverage, including the integration tests, which need a migrated database reachable with the `DB_*` settings |
+| `uv run pytest -m "not integration"` | `src/api` | Python tests without the integration tests, so without a database |
 | `uv run ruff check .` | `src/api` | Python linting |
 | `uv run alembic check` | `src/api` | Compares the models with the migrations; the database must be running |
 | `pnpm test:unit` | `src/front` | Frontend unit tests with coverage |
@@ -33,7 +34,7 @@ The repository is public, so GitHub-hosted runner minutes are free. Two workflow
 
 | Job | Timeout | Steps |
 | --- | --- | --- |
-| `backend` | 20 min | `uv run ruff check .`, `uv run ruff format --check .`, then `uv run pytest` with the 80% coverage threshold |
+| `backend` | 20 min | Starts a PostGIS service container (same image as `docker-compose.yaml`), creates the database users with `docker/init-db.sh` and applies the migrations; then `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pytest` with the 80% coverage threshold, integration tests included |
 | `frontend` | 20 min | `pnpm lint`, `pnpm typecheck`, `pnpm test:unit` with the 80% coverage thresholds, then `pnpm build` |
 | `stack` | 45 min | Builds and starts the containers with `.env.example` values, which applies the migrations; runs `alembic check`; downgrades every migration, upgrades again and reruns `alembic check`; runs the Playwright end-to-end tests against `http://localhost:8888` on Chromium, Firefox and WebKit. On failure, it prints the container logs and keeps the Playwright report as an artifact for 7 days |
 | `dependency-review` | 10 min | Pull requests only: fails when a pull request adds a dependency with a known vulnerability of high severity or more |
@@ -49,7 +50,7 @@ The branch protection of `develop` and `main` requires the `backend`, `frontend`
 | Level | Scope |
 | --- | --- |
 | Unit | Priority on the business rules engine, flight statistics and trajectory reconstruction |
-| Integration | API endpoints, database interactions and role checks |
+| Integration | API endpoints, database interactions and role checks. Tests that need the database carry the pytest marker `integration` and live in `src/api/tests/integration/`; each runs as the application user in a transaction rolled back at the end |
 | Non-regression | The whole suite runs automatically on every code change through the CI/CD pipeline |
 | Functional acceptance | Use cases UC-01 to UC-06 run in the presence of the supervising teacher |
 | Deployment check | Install and launch on a clean environment using only the documentation provided |

@@ -1,6 +1,6 @@
 # Open points
 
-Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-07.
+Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-09.
 
 ## Pending decisions
 
@@ -57,6 +57,16 @@ Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go bey
 | Scope | Every requirement of the specifications is to be developed, including flight statistics (BF-08), alert configuration (UC-05) and account management (UC-06) | C-01, C-04 |
 | Account deletion | A user can request it; the account is anonymised, never deleted, following the database guide | C-05 |
 | AI module | Shown in the diagrams as optional, with an anomaly score | Bonus |
+
+Taken on 2026-11-09 for the collection work package (`feat/collection-dashboard`). Same status: the team's choice, to confirm with the supervising teacher.
+
+| Topic | Decision | Settles |
+| --- | --- | --- |
+| Gap between two flights | N = 30 minutes, read from the setting `COLLECTION_FLIGHT_GAP_MINUTES` | D-06 |
+| Altitude | The barometric altitude feeds `NB_ALTITUDE`; the geometric altitude is used only when the barometric one is missing | [OpenSky Network](opensky.md#fields-used-by-the-rules) |
+| Aircraft on the ground | Stored like the other aircraft; the rules decide whether to ignore them | |
+| Airports and aircraft metadata | The origin and destination airports of flights and the import of the OpenSky aircraft metadata (registration, model, airline) are postponed until after the first collection pull request | |
+| Bounding boxes | Île-de-France: latitude 48.0 to 49.3, longitude 1.4 to 3.6 (2.86 square degrees, 1 credit per request). Metropolitan France: latitude 41.3 to 51.1, longitude −5.2 to 9.6 (145 square degrees, 3 credits) | D-05 |
 
 ## Not in the project sheet
 
