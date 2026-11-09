@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 
 from config.auth import settings as auth_settings
 from models import User
@@ -90,21 +91,19 @@ async def login(
     return open_session(response, service, session)
 
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     response: Response, service: Service, token: RefreshCookie = None
-) -> TokenResponse:
+) -> TokenResponse | JSONResponse:
     """Swap the refresh cookie for a new access token and a new refresh cookie."""
     try:
         if token is None:
             raise InvalidRefreshTokenError
         session = await service.refresh(token, datetime.now(UTC))
-    except InvalidRefreshTokenError as error:
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED,
-            "Session expired",
-            headers={"Set-Cookie": _expired_cookie_header()},
-        ) from error
+    except InvalidRefreshTokenError:
+        expired = JSONResponse({"detail": "Session expired"}, status.HTTP_401_UNAUTHORIZED)
+        clear_cookie(expired)
+        return expired
     return open_session(response, service, session)
 
 
@@ -114,9 +113,3 @@ async def logout(response: Response, service: Service, token: RefreshCookie = No
     if token is not None:
         await service.logout(token, datetime.now(UTC))
     clear_cookie(response)
-
-
-def _expired_cookie_header() -> str:
-    response = Response()
-    clear_cookie(response)
-    return response.headers["set-cookie"]

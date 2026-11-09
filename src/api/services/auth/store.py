@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import select, update
+from sqlalchemy import ColumnElement, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -19,14 +19,10 @@ class UserStore:
         self._users = Repository(session, User)
 
     async def get_by_email(self, email: str) -> User | None:
-        statement = self._users.select().options(joinedload(User.role)).where(User.email == email)
-        return await self._session.scalar(statement)
+        return await self._get_user(User.email == email)
 
     async def get_by_public_id(self, public_id: str) -> User | None:
-        statement = (
-            self._users.select().options(joinedload(User.role)).where(User.public_id == public_id)
-        )
-        return await self._session.scalar(statement)
+        return await self._get_user(User.public_id == public_id)
 
     async def get_role(self, code: str) -> Role:
         role = await self._session.scalar(select(Role).where(Role.code == code))
@@ -69,11 +65,15 @@ class UserStore:
         return await self._session.scalar(statement)
 
     async def get_user(self, user_id: int) -> User | None:
-        statement = self._users.select().options(joinedload(User.role)).where(User.id == user_id)
-        return await self._session.scalar(statement)
+        return await self._get_user(User.id == user_id)
 
     async def commit(self) -> None:
         await self._session.commit()
+
+    async def _get_user(self, criterion: ColumnElement[bool]) -> User | None:
+        """The account matching the criterion, with its role; a deleted account is never read."""
+        statement = self._users.select().options(joinedload(User.role)).where(criterion)
+        return await self._session.scalar(statement)
 
     @staticmethod
     def can_log_in(user: User | None) -> bool:
