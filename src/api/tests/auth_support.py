@@ -1,6 +1,6 @@
 """In-memory stand-in for `UserStore`, shared by the auth tests (no database needed)."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from itertools import count
 from unittest.mock import AsyncMock
 
@@ -61,8 +61,13 @@ class FakeUserStore(UserStore):
             RefreshToken(user_id=user.id, token_hash=token_hash, expires_at=expires_at)
         )
 
-    async def get_refresh_token(self, token_hash: str) -> RefreshToken | None:
-        return next((token for token in self.tokens if token.token_hash == token_hash), None)
+    async def revoke_refresh_token(self, token_hash: str, now: datetime) -> int | None:
+        for token in self.tokens:
+            valid = token.revoked_at is None and token.expires_at > now
+            if token.token_hash == token_hash and valid:
+                token.revoked_at = now
+                return token.user_id
+        return None
 
     async def get_user(self, user_id: int) -> User | None:
         return next((user for user in self.users if user.id == user_id), None)

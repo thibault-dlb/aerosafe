@@ -31,7 +31,7 @@ Decided on 2026-11-03, see [technology choices](technology-choices.md#authentica
 | --- | --- |
 | Access token | JWT signed with HS256 and `AUTH_JWT_SECRET` (at least 32 characters). Claims: `sub` (public ULID of the account), `role`, `iat`, `exp` |
 | Access token lifetime | `AUTH_ACCESS_TOKEN_MINUTES`, 15 by default |
-| Refresh token | Random value in the `refresh_token` cookie: `HttpOnly`, `SameSite=Strict`, path `/api/v1/auth`, `Secure` when `AUTH_COOKIE_SECURE=true`. Single use: each refresh revokes it and sets a new one |
+| Refresh token | Random value in the `refresh_token` cookie: `HttpOnly`, `SameSite=Strict`, path `/api/v1/auth`, `Secure` when `AUTH_COOKIE_SECURE=true`. Single use: each refresh revokes it and sets a new one. The check and the revocation are one `UPDATE`, so of two refreshes sent together with the same cookie only one succeeds; the other gets 401 and clears the cookie, so the front sends one refresh at a time |
 | Refresh token lifetime | `AUTH_REFRESH_TOKEN_DAYS`, 7 by default |
 | Passwords | 12 to 128 characters, no composition rule (OWASP), hashed with argon2id |
 | Throttling | `AUTH_LOGIN_MAX_FAILURES` (5) and `AUTH_LOGIN_LOCK_MINUTES` (15) |

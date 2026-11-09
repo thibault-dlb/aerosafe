@@ -34,11 +34,20 @@ async def test_user_reads_skip_deleted_rows(method: str, argument: object, colum
     assert "deleted_at IS NULL" in sql(session)
 
 
-async def test_refresh_tokens_are_read_by_hash() -> None:
-    session = session_returning("token")
+async def test_a_refresh_token_is_checked_and_revoked_in_one_update() -> None:
+    session = session_returning(7)
 
-    assert await UserStore(session).get_refresh_token("abc") == "token"
-    assert '"CD_HASH_JETON"' in sql(session)
+    assert await UserStore(session).revoke_refresh_token("abc", datetime.now(UTC)) == 7
+    statement = sql(session)
+    assert statement.startswith('UPDATE "JETON_RAFRAICHISSEMENT"')
+    for condition in (
+        '"CD_HASH_JETON" =',
+        '"DT_REVOCATION" IS NULL',
+        '"DT_EXPIRATION" >',
+        "deleted_at IS NULL",
+    ):
+        assert condition in statement
+    assert 'RETURNING "JETON_RAFRAICHISSEMENT"."ID_UTILISATEUR"' in statement
 
 
 async def test_a_missing_role_is_an_error() -> None:

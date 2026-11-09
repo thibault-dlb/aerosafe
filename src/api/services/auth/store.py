@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -17,7 +17,6 @@ class UserStore:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._users = Repository(session, User)
-        self._tokens = Repository(session, RefreshToken)
 
     async def get_by_email(self, email: str) -> User | None:
         statement = self._users.select().options(joinedload(User.role)).where(User.email == email)
@@ -50,8 +49,23 @@ class UserStore:
         )
         await self._session.flush()
 
-    async def get_refresh_token(self, token_hash: str) -> RefreshToken | None:
-        statement = self._tokens.select().where(RefreshToken.token_hash == token_hash)
+    async def revoke_refresh_token(self, token_hash: str, now: datetime) -> int | None:
+        """Revoke a valid refresh token and return its owner's key; None if it was not valid.
+
+        The check and the revocation are one UPDATE. Its row lock serialises two requests with
+        the same token: the second one finds the token revoked and gets nothing back.
+        """
+        statement = (
+            update(RefreshToken)
+            .where(
+                RefreshToken.token_hash == token_hash,
+                RefreshToken.revoked_at.is_(None),
+                RefreshToken.expires_at > now,
+                RefreshToken.deleted_at.is_(None),
+            )
+            .values(revoked_at=now)
+            .returning(RefreshToken.user_id)
+        )
         return await self._session.scalar(statement)
 
     async def get_user(self, user_id: int) -> User | None:

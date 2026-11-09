@@ -36,15 +36,16 @@ async def test_the_email_is_unique(session: AsyncSession) -> None:
         await store.add_user("twice@example.com", "hash", role)
 
 
-async def test_refresh_tokens_are_stored_by_hash(session: AsyncSession) -> None:
+async def test_a_refresh_token_is_revoked_only_once(session: AsyncSession) -> None:
     store = UserStore(session)
     user = await store.add_user(
         "token@example.com", "hash", await store.get_role(RoleCode.SUPERVISOR)
     )
+    now = datetime.now(UTC)
+    await store.add_refresh_token(user, "a" * 64, now + timedelta(days=7))
+    await store.add_refresh_token(user, "b" * 64, now - timedelta(seconds=1))
 
-    await store.add_refresh_token(user, "a" * 64, datetime.now(UTC) + timedelta(days=7))
-
-    token = await store.get_refresh_token("a" * 64)
-    assert token is not None
-    assert token.user_id == user.id
-    assert token.revoked_at is None
+    assert await store.revoke_refresh_token("a" * 64, now) == user.id
+    assert await store.revoke_refresh_token("a" * 64, now) is None
+    assert await store.revoke_refresh_token("b" * 64, now) is None
+    assert await store.revoke_refresh_token("unknown", now) is None

@@ -82,20 +82,17 @@ class AuthService:
         return await self._open_session(user, now)
 
     async def refresh(self, refresh_token: str, now: datetime) -> AuthSession:
-        token = await self._store.get_refresh_token(RefreshTokens.hash(refresh_token))
-        if token is None or token.revoked_at is not None or token.expires_at <= now:
+        # Rotation: each refresh token is used once, even by two requests sent together.
+        user_id = await self._store.revoke_refresh_token(RefreshTokens.hash(refresh_token), now)
+        if user_id is None:
             raise InvalidRefreshTokenError
-        user = await self._store.get_user(token.user_id)
+        user = await self._store.get_user(user_id)
         if not UserStore.can_log_in(user):
             raise InvalidRefreshTokenError
-        # Rotation: each refresh token is used once.
-        token.revoked_at = now
         return await self._open_session(user, now)
 
     async def logout(self, refresh_token: str, now: datetime) -> None:
-        token = await self._store.get_refresh_token(RefreshTokens.hash(refresh_token))
-        if token is not None and token.revoked_at is None:
-            token.revoked_at = now
+        if await self._store.revoke_refresh_token(RefreshTokens.hash(refresh_token), now):
             await self._store.commit()
 
     @property
