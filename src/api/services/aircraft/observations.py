@@ -8,6 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models import Aircraft, Flight, Observation
 from schemas.aircraft import ObservationPoint
 
+# Upper bound of a trajectory: about 80 hours at one observation every 30 s.
+MAX_FLIGHT_POINTS = 10_000
+
 
 @dataclass(frozen=True)
 class ObservationPeriod:
@@ -70,6 +73,20 @@ class ObservationReader:
         """Observations of one aircraft in chronological order, the latest `limit` of the period."""
         result = await self._session.execute(self.history_query(aircraft_public_id, period))
         return [self.to_point(row) for row in reversed(result.all())]
+
+    def flight_query(self, flight_id: int, limit: int = MAX_FLIGHT_POINTS) -> Select:
+        """Observations of one flight, oldest first."""
+        return (
+            self.points_query()
+            .where(Observation.flight_id == flight_id)
+            .order_by(Observation.last_contact_at)
+            .limit(limit)
+        )
+
+    async def flight(self, flight_id: int) -> list[ObservationPoint]:
+        """The trajectory of one flight, from its internal key, in chronological order."""
+        result = await self._session.execute(self.flight_query(flight_id))
+        return [self.to_point(row) for row in result.all()]
 
     @staticmethod
     def to_point(row: Row) -> ObservationPoint:

@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.security import CurrentUser, get_current_user
+from routes.v1.flights import FlightServiceDep
 from schemas.aircraft import AircraftSummary, ObservationPoint
+from schemas.flight import FlightSummary
 from services.aircraft import (
     AircraftSearchCriteria,
     AircraftService,
@@ -124,3 +126,16 @@ async def get_observations(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
         ) from error
     return await reader.history(aircraft_id, period)
+
+
+@router.get("/{aircraft_id}/flights", summary="List the flights of an aircraft")
+async def get_flights(
+    aircraft_id: str,
+    service: Service,
+    flights: FlightServiceDep,
+    _caller: Caller,
+    limit: Annotated[int, Query(ge=1, le=MAX_RESULTS)] = 50,
+) -> list[FlightSummary]:
+    """Flights of the aircraft, the most recent first (BF-07)."""
+    await find_aircraft(service, aircraft_id)
+    return await flights.list_for_aircraft(aircraft_id, limit)
