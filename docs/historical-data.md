@@ -52,7 +52,7 @@ Published by EUROCONTROL's Performance Review Commission, OpenSky, TU Delft and 
 | --- | --- |
 | Real dates, trajectories, speed and heading | Yes, after converting ft to m and kt to m/s |
 | Flights already grouped, origin and destination airports | Yes |
-| Aircraft identity (ICAO24, registration), callsign, airline | No: removed or obfuscated |
+| Aircraft identity (ICAO24, registration), callsign, airline | No: `icao24` is an obfuscated integer (one per flight, never the real code), the callsign and the airline are hashes, there is no registration |
 | `on_ground` | No: to derive from altitude and speed |
 | Full traffic | No: a sample of the flights whose airline gave its take-off weight, 30 aircraft types. Each trajectory runs from 5 minutes before off-block to 30 minutes after arrival, so aircraft also appear on the ground |
 
@@ -68,8 +68,24 @@ $dir = "$HOME\aerosafe-data\prc2024"; New-Item -ItemType Directory -Force $dir |
 
 Other days are listed on the 4TU page, each with its own file link.
 
+### Test on one day (2022-07-01)
+
+Checked on 2026-11-09 with pyarrow on the files above.
+
+| Topic | Finding | Consequence |
+| --- | --- | --- |
+| Size | 21 553 036 points, 3 273 flights, between 2022-07-01 00:22 and 2022-07-02 12:22 UTC (the file also holds the end of flights that started late in the day) | The file is not limited to its calendar day: filter on `timestamp` |
+| Sampling | One point per second (median step 1 s, at most 2 s) | Downsample to 30 s or 120 s |
+| Columns | The parquet also holds `icao24` (obfuscated integer) and the ERA5 weather columns (`u_component_of_wind`, `v_component_of_wind`, `temperature`, `specific_humidity`) | Weather is not needed; ignore it |
+| Missing values | `groundspeed`, `track` and `vertical_rate` are null on 83 525 points (0.4 %); position and altitude are never null | Drop or keep the point with a null speed, to decide |
+| Outliers | 3 542 points above 60 000 ft, 689 below −500 ft, 1 447 above 700 kt (maximum 3 921 kt) | Filter before the rules, otherwise they raise false alerts |
+| Over metropolitan France (latitude 41.3 to 51.1, longitude −5.2 to 9.6) | 1 272 flights, 3 740 123 points, so about 31 000 points at one every 120 s | Small enough to import into PostgreSQL |
+| Over Île-de-France (latitude 48.0 to 49.3, longitude 1.4 to 3.6) | 312 flights, 180 306 points, so about 6 000 points at one every 30 s | Same |
+| Link with the flight list | Only 1 640 of the 3 273 trajectories match a row of `flight_list.csv` (1 641 rows are dated 2022-07-01) | Half of the trajectories have no origin or destination |
+| Anonymisation | 30 airlines and 11 692 callsigns, all hashed | Nothing readable to show in the interface |
+
 ## Next steps
 
-1. Test d10 on one day: check the columns and count the flights over France.
+1. ~~Test d10 on one day~~ Done on 2022-07-01, see above. Remaining: decide how to treat the null speeds and the outliers, and why half of the trajectories have no row in `flight_list.csv`.
 2. Ask OpenSky where the d1 and d11 files went, together with V-01.
 3. If the team keeps a historical mode, reopen D-05 in [open points](open-points.md), and record the source of each collection run (live or import) in a reference table, following the [database conventions](database-conventions.md).
