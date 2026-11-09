@@ -41,7 +41,16 @@ export default function Alerts({ service }: AlertsProps) {
     setError(null);
     try {
       const result = await api.search(toFilters(applied, offset));
-      if (search === latestSearch.current) setPage(result);
+      if (search !== latestSearch.current) return;
+      if (result.items.length === 0 && offset > 0) {
+        // The page emptied, for instance after processing its last alert: show the last
+        // page that still has alerts instead of an empty page without navigation. Always
+        // at least one page back, so the search ends even if the total is already stale.
+        const lastPage = Math.max(0, Math.ceil(result.total / PAGE_SIZE) - 1) * PAGE_SIZE;
+        setOffset(Math.max(0, Math.min(lastPage, offset - PAGE_SIZE)));
+        return;
+      }
+      setPage(result);
     } catch (failure) {
       if (search !== latestSearch.current) return;
       setPage(null);

@@ -220,6 +220,33 @@ describe("Alerts", () => {
     expect(screen.getByRole("region", { name: "Alert details" })).toHaveTextContent("Processed on");
   });
 
+  it("goes back a page when processing empties the current one", async () => {
+    let unprocessed = PAGE_SIZE + 1;
+    const { search } = renderWith(
+      async (filters) => {
+        const offset = filters?.offset ?? 0;
+        const shown = Math.max(0, Math.min(PAGE_SIZE, unprocessed - offset));
+        return new AlertPage(
+          Array.from({ length: shown }, (_, index) => alert(`A${offset + index}`)),
+          unprocessed,
+        );
+      },
+      async (id) => {
+        unprocessed -= 1;
+        return alert(id, TRIGGERED);
+      },
+    );
+    await screen.findByText(`Alerts 1 to ${PAGE_SIZE} of ${PAGE_SIZE + 1}`);
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText(`Alerts ${PAGE_SIZE + 1} to ${PAGE_SIZE + 1} of ${PAGE_SIZE + 1}`);
+
+    fireEvent.click(screen.getByRole("button", { name: "Mark R1 for 3c6444 as processed" }));
+
+    expect(await screen.findByText(`Alerts 1 to ${PAGE_SIZE} of ${PAGE_SIZE}`)).toBeInTheDocument();
+    expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 }));
+    expect(screen.queryByText("No alert matches these criteria.")).not.toBeInTheDocument();
+  });
+
   it("explains a failed processing", async () => {
     renderWith(
       async () => new AlertPage([alert("A1")], 1),
