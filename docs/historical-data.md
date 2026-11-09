@@ -45,7 +45,7 @@ The emptied folders all got their placeholder on 2026-11-04, so the files were p
 Published by EUROCONTROL's Performance Review Commission, OpenSky, TU Delft and ONERA on [4TU.ResearchData](https://doi.org/10.4121/8cb8484b-dbe7-4750-8b87-a5b1dbc621b4) (version 2, 2025-07-14), with its [data description](https://ansperformance.eu/study/data-challenge/dc2024/data.html).
 
 - **Flights:** 527 162 flights in Europe in 2022 (6.1 % of the flights in EUROCONTROL airspace), in `flight_list.csv` (101 MB): `flight_id`, real departure and arrival airports (`adep`, `ades`, with names and countries), off-block and arrival times, `aircraft_type`, `wtc`.
-- **Trajectories:** one parquet file per day (`2022-01-01.parquet` to `2022-12-31.parquet`, 0.5 to 1 GB each, about 158 GiB in all), from OpenSky state vectors, at most one point per second: `flight_id`, `timestamp`, `latitude`, `longitude`, `altitude` (ft), `groundspeed` (kt), `track` (°), `vertical_rate` (ft/min), plus wind and temperature.
+- **Trajectories:** one parquet file per day (`2022-01-01.parquet` to `2022-12-31.parquet`, 0.5 to 1 GB each, about 285 GiB in all), from OpenSky state vectors, at most one point per second: `flight_id`, `timestamp`, `latitude`, `longitude`, `altitude` (ft), `groundspeed` (kt), `track` (°), `vertical_rate` (ft/min), plus wind and temperature.
 - **Licence:** CC BY 4.0. Cite the dataset and the paper *Aircraft Take-off Weight Estimation: The EUROCONTROL PRC 2024 Data Challenge* (Journal of Open Aviation Science, 2025, [doi:10.59490/joas.2025.8252](https://doi.org/10.59490/joas.2025.8252)).
 
 | Need | Covered |
@@ -67,6 +67,14 @@ $dir = "$HOME\aerosafe-data\prc2024"; New-Item -ItemType Directory -Force $dir |
 ```
 
 Other days are listed on the 4TU page, each with its own file link.
+
+### Download the whole year
+
+`scripts/download-prc2024.ps1` downloads the 365 daily files, the flight list and the README (367 files, about 285 GiB, so check the free disk space) into `$HOMEerosafe-data\prc2024`. It reads the file list from the 4TU API, skips the files that are already complete, resumes the interrupted one, retries after a network error, and shows the progress of the current file and of the whole download (speed, elapsed and remaining time). `-DryRun` only prints the plan.
+
+```powershell
+.\scripts\download-prc2024.ps1
+```
 
 ### Test on one day (2022-07-01)
 
