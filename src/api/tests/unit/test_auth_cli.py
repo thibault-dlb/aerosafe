@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -30,6 +31,26 @@ async def test_promotes_an_existing_account_without_asking_a_password() -> None:
 
     assert user.role.code == RoleCode.SUPERVISOR
     assert user.role_id == store.roles[RoleCode.SUPERVISOR].id
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"is_active": False},
+        {"anonymised_at": datetime(2026, 11, 9, tzinfo=UTC), "password_hash": None},
+    ],
+)
+async def test_does_not_promote_an_account_that_cannot_log_in(change: dict) -> None:
+    store = FakeUserStore()
+    user = await store.seed("pilot@example.com")
+    for name, value in change.items():
+        setattr(user, name, value)
+
+    message = await SupervisorCommand(store).run("pilot@example.com", lambda: pytest.fail("asked"))
+
+    assert "deactivated or anonymised" in message
+    assert user.role.code == RoleCode.USER
+    assert store.commits == 0
 
 
 async def test_refuses_a_short_password() -> None:

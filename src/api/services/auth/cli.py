@@ -36,6 +36,10 @@ class SupervisorCommand:
                 )
             except IntegrityError:
                 return "This e-mail belongs to a deleted account; use another one."
+        elif not UserStore.can_log_in(user):
+            return (
+                f"{user.email} is deactivated or anonymised; it could not log in as a Supervisor."
+            )
         else:
             user.role_id, user.role = supervisor.id, supervisor
         await self._store.commit()
