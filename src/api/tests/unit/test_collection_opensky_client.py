@@ -67,9 +67,7 @@ async def test_an_empty_area_gives_no_state() -> None:
 
 async def test_a_429_gives_the_wait_announced_by_opensky() -> None:
     client = anonymous(
-        lambda _request: httpx.Response(
-            429, headers={"X-Rate-Limit-Retry-After-Seconds": "1200"}
-        )
+        lambda _request: httpx.Response(429, headers={"X-Rate-Limit-Retry-After-Seconds": "1200"})
     )
 
     with pytest.raises(OpenSkyRateLimited) as error:

@@ -33,8 +33,7 @@ class OpenSkySettings(CustomBaseSettings):
     OPENSKY_CLIENT_SECRET: SecretStr = SecretStr("")
     OPENSKY_API_URL: str = "https://opensky-network.org/api"
     OPENSKY_TOKEN_URL: str = (
-        "https://auth.opensky-network.org/auth/realms/opensky-network"
-        "/protocol/openid-connect/token"
+        "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
     )
     OPENSKY_TIMEOUT_SECONDS: float = Field(default=10.0, gt=0)
 
