@@ -42,7 +42,7 @@ The repository is public, so GitHub-hosted runner minutes are free. Two workflow
 
 Locally, `pnpm test:e2e` runs on Chromium only; set `CI=1` to also run Firefox and WebKit, after `pnpm exec playwright install firefox webkit`. Before pushing, run `uv run ruff format .` from `src/api` so the formatting check passes.
 
-A pull request is merged only when the `backend`, `frontend` and `stack` jobs pass.
+The branch protection of `develop` and `main` requires the `backend`, `frontend`, `stack` and `dependency-review` jobs to pass before a pull request can be merged, on top of one approving review. The branch does not have to be up to date with its target before merging.
 
 ## Test levels
 

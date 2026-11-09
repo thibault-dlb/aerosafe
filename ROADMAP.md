@@ -48,7 +48,7 @@ From the project sheet:
 - [ ] Validate the proposed thresholds and calculations of rules R1 to R5 in [business rules](docs/business-rules.md) (§6: "second stage"; see D-04)
 - [x] Choose the mapping library and the CI/CD tool using a written justification (Leaflet without its React wrapper, GitHub Actions)
 - [x] Set up the CI pipeline with GitHub Actions (step 7)
-- [ ] Make the `backend`, `frontend` and `stack` CI jobs required to merge into `develop`
+- [x] Make the `backend`, `frontend`, `stack` and `dependency-review` CI jobs required to merge into `develop` and `main` (2026-11-09)
 - [ ] Confirm with the supervising teacher the team's answers to the ambiguities of the sheet (A-01 to A-04 in [open points](docs/open-points.md))
 - [x] Read the OpenSky terms of use (see [OpenSky Network](docs/opensky.md))
 - [ ] Register one OpenSky account for the group and create its OAuth2 API client (quotas are documented in [architecture](docs/architecture.md))
