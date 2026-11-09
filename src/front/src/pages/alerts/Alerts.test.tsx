@@ -9,7 +9,9 @@ import type { AlertService } from "@/services/AlertService";
 import type { RuleService } from "@/services/RuleService";
 
 import Alerts from "./Alerts";
-import { DEFAULT_CRITERIA, PAGE_SIZE, periodReversed, toFilters } from "./filters";
+import { AlertCriteria } from "./AlertCriteria";
+
+const { PAGE_SIZE } = AlertCriteria;
 
 const TRIGGERED = new Date("2026-11-09T10:00:00Z");
 
@@ -58,7 +60,7 @@ function renderWith(
 
 describe("filters", () => {
   it("leaves empty criteria out and pages the results", () => {
-    expect(toFilters(DEFAULT_CRITERIA, 50)).toEqual({
+    expect(AlertCriteria.toFilters(AlertCriteria.DEFAULT, 50)).toEqual({
       rule: undefined,
       status: "unprocessed",
       criticality: undefined,
@@ -73,11 +75,11 @@ describe("filters", () => {
   });
 
   it("reads the dates of the period", () => {
-    const criteria = { ...DEFAULT_CRITERIA, start: "2026-11-09T10:00", end: "2026-11-09T09:00" };
+    const criteria = { ...AlertCriteria.DEFAULT, start: "2026-11-09T10:00", end: "2026-11-09T09:00" };
 
-    expect(toFilters(criteria, 0).start).toEqual(new Date("2026-11-09T10:00"));
-    expect(periodReversed(criteria)).toBe(true);
-    expect(periodReversed(DEFAULT_CRITERIA)).toBe(false);
+    expect(AlertCriteria.toFilters(criteria, 0).start).toEqual(new Date("2026-11-09T10:00"));
+    expect(AlertCriteria.periodReversed(criteria)).toBe(true);
+    expect(AlertCriteria.periodReversed(AlertCriteria.DEFAULT)).toBe(false);
   });
 });
 

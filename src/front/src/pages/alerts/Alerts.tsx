@@ -2,19 +2,15 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link } from "react-router-dom";
 
 import AlertTable from "@/components/alerts/AlertTable";
-import { ErrorMessages } from "@/services/ErrorMessages";
-import { Formatter } from "@/services/Formatter";
 import type { Alert, AlertPage } from "@/models/Alert";
 import { AlertService, type AlertSort } from "@/services/AlertService";
+import { ErrorMessages } from "@/services/ErrorMessages";
+import { Formatter } from "@/services/Formatter";
 import { RuleService } from "@/services/RuleService";
 
-import {
-  type Criteria,
-  DEFAULT_CRITERIA,
-  PAGE_SIZE,
-  periodReversed,
-  toFilters,
-} from "./filters";
+import { AlertCriteria, type Criteria } from "./AlertCriteria";
+
+const { PAGE_SIZE } = AlertCriteria;
 
 export interface AlertsProps {
   service?: AlertService;
@@ -27,8 +23,8 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
   const rulesApi = useMemo(() => ruleService ?? new RuleService(), [ruleService]);
   // Read from the API, so a rule added to REGLE shows up without changing this page (NF-06).
   const [ruleCodes, setRuleCodes] = useState<string[]>([]);
-  const [criteria, setCriteria] = useState<Criteria>(DEFAULT_CRITERIA);
-  const [applied, setApplied] = useState<Criteria>(DEFAULT_CRITERIA);
+  const [criteria, setCriteria] = useState<Criteria>(AlertCriteria.DEFAULT);
+  const [applied, setApplied] = useState<Criteria>(AlertCriteria.DEFAULT);
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<AlertPage | null>(null);
   const [selected, setSelected] = useState<Alert | null>(null);
@@ -44,7 +40,7 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
     setLoading(true);
     setError(null);
     try {
-      const result = await api.search(toFilters(applied, offset));
+      const result = await api.search(AlertCriteria.toFilters(applied, offset));
       if (search !== latestSearch.current) return;
       if (result.items.length === 0 && offset > 0) {
         // The page emptied, for instance after processing its last alert: show the last
@@ -88,7 +84,7 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (periodReversed(criteria)) {
+    if (AlertCriteria.periodReversed(criteria)) {
       setError("The start of the period must not be after its end.");
       return;
     }
