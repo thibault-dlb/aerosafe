@@ -46,11 +46,33 @@ The Supervisor can also search for and view aircraft (UC-01). Only the dashboard
 | Task | Use case | Instructions |
 | --- | --- | --- |
 | Open the supervision dashboard | UC-04 | `TBD` |
-| Filter and sort alerts by rule, period or aircraft | UC-04 | `TBD` |
-| View the details of an alert and mark it as processed | UC-04 | `TBD` |
-| View and adjust the thresholds of a rule | UC-05 | `TBD` |
+| Filter and sort alerts by rule, period or aircraft | UC-04 | See [Alerts](#alerts) |
+| View the details of an alert and mark it as processed | UC-04 | See [Alerts](#alerts) |
+| View and adjust the thresholds of a rule | UC-05 | See [Rules](#rules) |
 | Create, modify or deactivate accounts and assign roles | UC-06 | `TBD` |
 | Compare rule alerts with AI anomaly scores (bonus) | UC-07 | `TBD` |
+
+### Alerts
+
+After each data collection, the rules engine checks rules R1 to R5 on every airborne aircraft heard in the last 30 minutes. When a value exceeds its threshold, an alert is raised. An aircraft raises one alert per rule and per situation: no new alert comes while the situation lasts. The rules are described in [business rules](business-rules.md).
+
+1. Open **Alerts** in the navigation bar. The page first lists the alerts not yet processed, the latest first.
+2. To narrow the list, choose a rule, a status, a criticality, the start of an ICAO24 address or a period, then select **Apply**. The status can be:
+   - **Not processed**: no Supervisor has handled the alert yet;
+   - **Situation still active**: the value is still above the threshold;
+   - **Processed**: a Supervisor marked the alert as processed.
+3. **Sort by** date, criticality or rule, in descending or ascending order. Use **Previous** and **Next** to move between pages of 25 alerts.
+4. Select **Details** to see the aircraft, the rule, the trigger time, the observed value, the threshold in force at that time, the criticality and the message. The aircraft name opens its record.
+5. Select **Mark as processed** once the alert has been handled. An alert is processed only once: the page says so if another Supervisor already did it.
+
+If an alert is not relevant, the details offer a link to adjust the threshold of its rule.
+
+### Rules
+
+1. Open **Rules** in the navigation bar. Each rule shows what it detects, its threshold with its unit, its criticality, whether it is evaluated and its last change.
+2. Change the threshold, the criticality or the **evaluated** box of a rule, then select **Save** on its row. The button stays disabled until a setting changes, and for a negative or empty threshold.
+
+The change applies at the next evaluation, within one collection period. Alerts already raised keep the threshold in force when they were triggered. Every change is recorded with its author in the audit log.
 
 ## Dashboard content
 
