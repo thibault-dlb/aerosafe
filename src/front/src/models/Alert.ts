@@ -76,6 +76,12 @@ export class Alert {
     return this.episodeEndedAt === null;
   }
 
+  /** Where the alert stands for the Supervisor. */
+  get statusLabel(): string {
+    if (this.processed) return "Processed";
+    return this.active ? "Active" : "Ended, not processed";
+  }
+
   get processed(): boolean {
     return this.processedAt !== null;
   }

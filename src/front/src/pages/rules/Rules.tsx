@@ -4,7 +4,7 @@ import type { Criticality } from "@/models/Alert";
 import type { Rule, RuleChanges } from "@/models/Rule";
 import { RuleService } from "@/services/RuleService";
 
-import { errorMessage } from "../alerts/errorMessage";
+import { ErrorMessages } from "@/services/ErrorMessages";
 
 export interface RulesProps {
   service?: RuleService;
@@ -111,7 +111,7 @@ export default function Rules({ service }: RulesProps) {
         if (!cancelled) setRules(loaded);
       })
       .catch((failure: unknown) => {
-        if (!cancelled) setError(errorMessage(failure));
+        if (!cancelled) setError(ErrorMessages.SUPERVISOR.describe(failure));
       });
     return () => {
       cancelled = true;
@@ -126,7 +126,7 @@ export default function Rules({ service }: RulesProps) {
       setRules((current) => current?.map((rule) => (rule.code === code ? updated : rule)) ?? null);
       setNotice(`${code} saved. The change applies at the next evaluation.`);
     } catch (failure) {
-      setError(errorMessage(failure));
+      setError(ErrorMessages.SUPERVISOR.describe(failure));
     }
   }
 

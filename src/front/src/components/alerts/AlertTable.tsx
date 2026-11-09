@@ -1,6 +1,6 @@
 import type { Alert } from "@/models/Alert";
 
-import { formatValue, MISSING, statusLabel } from "./format";
+import { Formatter } from "@/services/Formatter";
 
 export interface AlertTableProps {
   alerts: Alert[];
@@ -42,11 +42,11 @@ export default function AlertTable({
           <tr key={alert.id}>
             <td>{alert.ruleCode}</td>
             <td>{alert.triggeredAt.toLocaleString()}</td>
-            <td>{alert.aircraftName || MISSING}</td>
-            <td>{formatValue(alert.observedValue, alert.unit)}</td>
-            <td>{formatValue(alert.threshold, alert.unit)}</td>
-            <td>{alert.criticality ?? MISSING}</td>
-            <td>{statusLabel(alert)}</td>
+            <td>{alert.aircraftName || Formatter.MISSING}</td>
+            <td>{Formatter.rounded(alert.observedValue, alert.unit)}</td>
+            <td>{Formatter.rounded(alert.threshold, alert.unit)}</td>
+            <td>{alert.criticality ?? Formatter.MISSING}</td>
+            <td>{alert.statusLabel}</td>
             <td>{alert.message}</td>
             {(onSelect || onProcess) && (
               <td>

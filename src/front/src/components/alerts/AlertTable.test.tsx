@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import { Alert } from "@/models/Alert";
 
 import AlertTable from "./AlertTable";
-import { formatValue, statusLabel } from "./format";
 
 const TRIGGERED = new Date("2026-11-07T10:00:00Z");
 
@@ -74,16 +73,10 @@ describe("AlertTable", () => {
   });
 });
 
-describe("format", () => {
-  it("rounds values to one decimal and shows a dash when missing", () => {
-    expect(formatValue(5.5, "°/s")).toBe("5.5 °/s");
-    expect(formatValue(0.3333, "m/s²")).toBe("0.3 m/s²");
-    expect(formatValue(null, "s")).toBe("–");
-  });
-
+describe("Alert.statusLabel", () => {
   it("describes the status of an alert", () => {
-    expect(statusLabel(alert())).toBe("Active");
-    expect(statusLabel(alert({ episodeEndedAt: TRIGGERED }))).toBe("Ended, not processed");
-    expect(statusLabel(alert({ processedAt: TRIGGERED }))).toBe("Processed");
+    expect(alert().statusLabel).toBe("Active");
+    expect(alert({ episodeEndedAt: TRIGGERED }).statusLabel).toBe("Ended, not processed");
+    expect(alert({ processedAt: TRIGGERED }).statusLabel).toBe("Processed");
   });
 });

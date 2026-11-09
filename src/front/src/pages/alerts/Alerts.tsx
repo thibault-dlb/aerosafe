@@ -2,12 +2,12 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link } from "react-router-dom";
 
 import AlertTable from "@/components/alerts/AlertTable";
-import { formatValue, statusLabel } from "@/components/alerts/format";
+import { ErrorMessages } from "@/services/ErrorMessages";
+import { Formatter } from "@/services/Formatter";
 import type { Alert, AlertPage } from "@/models/Alert";
 import { AlertService, type AlertSort } from "@/services/AlertService";
 import { RuleService } from "@/services/RuleService";
 
-import { errorMessage } from "./errorMessage";
 import {
   type Criteria,
   DEFAULT_CRITERIA,
@@ -58,7 +58,7 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
     } catch (failure) {
       if (search !== latestSearch.current) return;
       setPage(null);
-      setError(errorMessage(failure));
+      setError(ErrorMessages.SUPERVISOR.describe(failure));
     } finally {
       if (search === latestSearch.current) setLoading(false);
     }
@@ -105,7 +105,7 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
       if (selected?.id === alert.id) setSelected(processed);
       await load();
     } catch (failure) {
-      setError(errorMessage(failure));
+      setError(ErrorMessages.SUPERVISOR.describe(failure));
     } finally {
       setProcessingId(null);
     }
@@ -256,16 +256,16 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
             <dt>Triggered at</dt>
             <dd>{selected.triggeredAt.toLocaleString()}</dd>
             <dt>Observed value</dt>
-            <dd>{formatValue(selected.observedValue, selected.unit)}</dd>
+            <dd>{Formatter.rounded(selected.observedValue, selected.unit)}</dd>
             <dt>Threshold</dt>
-            <dd>{formatValue(selected.threshold, selected.unit)}</dd>
+            <dd>{Formatter.rounded(selected.threshold, selected.unit)}</dd>
             <dt>Criticality</dt>
             <dd>{selected.criticality ?? "None"}</dd>
             <dt>Situation ended at</dt>
             <dd>{selected.episodeEndedAt?.toLocaleString() ?? "Still active"}</dd>
             <dt>Status</dt>
             <dd>
-              {statusLabel(selected)}
+              {selected.statusLabel}
               {selected.processedAt && ` on ${selected.processedAt.toLocaleString()}`}
             </dd>
             <dt>Message</dt>

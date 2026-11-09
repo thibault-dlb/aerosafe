@@ -9,7 +9,6 @@ import type { AlertService } from "@/services/AlertService";
 import type { RuleService } from "@/services/RuleService";
 
 import Alerts from "./Alerts";
-import { errorMessage } from "./errorMessage";
 import { DEFAULT_CRITERIA, PAGE_SIZE, periodReversed, toFilters } from "./filters";
 
 const TRIGGERED = new Date("2026-11-09T10:00:00Z");
@@ -79,17 +78,6 @@ describe("filters", () => {
     expect(toFilters(criteria, 0).start).toEqual(new Date("2026-11-09T10:00"));
     expect(periodReversed(criteria)).toBe(true);
     expect(periodReversed(DEFAULT_CRITERIA)).toBe(false);
-  });
-});
-
-describe("errorMessage", () => {
-  it("explains each API failure", () => {
-    expect(errorMessage(new ApiError(401))).toMatch(/Log in/);
-    expect(errorMessage(new ApiError(403))).toMatch(/Only Supervisors/);
-    expect(errorMessage(new ApiError(404))).toMatch(/no longer exists/);
-    expect(errorMessage(new ApiError(409))).toMatch(/already processed/);
-    expect(errorMessage(new ApiError(422))).toMatch(/Check/);
-    expect(errorMessage(new Error("network"))).toMatch(/could not be reached/);
   });
 });
 
