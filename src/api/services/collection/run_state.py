@@ -4,7 +4,7 @@ from typing import Protocol
 
 
 class RunStatus:
-    """Stable codes of the collection statuses (future `R_STATUT_COLLECTE`)."""
+    """Stable codes of the collection statuses, the `CD_` codes of `R_STATUT_COLLECTE`."""
 
     SUCCESS = "SUCCESS"
     PARTIAL = "PARTIAL"

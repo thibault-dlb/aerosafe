@@ -16,7 +16,8 @@ class OpenSkySettings(CustomBaseSettings):
     """OpenSky access and collection profile, read once at start-up.
 
     The application refuses to start when the active profile would use more credits per day
-    than the access type allows.
+    than an account allows. Anonymous access is not checked: it is for local development and
+    simply waits after its 429.
     """
 
     # Off by default: only one instance may collect with the group account at a time.
