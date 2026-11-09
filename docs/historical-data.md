@@ -70,7 +70,7 @@ Other days are listed on the 4TU page, each with its own file link.
 
 ### Download the whole year
 
-`scripts/download-prc2024.ps1` downloads the 365 daily files, the flight list and the README (367 files, about 285 GiB, so check the free disk space) into `$HOMEerosafe-data\prc2024`. It reads the file list from the 4TU API, skips the files that are already complete, resumes the interrupted one, retries after a network error, and shows the progress of the current file and of the whole download (speed, elapsed and remaining time). `-DryRun` only prints the plan.
+`scripts/download-prc2024.ps1` downloads the 365 daily files, the flight list and the README (367 files, about 285 GiB, so check the free disk space) into `$HOME\aerosafe-data\prc2024`. It reads the file list from the 4TU API, skips the files that are already complete, resumes the interrupted one, retries after a network error, and shows the progress of the current file and of the whole download (speed, elapsed and remaining time). `-DryRun` only prints the plan.
 
 ```powershell
 .\scripts\download-prc2024.ps1
