@@ -1,0 +1,144 @@
+# Continuous integration: lint, tests, Docker stack, migrations and end-to-end tests.
+# The repository is private, so GitHub Actions minutes are limited: the pipeline runs on
+# pull requests and on the long-lived branches only, and a newer run cancels an older one.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src/api
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          # Same Python version as src/api/Dockerfile.
+          python-version: "3.11"
+          enable-cache: true
+          cache-dependency-glob: src/api/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --all-groups --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      # Coverage and its 80% threshold are configured in pyproject.toml.
+      - name: Test
+        run: uv run pytest
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src/front
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same pnpm and Node versions as src/front/Dockerfile.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: src/front/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      # Coverage and its 80% thresholds are configured in vite.config.ts.
+      - name: Unit tests
+        run: pnpm test:unit
+
+  # Builds and starts the whole stack once, then checks the migrations and runs the
+  # end-to-end tests against it, so the images are not built twice.
+  stack:
+    name: stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      # The example values are placeholders, not secrets: the stack only lives in this job.
+      - name: Create the environment file
+        run: cp .env.example .env
+
+      # The API entrypoint applies the migrations (alembic upgrade head) before it starts,
+      # and --wait relies on the health checks of docker-compose.yaml.
+      - name: Build and start the stack
+        run: docker compose up --build --detach --wait --wait-timeout 180
+
+      - name: Check that the models match the migrations
+        run: docker compose exec -T api /app/.venv/bin/alembic check
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: src/front/pnpm-lock.yaml
+
+      - name: Install the end-to-end dependencies
+        working-directory: src/front
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      # playwright.config.ts targets http://localhost:8888, the gateway of the stack.
+      - name: End-to-end tests
+        working-directory: src/front
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+        run: pnpm test:e2e
+
+      - name: Show the container logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: src/front/playwright-report/
+          retention-days: 7
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down --volumes

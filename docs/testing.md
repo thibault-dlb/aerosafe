@@ -12,7 +12,7 @@ The acceptance criteria CA-01 to CA-10, the functional acceptance record and the
 | Frontend unit | Vitest, Testing Library | ESLint |
 | Frontend end to end | Playwright | ESLint |
 
-Both unit test suites fail below 80% coverage. The CI tool is `TBD`.
+Both unit test suites fail below 80% coverage. The CI tool is GitHub Actions, see [continuous integration](#continuous-integration).
 
 | Command | Where | What it does |
 | --- | --- | --- |
@@ -24,6 +24,18 @@ Both unit test suites fail below 80% coverage. The CI tool is `TBD`.
 | `pnpm lint` | `src/front` | Frontend linting |
 | `pnpm typecheck` | `src/front` | TypeScript type check |
 | `pnpm test:e2e` | `src/front` | End-to-end tests; the application must be running |
+
+## Continuous integration
+
+The pipeline is `.github/workflows/ci.yml`. It runs on every pull request to `develop` or `main`, and on every push to `develop` or `main`, so after each merge. A newer run on the same branch cancels the older one. The repository is private, so GitHub Actions minutes are limited; that is why the pipeline does not run on pushes to other branches.
+
+| Job | Steps |
+| --- | --- |
+| `backend` | `uv run ruff check .`, then `uv run pytest` with the 80% coverage threshold |
+| `frontend` | `pnpm lint`, `pnpm typecheck`, then `pnpm test:unit` with the 80% coverage thresholds |
+| `stack` | Builds and starts the containers with `.env.example` values, which applies the migrations; runs `alembic check`; runs the Playwright end-to-end tests against `http://localhost:8888`. On failure, it prints the container logs and keeps the Playwright report as an artifact for 7 days |
+
+A pull request is merged only when all three jobs pass.
 
 ## Test levels
 

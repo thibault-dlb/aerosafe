@@ -1,6 +1,6 @@
 # Roadmap
 
-Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-07.
+Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-08.
 
 Anything flagged `Not in the project sheet` comes from the specifications and is not binding. See [open points](docs/open-points.md).
 
@@ -9,9 +9,9 @@ The work is shared between the five group members in [team work split](docs/team
 ## Current status
 
 - The project sheet defines nine steps and three deliverables. It sets no milestones and no dates.
-- The shared foundation exists: the container stack, the test tooling, the database models and migrations, and empty routes and pages for each work package. No business feature has been developed.
+- The shared foundation is merged into `develop` (pull request #11): the container stack, the test tooling, the database models and migrations, and empty routes and pages for each work package. No business feature has been developed.
 - Step 2 (design) is in progress: the UML diagrams and the data model are drafted and must be validated.
-- There is no CI pipeline yet (step 7).
+- The CI pipeline runs on GitHub Actions (step 7): lint, tests, Docker stack, migrations and end-to-end tests. Deployment is not started.
 
 ## Steps
 
@@ -23,7 +23,7 @@ The work is shared between the five group members in [team work split](docs/team
 | 4 | Testing and quality | Unit tests, integration tests, component checks, fixes and code improvements | Tooling in place (pytest, Vitest, Playwright); no business tests yet |
 | 5 | Documentation and evolution | Technical and functional documentation, maintenance, evolution, new features including AI | In progress: documentation skeleton |
 | 6 | Code and version management | Git, branch management, version management | In place: Git, branching strategy, pull requests |
-| 7 | Automation and integration | Test automation, continuous integration, CI/CD pipeline | Not started |
+| 7 | Automation and integration | Test automation, continuous integration, CI/CD pipeline | In progress: CI on GitHub Actions (lint, tests, Docker stack, migrations, end-to-end tests); continuous deployment not started |
 | 8 | Containers and environments | Docker, development and deployment environments | In place: Docker Compose; environments `TBD` |
 | 9 | Deployment and monitoring | Prepare deployment, deploy, check and monitor operation | Not started |
 
@@ -46,7 +46,8 @@ From the project sheet:
 - [x] Formalise the data model and the database design (step 2): relational schema, integrity constraints, indexes
 - [ ] Validate the proposed thresholds and calculations of rules R1 to R5 in [business rules](docs/business-rules.md) (§6: "second stage"; see D-04)
 - [x] Choose the mapping library and the CI/CD tool using a written justification (Leaflet without its React wrapper, GitHub Actions)
-- [ ] Set up the CI pipeline with GitHub Actions (step 7)
+- [x] Set up the CI pipeline with GitHub Actions (step 7)
+- [ ] Make the `backend`, `frontend` and `stack` CI jobs required to merge into `develop`
 - [ ] Confirm with the supervising teacher the team's answers to the ambiguities of the sheet (A-01 to A-04 in [open points](docs/open-points.md))
 - [x] Read the OpenSky terms of use (see [OpenSky Network](docs/opensky.md))
 - [ ] Register one OpenSky account for the group and create its OAuth2 API client (quotas are documented in [architecture](docs/architecture.md))

@@ -1,3 +1,7 @@
+# Fixed project name, whatever the folder the repository is cloned into: images, volumes and
+# networks are always prefixed with "aerosafe", so they can be found and removed reliably.
+name: aerosafe
+
 services:
   postgres:
     image: docker.io/postgis/postgis:17-3.7-alpine
@@ -20,7 +24,9 @@ services:
     networks:
       - aerosafe-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      # TCP, not the Unix socket: during the first start the image runs a temporary server
+      # on the socket only, which would report the database ready before it accepts the API.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 2s
       timeout: 5s
       retries: 10
