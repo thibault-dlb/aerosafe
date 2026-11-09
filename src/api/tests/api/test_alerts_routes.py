@@ -143,6 +143,7 @@ async def test_list_passes_the_filters(api: httpx.AsyncClient, alerts: FakeAlert
         {"limit": 0},
         {"limit": 201},
         {"offset": -1},
+        {"offset": 10_001},
         {"start": "2026-11-09T10:00:00Z", "end": "2026-11-09T09:00:00Z"},
         {"start": "2026-11-09T10:00:00", "end": "2026-11-10T00:00:00Z"},
     ],

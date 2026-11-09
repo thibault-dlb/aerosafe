@@ -52,7 +52,9 @@ def test_recent_query_ranks_per_aircraft_and_per_flight() -> None:
 def test_positioned_query_keeps_one_row_per_aircraft() -> None:
     sql = compiled(SnapshotReader.positioned_query([1, 2]))
 
-    assert 'DISTINCT ON ("OBSERVATION"."ID_AERONEF")' in sql
+    assert "JOIN LATERAL" in sql
+    assert "LIMIT" in sql
+    assert '"OBSERVATION"."ID_AERONEF" = "AERONEF"."ID"' in sql
     assert '"OBSERVATION"."DT_POSITION" IS NOT NULL' in sql
     assert '"DT_DERNIER_CONTACT" <=' not in sql
 

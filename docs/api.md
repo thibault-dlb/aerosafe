@@ -190,7 +190,7 @@ Work package `feat/rules-alerts` (BF-10, BF-12, UC-03, UC-04). Every endpoint ne
 | `GET /alerts/{alert_id}` | Details of one alert | 200; 404 if unknown or deleted |
 | `POST /alerts/{alert_id}/process` | Mark the alert as processed by the caller | 200 with the alert; 404; 409 if already processed |
 
-Query parameters of `GET /alerts`. Every criterion is optional and they are combined (AND). `total` counts every alert that matches, all pages included.
+Query parameters of `GET /alerts`. Every criterion is optional and they are combined (AND). `total` counts every alert that matches, all pages included. It is an exact count, run with each page: filtered through indexed columns on a table of a few thousand rows, it stays cheap, and the page needs it for its navigation.
 
 | Parameter | Rule |
 | --- | --- |
@@ -202,7 +202,7 @@ Query parameters of `GET /alerts`. Every criterion is optional and they are comb
 | `sort` | `triggered_at` (default), `criticality` or `rule`. Ties are sorted by trigger time, the latest first |
 | `order` | `desc` (default) or `asc` |
 | `limit` | 1 to 200, default 50 |
-| `offset` | 0 or more, default 0 |
+| `offset` | 0 to 10 000, default 0. OFFSET paging reads every skipped row, so it is bounded; narrow the period or the filters to reach older alerts |
 
 An alert:
 

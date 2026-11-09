@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy import Select, func, select
-from sqlalchemy.dialects.postgresql import distinct_on
+from sqlalchemy import Select, func, select, true
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,10 +74,14 @@ class SnapshotReader:
     @staticmethod
     def positioned_query(aircraft_ids: list[int]) -> Select:
         """The latest observation with a position of each given aircraft, for R2. No upper
-        bound either, for the same reason as `recent_query`."""
-        return (
+        bound either, for the same reason as `recent_query`.
+
+        One LATERAL subquery per aircraft, limited to one row: it walks the unique index
+        (ID_AERONEF, DT_DERNIER_CONTACT) backwards and stops at the first position, instead
+        of reading the whole history of the aircraft as a DISTINCT ON would.
+        """
+        latest = (
             select(
-                Observation.aircraft_id,
                 Observation.flight_id,
                 Observation.last_contact_at,
                 Observation.position_at,
@@ -87,13 +90,20 @@ class SnapshotReader:
                 Observation.heading,
                 Observation.on_ground,
             )
-            .ext(distinct_on(Observation.aircraft_id))
             .where(
+                Observation.aircraft_id == Aircraft.id,
                 Observation.deleted_at.is_(None),
-                Observation.aircraft_id.in_(aircraft_ids),
                 Observation.position_at.is_not(None),
             )
-            .order_by(Observation.aircraft_id, Observation.last_contact_at.desc())
+            .order_by(Observation.last_contact_at.desc())
+            .limit(1)
+            .lateral("positioned")
+        )
+        return (
+            select(Aircraft.id.label("aircraft_id"), latest)
+            .select_from(Aircraft)
+            .join(latest, true())
+            .where(Aircraft.id.in_(aircraft_ids))
         )
 
     async def read(self, now: datetime) -> list[AircraftSnapshot]:

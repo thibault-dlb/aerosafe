@@ -20,6 +20,9 @@ from services.alerts.service import (
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
 MAX_RESULTS = 200
+# Paging uses OFFSET, which reads and drops every skipped row: the bound keeps that cost
+# small on ALERTE, which only grows (conventions SQL-02). 10 000 alerts are 50 pages of 200.
+MAX_OFFSET = 10_000
 DEFAULT_STATISTICS_PERIOD = timedelta(hours=24)
 
 
@@ -66,7 +69,7 @@ async def list_alerts(
     sort: Annotated[AlertSort, Query(description="Sort key")] = AlertSort.TRIGGERED_AT,
     order: Annotated[str, Query(pattern="^(asc|desc)$")] = "desc",
     limit: Annotated[int, Query(ge=1, le=MAX_RESULTS)] = 50,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
 ) -> AlertPage:
     """Alerts matching every given criterion, sorted, one page at a time (BF-12, UC-04)."""
     try:

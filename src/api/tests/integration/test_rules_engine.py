@@ -149,3 +149,15 @@ async def test_the_contacts_of_the_current_collection_are_evaluated(
     await RulesEngine(session).evaluate(NOW)
 
     assert await alerts_of(session, aircraft) == []
+
+
+async def test_r2_reads_the_latest_position_behind_newer_contacts(session: AsyncSession) -> None:
+    aircraft = secrets.token_hex(3)
+    # Positions 1200 and 900 s ago, then contacts without position.
+    without_position = [replace(state(aircraft, ago), position_at=None) for ago in (600, 20)]
+    await save(session, state(aircraft, 1200), state(aircraft, 900), *without_position)
+
+    await RulesEngine(session).evaluate(NOW)
+
+    codes = {code: alert for code, alert in await alerts_of(session, aircraft)}
+    assert codes["R2"].observed_value == Decimal("900.000")
