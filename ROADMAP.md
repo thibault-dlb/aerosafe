@@ -1,6 +1,6 @@
 # Roadmap
 
-Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-09.
+Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-10.
 
 Anything flagged `Not in the project sheet` comes from the specifications and is not binding. See [open points](docs/open-points.md).
 
@@ -9,7 +9,9 @@ The work is shared between the five group members in [team work split](docs/team
 ## Current status
 
 - The project sheet defines nine steps and three deliverables. It sets no milestones and no dates.
-- The shared foundation is merged into `develop` (pull request #11): the container stack, the test tooling, the database models and migrations, and empty routes and pages for each work package. No business feature has been developed.
+- The shared foundation is merged into `develop` (pull request #11): the container stack, the test tooling, the database models and migrations, and empty routes and pages for each work package. 
+- Merged into `develop` since: the aircraft lookup (#14), the collection (#16, #17), the authentication API (#18) and the rules engine with the alerts (#19).
+- The interface is partly built. The aircraft, flight, alert and rule pages work but have no styling. The home, log in, sign up, accounts and dashboard pages are still empty, and the API of the accounts and of the dashboard is not written. The front has no stylesheet. See [team work split](docs/team-split.md#interface).
 - Step 2 (design) is in progress: the UML diagrams and the data model are drafted and must be validated.
 - The CI pipeline runs on GitHub Actions on every push (step 7): lint, formatting, tests, production build, Docker stack, migration round trip, end-to-end tests on three browsers and CodeQL. Deployment is not started.
 - The repository is public since 2026-11-09, with the agreement of the supervising teacher.
@@ -20,8 +22,8 @@ The work is shared between the five group members in [team work split](docs/team
 | --- | --- | --- | --- |
 | 1 | Analysis and specification | Analyse requirements, identify actors and use cases, define features and business rules | Largely done; several items come from the specifications, not from the sheet |
 | 2 | Design | UML modelling, software architecture, database design, module organisation, technology choices | In progress: technology choices (mapping library, CI tool, authentication) and repository layout set; UML diagrams and data model drafted and to validate; migrations written |
-| 3 | Development | Web application, interface, authentication and role management, alert system | Shared foundation in place; features to develop, see [team work split](docs/team-split.md) |
-| 4 | Testing and quality | Unit tests, integration tests, component checks, fixes and code improvements | Tooling in place (pytest, Vitest, Playwright); no business tests yet |
+| 3 | Development | Web application, interface, authentication and role management, alert system | Foundation, aircraft lookup, collection, authentication API, rules and alerts merged; accounts, dashboard, log in and home screens and the design still to do, see [team work split](docs/team-split.md#interface) |
+| 4 | Testing and quality | Unit tests, integration tests, component checks, fixes and code improvements | Tooling in place (pytest, Vitest, Playwright); each work package brings its own tests |
 | 5 | Documentation and evolution | Technical and functional documentation, maintenance, evolution, new features including AI | In progress: documentation skeleton |
 | 6 | Code and version management | Git, branch management, version management | In place: Git, branching strategy, pull requests |
 | 7 | Automation and integration | Test automation, continuous integration, CI/CD pipeline | In progress: CI on GitHub Actions on every push (lint, formatting, tests, build, Docker stack, migration round trip, end-to-end tests on three browsers, CodeQL); continuous deployment not started |
@@ -50,6 +52,7 @@ From the project sheet:
 - [x] Set up the CI pipeline with GitHub Actions (step 7)
 - [x] Make the `backend`, `frontend`, `stack` and `dependency-review` CI jobs required to merge into `develop` and `main` (2026-11-09)
 - [ ] Confirm with the supervising teacher the team's answers to the ambiguities of the sheet (A-01 to A-04 in [open points](docs/open-points.md))
+- [ ] Finish the interface: the design and the home page (Thibault), the logo, log in, sign up and accounts (Louis-Amaury), the dashboard (Jules), then the design applied to every page (see [team work split](docs/team-split.md#interface) and D-19)
 - [x] Read the OpenSky terms of use (see [OpenSky Network](docs/opensky.md))
 - [ ] Register one OpenSky account for the group and create its OAuth2 API client (quotas are documented in [architecture](docs/architecture.md))
 
