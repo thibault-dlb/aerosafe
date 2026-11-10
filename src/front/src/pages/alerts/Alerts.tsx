@@ -27,6 +27,9 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
   const [applied, setApplied] = useState<Criteria>(AlertCriteria.DEFAULT);
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<AlertPage | null>(null);
+  // Offset of the rows in `page`: `offset` moves as soon as a page is asked for, while the
+  // rows only change once its search answers.
+  const [pageOffset, setPageOffset] = useState(0);
   const [selected, setSelected] = useState<Alert | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +54,7 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
         return;
       }
       setPage(result);
+      setPageOffset(offset);
     } catch (failure) {
       if (search !== latestSearch.current) return;
       setPage(null);
@@ -108,7 +112,7 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
   }
 
   const total = page?.total ?? 0;
-  const lastShown = Math.min(offset + PAGE_SIZE, total);
+  const lastShown = Math.min(pageOffset + PAGE_SIZE, total);
 
   return (
     <main>
@@ -214,7 +218,7 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
         <>
           <AlertTable
             alerts={page.items}
-            caption={`Alerts ${offset + 1} to ${lastShown} of ${total}`}
+            caption={`Alerts ${pageOffset + 1} to ${lastShown} of ${total}`}
             onSelect={setSelected}
             onProcess={onProcess}
             processingId={processingId}

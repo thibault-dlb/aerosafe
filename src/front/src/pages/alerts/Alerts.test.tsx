@@ -227,6 +227,38 @@ describe("Alerts", () => {
     expect(screen.getByRole("region", { name: "Alert details" })).toHaveTextContent("Processed on");
   });
 
+  it("keeps the range of the rows shown while the next page loads", async () => {
+    let release: () => void = () => undefined;
+    const nextPageLoaded = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    renderWith(async (filters) => {
+      const offset = filters?.offset ?? 0;
+      if (offset > 0) await nextPageLoaded;
+      const shown = offset === 0 ? PAGE_SIZE : 1;
+      return new AlertPage(
+        Array.from({ length: shown }, (_, index) => alert(`A${offset + index}`)),
+        PAGE_SIZE + 1,
+      );
+    });
+    await screen.findByText(`Alerts 1 to ${PAGE_SIZE} of ${PAGE_SIZE + 1}`);
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    // The rows of the first page stay on screen until the second one arrives, so the
+    // caption must keep describing them.
+    expect(screen.getByText(`Alerts 1 to ${PAGE_SIZE} of ${PAGE_SIZE + 1}`)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Details of R1 for 3c6444" })).toHaveLength(
+      PAGE_SIZE,
+    );
+
+    release();
+    expect(
+      await screen.findByText(`Alerts ${PAGE_SIZE + 1} to ${PAGE_SIZE + 1} of ${PAGE_SIZE + 1}`),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Details of R1 for 3c6444" })).toHaveLength(1);
+  });
+
   it("goes back a page when processing empties the current one", async () => {
     let unprocessed = PAGE_SIZE + 1;
     const { search } = renderWith(
