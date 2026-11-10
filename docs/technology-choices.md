@@ -39,6 +39,7 @@ Technical and organisational choices are judged against these weighted criteria.
 | Cache | Redis | Deferred | Adopted only if a need appears, see below |
 | Mapping library | Leaflet (BSD-2-Clause) | Decided on 2026-11-03, scored grid added | See below. Used directly, without the react-leaflet wrapper (licence) |
 | CI/CD tool | GitHub Actions | Decided on 2026-11-03, scored grid added | See below |
+| Interface design | `TBD` | To decide (Thibault), D-19 | See below. The front has no stylesheet yet |
 | AI library (bonus) | `TBD` | Postponed | To be decided when the module starts |
 
 ## Frontend: React with TypeScript
@@ -140,3 +141,30 @@ Same scale and weights as above.
 - end-to-end tests (Playwright) and the Docker build.
 
 **Trade-off:** while the repository was private, free minutes were limited, so the pipeline only ran on pull requests and on pushes to `develop` and `main`. Since 2026-11-09 the repository is public and GitHub-hosted runner minutes are free, so the pipeline runs on every push and checks more (formatting, production build, migration round trip, three browsers, CodeQL). The Docker build and the end-to-end tests still share one job so the images are built once. The workflows are in `.github/workflows/`, described in [testing](testing.md#continuous-integration).
+
+## Interface design
+
+Not decided yet. Thibault owns the design (see [team work split](team-split.md#interface)) and records each choice here, with its date, as it is made. Until then the front has no stylesheet, and every page shows plain HTML.
+
+**What already constrains the choice:**
+
+- NF-03 asks for a clear, intuitive interface suited to quickly reviewing flights and alerts, a readable map and a visual prioritisation of alerts ([requirements](requirements.md)).
+- Components are functions and everything else is a TypeScript class, whatever styling approach is chosen (see [frontend](#frontend-react-with-typescript)).
+- A new dependency goes in its own small pull request, with its licence in [dependencies](dependencies.md). The licence matters: the `react-leaflet` case (D-01) showed that a wrapper can be non-open-source.
+- Other members build their pages with the shared elements and do not edit them.
+
+**Choices to make:**
+
+| Topic | Question | Decision |
+| --- | --- | --- |
+| Styling approach | Plain CSS, CSS modules, a utility framework or a component library | `TBD` |
+| Design tokens | Colours, spacing, typography, shared by every page | `TBD` |
+| Logo | Designed by Louis-Amaury (see [team work split](team-split.md#design)): format, colours and variants (full, icon, light and dark background) | `TBD` |
+| Shared elements | Which base elements go in `components/ui/` (buttons, form fields, tables, badges, messages) | `TBD` |
+| Alert criticality | How a level is shown at first glance, in a way that does not rely on colour alone | `TBD` |
+| Map | Size, controls and legend of the Leaflet map, shared by the aircraft pages and the dashboard | `TBD` |
+| Navigation | What the navigation shows before login, as a User and as a Supervisor | `TBD` |
+| Home page | What the home page presents, including the educational disclaimer the specifications ask to show in the application (§VII.3) | `TBD` |
+| Accessibility | Contrast, keyboard use, labels | `TBD` |
+| Screen sizes | Desktop only, or also tablet and phone | `TBD` |
+| Language of the interface | The texts are in English today; whether they stay so | `TBD` |
