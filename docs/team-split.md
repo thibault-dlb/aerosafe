@@ -27,7 +27,7 @@ The AI module (BF-15, UC-07) is **not assigned**. It is a bonus and only starts 
 | Member | Backend (`src/api/`) | Frontend (`src/front/src/`) |
 | --- | --- | --- |
 | Thibault | `models/`, `database/migrations/`, `core/`, `routes/router.py`, `main.py`, `pyproject.toml` | `AppRoute.tsx`, `App.tsx`, `services/ApiClient.ts`, `components/layout/`, `pages/Home.tsx`, the global styles and `components/ui/` (design, see [interface](#interface)), `../package.json` |
-| Louis-Amaury | `routes/v1/auth.py`, `routes/v1/users.py`, `services/auth/`, `schemas/auth.py`, `schemas/user.py`, `config/auth.py` | `pages/auth/`, `pages/admin/`, `components/auth/`, `providers/AuthProvider.tsx`, `hooks/useAuth.ts`, `services/AuthService.ts`, `models/User.ts` |
+| Louis-Amaury | `routes/v1/auth.py`, `routes/v1/users.py`, `services/auth/`, `schemas/auth.py`, `schemas/user.py`, `config/auth.py` | `pages/auth/`, `pages/admin/`, `components/auth/`, `assets/logo/`, `providers/AuthProvider.tsx`, `hooks/useAuth.ts`, `services/AuthService.ts`, `models/User.ts` |
 | Jules | `routes/v1/collection.py`, `routes/v1/dashboard.py`, `services/collection/`, `schemas/collection.py`, `schemas/dashboard.py`, `config/opensky.py` | `pages/dashboard/`, `components/dashboard/`, `services/DashboardService.ts` |
 | Sacha | `routes/v1/rules.py`, `routes/v1/alerts.py`, `services/rules/`, `services/alerts/`, `schemas/rule.py`, `schemas/alert.py` | `pages/alerts/`, `pages/rules/`, `components/alerts/`, `services/AlertService.ts`, `services/RuleService.ts`, `models/Alert.ts`, `models/Rule.ts` |
 | Yassine | `routes/v1/aircraft.py`, `routes/v1/flights.py`, `services/aircraft/`, `services/flights/`, `schemas/aircraft.py`, `schemas/flight.py` | `pages/aircraft/`, `pages/flights/`, `components/map/`, `services/MapService.ts`, `services/AircraftService.ts`, `models/Aircraft.ts`, `models/Flight.ts` |
@@ -61,7 +61,7 @@ The front has no stylesheet yet: every page shows plain HTML.
 | Member | Interface work left |
 | --- | --- |
 | Thibault | The design (global styles, shared base elements, navigation frame, see below) and the home page. Wires the route guard of Louis-Amaury in `AppRoute.tsx` |
-| Louis-Amaury | `AuthProvider`, `useAuth`, `AuthService`, `User` model, the token provider of `ApiClient`, a route guard by role in `components/auth/`, the log in, sign up and accounts pages. The accounts page needs `users.py` first |
+| Louis-Amaury | The logo (design and files), then `AuthProvider`, `useAuth`, `AuthService`, `User` model, the token provider of `ApiClient`, a route guard by role in `components/auth/`, the log in, sign up and accounts pages. The accounts page needs `users.py` first |
 | Jules | The dashboard page, `components/dashboard/` and `DashboardService`. The page needs `dashboard.py` first, and reuses `AlertTable` and the map (see the contracts below) |
 | Sacha | Style the alerts and rules pages with the design, and make the criticality of an alert visible at first glance (NF-03) |
 | Yassine | Style the aircraft and flight pages with the design, and keep the map readable (NF-03) |
@@ -70,6 +70,7 @@ The front has no stylesheet yet: every page shows plain HTML.
 
 - **Owner.** Thibault owns the global styles, the design tokens (colours, spacing, typography), the shared base elements in `components/ui/` and the navigation frame in `components/layout/`. The choices are recorded in [technology choices](technology-choices.md#interface-design).
 - **Use.** The other members build their pages with these elements and do not edit them, following the one-owner rule. A missing element is asked from Thibault, who adds it in a small pull request.
+- **Logo.** Louis-Amaury designs the logo and owns its files in `src/front/src/assets/logo/` (a folder to create). Thibault then places it in the navigation frame, on the home page and as the page icon in `index.html`, and its colours follow the design tokens, so the two stay consistent.
 - **Order.** Nobody waits for the design to build a screen: a screen works unstyled and takes the design when it is merged.
 
 ## Foundation content

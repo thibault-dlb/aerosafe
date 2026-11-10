@@ -159,6 +159,7 @@ Not decided yet. Thibault owns the design (see [team work split](team-split.md#i
 | --- | --- | --- |
 | Styling approach | Plain CSS, CSS modules, a utility framework or a component library | `TBD` |
 | Design tokens | Colours, spacing, typography, shared by every page | `TBD` |
+| Logo | Designed by Louis-Amaury (see [team work split](team-split.md#design)): format, colours and variants (full, icon, light and dark background) | `TBD` |
 | Shared elements | Which base elements go in `components/ui/` (buttons, form fields, tables, badges, messages) | `TBD` |
 | Alert criticality | How a level is shown at first glance, in a way that does not rely on colour alone | `TBD` |
 | Map | Size, controls and legend of the Leaflet map, shared by the aircraft pages and the dashboard | `TBD` |
