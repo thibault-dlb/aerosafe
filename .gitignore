@@ -25,5 +25,8 @@ test-results/
 .DS_Store
 Thumbs.db
 
+# Large local datasets (see docs/historical-data.md), never committed
+/data/
+
 # Local reference document (not versioned)
 docs/reference/bible_bdd_final.pdf

@@ -80,7 +80,7 @@ Unit tests of the frontend sit next to the code they test (`*.test.ts`, `*.test.
   | High frequency | Île-de-France, about 12 square degrees | 30 s | 1 | 2 880 |
   | Low frequency | Metropolitan France, about 150 square degrees | 120 s | 3 | 2 160 |
 
-- Historical data is out of scope: collection is live only.
+- Historical data is out of scope: collection is live only. A replay of past traffic was explored but is not decided (see [historical data](historical-data.md)).
 - Data can contain missing or inconsistent fields, so it must be cleaned and validated before use.
 - The application must stay accessible and stable during demonstrations, including when the source is temporarily unavailable (NF-04).
 

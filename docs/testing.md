@@ -57,7 +57,7 @@ The branch protection of `develop` and `main` requires the `backend`, `frontend`
 
 ## Test data
 
-A reproducible set of observations, independent of the external source's availability, is used to replay the detection scenarios. Its content is `TBD`.
+A reproducible set of observations, independent of the external source's availability, is used to replay the detection scenarios. Its content is `TBD`. [Historical data](historical-data.md) explores real trajectories that could feed it.
 
 ## Business rule coverage
 
