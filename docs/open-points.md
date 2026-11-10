@@ -1,6 +1,6 @@
 # Open points
 
-Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-09.
+Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-10.
 
 ## Pending decisions
 
@@ -50,7 +50,7 @@ Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go bey
 | Flights | `Flight` is an explicit entity grouping observations. An observation joins the flight of the same `icao24` when at most N minutes separate it from the previous one; otherwise a new flight starts | D-06 |
 | Authentication | Built in the API: FastAPI, JWT of about 15 minutes, revocable refresh token in an `HttpOnly` cookie, argon2id. Keycloak dropped | A-06 |
 | Processing | Collection and evaluation run as scheduled tasks in the API; no worker container. Evaluation runs right after each collection | D-05 |
-| Collection | Live only. Two profiles switched by configuration: Île-de-France every 30 s (1 credit per request) or metropolitan France every 120 s (3 credits). No historical data | D-05 |
+| Collection | Live only. Two profiles switched by configuration: Île-de-France every 30 s (1 credit per request) or metropolitan France every 120 s (3 credits). No historical data (a replay of past traffic is explored in [historical data](historical-data.md) and not decided; keeping it would reopen D-05) | D-05 |
 | Mapping and CI | Leaflet (the `react-leaflet` wrapper depends on its licence, see D-01); GitHub Actions, scored in [technology choices](technology-choices.md) | D-01, D-02 |
 | Alerts | Aircraft, rule, date and time, message mandatory; observed value, threshold and criticality optional | A-03 |
 | Dashboard | Active alerts, tracked aircraft, alert statistics, collection state. Flight statistics: duration and distance, altitude and speed, number of observations | A-04 |
