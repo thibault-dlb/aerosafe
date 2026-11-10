@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -56,7 +56,8 @@ describe("FlightDetail", () => {
     expect(screen.getByRole("img", { name: "Altitude profile" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Speed profile" })).toBeInTheDocument();
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
-    expect(showSegments.mock.lastCall?.[0]).toHaveLength(1);
+    // The map draws in an effect that can run after the title shows, so wait for it.
+    await waitFor(() => expect(showSegments.mock.lastCall?.[0]).toHaveLength(1));
   });
 
   it("flags a partial trajectory and does not join its gaps", async () => {
