@@ -20,6 +20,10 @@ export const en: Record<TranslationKey, string> = {
   "theme.label": "Theme",
   "theme.dark": "Dark",
   "theme.light": "Light",
+  "theme.toLight": "Switch to the light theme",
+  "theme.toDark": "Switch to the dark theme",
+
+  "layout.skipToContent": "Skip to the content",
 
   "footer.disclaimer":
     "AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally.",

@@ -18,6 +18,10 @@ export const fr = {
   "theme.label": "Thème",
   "theme.dark": "Sombre",
   "theme.light": "Clair",
+  "theme.toLight": "Passer au thème clair",
+  "theme.toDark": "Passer au thème sombre",
+
+  "layout.skipToContent": "Aller au contenu",
 
   "footer.disclaimer":
     "AeroSafe est un projet pédagogique. Ce n'est pas un système certifié de surveillance ou de gestion du trafic aérien et il ne doit pas servir à un usage opérationnel.",
