@@ -9,7 +9,7 @@ test("the home page shows the application name", async ({ page }) => {
 test("the home page shows the educational disclaimer", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByText("Projet pédagogique")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Projet pédagogique" })).toBeVisible();
 });
 
 test("the home page is in French and switches to English, and the choice is kept", async ({ page }) => {
@@ -23,7 +23,16 @@ test("the home page is in French and switches to English, and the choice is kept
   await expect(page.getByRole("link", { name: "Dashboard" }).first()).toBeVisible();
 });
 
+test("the theme follows the system until the user chooses", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: "Passer au thème sombre" })).toBeVisible();
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.*/);
+});
+
 test("the theme switches between dark and light", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
 
   await page.getByRole("button", { name: "Passer au thème clair" }).click();
