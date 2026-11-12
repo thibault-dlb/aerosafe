@@ -109,13 +109,37 @@ Measured on the 365 files on 2026-11-12 (row counts from the parquet metadata, f
 
 Few domestic flights: the sample only holds the flights of airlines that gave their take-off weight. A selection by airports drops the 46 % of trajectories that have no row in the list; a selection by area keeps them.
 
+### Area that follows the border, and Europe
+
+Counted on 2026-11-12 on the 365 files, at one point per second, with the `OBSERVATION` size of 318 bytes a point, the speed of 24 600 points a second (a minimum: the indexes slow the inserts as they grow) and the 306 GB of parquet freed by `--delete-source`.
+
+| Area | Points | Share of the year | Size in PostgreSQL | Time | Disk, net of the parquet |
+| --- | --- | --- | --- | --- | --- |
+| Rectangle `COLLECTION_BBOX_FRANCE` | 1.049 billion | 16.4 % | 334 GB | 11.8 h | +27 GB |
+| France without Corsica, exact border | 425 million | 6.6 % | 135 GB | 4.8 h | −171 GB |
+| France without Corsica + 50 km | 601 million | 9.4 % | 191 GB | 6.8 h | −115 GB |
+| **France without Corsica + 100 km** (`france-100km`) | **856 million** | **13.4 %** | **272 GB** | **9.7 h** | **−34 GB** |
+
+The border is that of Natural Earth (10 m, public domain, a few kilometres of generalisation, which a 100 km margin makes irrelevant), widened in metres in the Lambert-93 projection. Corsica is 166 km from the mainland, so the margin never reaches it. The mask is 1 113 runs of cells (15 KB), `src/api/services/historical/areas/france_100km.csv`, built by `scripts/build_area_mask.py` (run again only to change the area, with `uv run scripts/build_area_mask.py --km 100`). Checked on the data: its area is 0.05 % under the polygon, and the points it keeps are 0.09 % under the exact polygon counted on a coarser grid. The cell of a point is `floor(latitude / 0.01), floor(longitude / 0.01)`, so the border is exact to about 1 km.
+
+Europe, overflights included (a rectangle from 35° to 70° of latitude and −12° to 40° of longitude: 5.50 billion points, 86 % of the year):
+
+| Step | Points | Size in PostgreSQL | Time |
+| --- | --- | --- | --- |
+| 1 s | 5.50 billion | 1.75 TB | 62 h |
+| 5 s | 1.10 billion | about 350 GB | 12 h |
+| 10 s | 550 million | 175 GB | 6 h |
+| 30 s | 183 million | 58 GB | 2 h |
+
+The import has no `--step` option yet: it keeps the resolution of the dataset. R3 to R5 ignore two points less than 10 s apart, so a step under 10 s would need the engine to compare a point with the one two or more steps before.
+
 ## Import into PostgreSQL
 
 `src/api/services/historical` loads the daily files into `AERONEF`, `VOL` and `OBSERVATION`. **Proposal, to confirm with the team** (it needs D-05 to be reopened, see below): the area of metropolitan France, every trajectory (listed or not), clipped to the area, at the resolution of the dataset (one point per second, no downsampling), aircraft anonymous.
 
 | Topic | Rule |
 | --- | --- |
-| Area | The `COLLECTION_BBOX_FRANCE` setting (`--bbox` changes it). The points outside are dropped, so an aircraft that leaves the area and comes back more than 30 minutes later makes a second flight |
+| Area | `--area france-100km`: metropolitan France without Corsica, plus 100 km all around, as a mask of cells of 0.01 degree (see below). Without it, a rectangle: `--bbox`, by default the `COLLECTION_BBOX_FRANCE` setting. The points outside are dropped, so an aircraft that leaves the area and comes back more than 30 minutes later makes a second flight |
 | Aircraft | One `AERONEF` per flight of the dataset, since the obfuscated `icao24` is the `flight_id`. `CD_ICAO24` is the flight identifier minus 248 000 000, written in six hexadecimal digits (the identifiers go from 248 750 611 to 258 074 492, which fits in 24 bits). Registration, model and airline stay empty |
 | Flights | One `VOL` per segment of trajectory, cut when two points are more than `COLLECTION_FLIGHT_GAP_MINUTES` apart (D-06). Callsign and airports stay empty |
 | Observations | `DT_DERNIER_CONTACT` and `DT_POSITION` are the time of the point, so **R1 and R2 never fire**. Altitude ft to m, speed kt to m/s, heading rounded to 2 decimals with 360 turned into 0, coordinates rounded to 6 decimals |
@@ -131,8 +155,8 @@ Run from `src/api`, with the password of the target database. Start with a dry r
 ```powershell
 cd src\api
 $env:DB_HOST = "127.0.0.1"; $env:DB_PASS = "<password of aerosafe_user>"
-uv run python -m services.historical.cli ..\..\data\prc2024 --from 2022-07-01 --to 2022-07-01 --dry-run
-uv run python -m services.historical.cli ..\..\data\prc2024 --from 2022-07-01 --to 2022-07-01
+uv run python -m services.historical.cli ..\..\data\prc2024 --area france-100km --from 2022-07-01 --to 2022-07-01 --dry-run
+uv run python -m services.historical.cli ..\..\data\prc2024 --area france-100km --from 2022-07-01 --to 2022-07-01
 ```
 
 `--delete-source` deletes each daily file once its points are verified in the database, to free the disk as the import goes (only the `.parquet` files, never `flight_list.csv` or the README). Keep a copy elsewhere first. Run `ANALYZE "OBSERVATION"` as the table owner after a large import.
@@ -146,7 +170,7 @@ Loaded on 2026-11-12 into the PostgreSQL of `docker compose` (PostGIS 17, defaul
 | Load | 3 740 123 points, 1 272 aircraft and 1 278 flights in 5 min 02 s, so **12 370 points a second**. The client side (DuckDB 3.1 s, batches to Python 4.4 s, keys 0.8 s) takes 8 s of the 302: the rest is the `INSERT` |
 | Size | Table 530 MB and six indexes 605 MB, so **318 bytes a point** (my first estimate was 150). Indexes: position GiST 152 MB, unique pair 113 MB, (flight, position time) 113 MB, (flight, last contact) 113 MB, primary key 80 MB, last contact 36 MB |
 | Journal | 2.9 GB of WAL written for 1.1 GB of data, 7 checkpoints forced by a full WAL (`max_wal_size` is 1 GB), none on the timer; `shared_buffers` is 128 MB, below the 605 MB of indexes |
-| Year, France | 1.05 billion points at 318 bytes: **about 334 GB**, which does not fit on the development disk. At 12 370 points a second (one connection), about 24 hours; see the measures below |
+| Year, France | 1.05 billion points at 318 bytes: **about 334 GB** with the rectangle. It fits on the development disk with `--delete-source`: the 306 GB of parquet are freed as the files are loaded, so the net need is about 28 GB. At 12 370 points a second (one connection), about 24 hours; see the measures below |
 | Year, Île-de-France | 4.8 % of the points of France on this day (180 306 against 3.74 million), so about 16 GB |
 
 Why it is not faster although no resource is at 100 % in the task manager: one `INSERT` runs in one PostgreSQL process, so on one core, and a saturated core is under 10 % of a processor with many threads. The disk is almost idle (about 10 MB/s). The time goes into the maintenance of six indexes and into the checkpoints, not into the client.
