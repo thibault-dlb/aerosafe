@@ -54,7 +54,7 @@ Published by EUROCONTROL's Performance Review Commission, OpenSky, TU Delft and 
 | Flights already grouped, origin and destination airports | Yes |
 | Aircraft identity (ICAO24, registration), callsign, airline | No: `icao24` is an obfuscated integer (one per flight, never the real code), the callsign and the airline are hashes, there is no registration |
 | `on_ground` | No: to derive from altitude and speed |
-| Full traffic | No: a sample of the flights whose airline gave its take-off weight, 30 aircraft types. Each trajectory runs from 5 minutes before off-block to 30 minutes after arrival, so aircraft also appear on the ground |
+| Full traffic | No: a sample of the flights whose airline gave its take-off weight, 30 aircraft types. A trajectory starts at most 5 minutes before off-block and ends at most 30 minutes after arrival, but most start later, where the coverage begins: on 2022-07-01, 78 % of the listed flights already move at their first point, and only 0.05 % of the points are under 40 kt, so the ground is almost absent |
 
 A replay would import one or more days, keep the France area, keep one point every 30 s or 120 s like the live profiles, and give each snapshot's own time to the rules engine as `now`. The aircraft would be anonymous.
 
@@ -89,11 +89,57 @@ Checked on 2026-11-09 with pyarrow on the files above.
 | Outliers | 3 542 points above 60 000 ft, 689 below −500 ft, 1 447 above 700 kt (maximum 3 921 kt) | Filter before the rules, otherwise they raise false alerts |
 | Over metropolitan France (latitude 41.3 to 51.1, longitude −5.2 to 9.6) | 1 272 flights, 3 740 123 points, so about 31 000 points at one every 120 s | Small enough to import into PostgreSQL |
 | Over Île-de-France (latitude 48.0 to 49.3, longitude 1.4 to 3.6) | 312 flights, 180 306 points, so about 6 000 points at one every 30 s | Same |
-| Link with the flight list | Only 1 640 of the 3 273 trajectories match a row of `flight_list.csv` (1 641 rows are dated 2022-07-01) | Half of the trajectories have no origin or destination |
+| Link with the flight list | Only 1 640 of the 3 273 trajectories match a row of `flight_list.csv` (1 641 rows are dated 2022-07-01). Over the year: 979 680 trajectories for 527 162 rows, so 452 518 trajectories (46 %) have no row. The README only counts the flights "with complete weight information", so they are probably flights without a take-off weight (not checked) | Almost half of the trajectories have no origin, destination, type or country |
 | Anonymisation | 30 airlines and 11 692 callsigns, all hashed | Nothing readable to show in the interface |
+
+### Size of the whole year
+
+Measured on the 365 files on 2026-11-12 (row counts from the parquet metadata, flights and areas from one scan).
+
+- 6 390 198 052 points in 979 680 trajectories, 306 GB, so about 48 bytes a point in parquet. A flight is in exactly one daily file.
+- The trajectories are not limited to Europe, since a flight is followed from end to end: on the three days checked (2022-01-15, 2022-07-01 and 2022-12-31), latitudes go from −34° to 69° and longitudes from −123° to 145°.
+- Inside metropolitan France (latitude 41.3 to 51.1, longitude −5.2 to 9.6): 1 049 153 028 points, **16.4 %** of the year, at one point per second.
+
+| Selection of the flights (airports of `flight_list.csv`) | Flights | Share of the 527 162 listed flights | Share of the points |
+| --- | --- | --- | --- |
+| Departure and arrival in Europe (strict: no Turkey, Cyprus, Caucasus, Israel) | 355 360 | 67 % | 29 % |
+| Same, with Turkey, Cyprus and the Caucasus | 458 388 | 87 % | 43.5 % |
+| Departure and arrival in France | 68 | 0.01 % | 0 % |
+| Departure or arrival in France | 34 939 | 6.6 % | 4.0 % |
+
+Few domestic flights: the sample only holds the flights of airlines that gave their take-off weight. A selection by airports drops the 46 % of trajectories that have no row in the list; a selection by area keeps them.
+
+## Import into PostgreSQL
+
+`src/api/services/historical` loads the daily files into `AERONEF`, `VOL` and `OBSERVATION`. **Proposal, to confirm with the team** (it needs D-05 to be reopened, see below): the area of metropolitan France, every trajectory (listed or not), clipped to the area, at the resolution of the dataset (one point per second, no downsampling), aircraft anonymous.
+
+| Topic | Rule |
+| --- | --- |
+| Area | The `COLLECTION_BBOX_FRANCE` setting (`--bbox` changes it). The points outside are dropped, so an aircraft that leaves the area and comes back more than 30 minutes later makes a second flight |
+| Aircraft | One `AERONEF` per flight of the dataset, since the obfuscated `icao24` is the `flight_id`. `CD_ICAO24` is the flight identifier minus 248 000 000, written in six hexadecimal digits (the identifiers go from 248 750 611 to 258 074 492, which fits in 24 bits). Registration, model and airline stay empty |
+| Flights | One `VOL` per segment of trajectory, cut when two points are more than `COLLECTION_FLIGHT_GAP_MINUTES` apart (D-06). Callsign and airports stay empty |
+| Observations | `DT_DERNIER_CONTACT` and `DT_POSITION` are the time of the point, so **R1 and R2 never fire**. Altitude ft to m, speed kt to m/s, heading rounded to 2 decimals with 360 turned into 0, coordinates rounded to 6 decimals |
+| Outliers | An altitude outside −500 to 60 000 ft, a speed below 0 or above 700 kt, a heading outside 0 to 360 become empty and the point is kept, as the collector does with OpenSky: the rules skip a missing value |
+| `BL_AU_SOL` | The dataset has no such field. True when the speed is under 40 kt and the altitude under 3 000 ft. A speed under 40 kt at a higher altitude is a glitch: the speed is emptied. A simplification to validate with R4, since a takeoff roll above 40 kt counts as airborne; ground points are only 0.05 % of the data |
+| Safety | A database that holds observations dated outside 2022 is refused, since the synthetic codes could collide with real ICAO24 addresses. Use a database of its own |
+| Restart | Each daily file is one transaction. A file already loaded is recognised by its row count and skipped, so the command can be stopped and started again |
+| Check | After each file, the database must hold as many observations for its aircraft as the file holds points, otherwise the file is rolled back and never deleted |
+
+Run from `src/api`, with the password of the target database. Start with a dry run on one day: it reads the file and reports the points, the flights and a rough size, without a database. Then load that day, and compare the time and `pg_total_relation_size('"OBSERVATION"')` with the estimates before loading more.
+
+```powershell
+cd src\api
+$env:DB_HOST = "127.0.0.1"; $env:DB_PASS = "<password of aerosafe_user>"
+uv run python -m services.historical.cli ..\..\data\prc2024 --from 2022-07-01 --to 2022-07-01 --dry-run
+uv run python -m services.historical.cli ..\..\data\prc2024 --from 2022-07-01 --to 2022-07-01
+```
+
+`--delete-source` deletes each daily file once its points are verified in the database, to free the disk as the import goes (only the `.parquet` files, never `flight_list.csv` or the README). Keep a copy elsewhere first. Run `ANALYZE "OBSERVATION"` as the table owner after a large import.
+
+Not measured yet: the size and the time of the import. At 150 to 200 bytes a point with the indexes (rough estimate), the year inside France is about 150 to 210 GB, and the GiST index on the position slows the inserts down. The first real day gives the actual figures.
 
 ## Next steps
 
-1. ~~Test d10 on one day~~ Done on 2022-07-01, see above. Remaining: decide how to treat the null speeds and the outliers, and why half of the trajectories have no row in `flight_list.csv`.
+1. ~~Test d10 on one day~~ Done on 2022-07-01, see above. Remaining: check the `BL_AU_SOL` rule and the outlier limits on the first imported day, with R3 to R5.
 2. Ask OpenSky where the d1 and d11 files went, together with V-01.
-3. If the team keeps a historical mode, reopen D-05 in [open points](open-points.md), and record the source of each collection run (live or import) in a reference table, following the [database conventions](database-conventions.md).
+3. If the team keeps a historical mode, reopen D-05 in [open points](open-points.md), and record the source of each collection run (live or import) in a reference table, following the [database conventions](database-conventions.md). The import does not touch `EXECUTION_COLLECTE`.
