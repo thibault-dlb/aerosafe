@@ -122,8 +122,9 @@ Few domestic flights: the sample only holds the flights of airlines that gave th
 | Outliers | An altitude outside −500 to 60 000 ft, a speed below 0 or above 700 kt, a heading outside 0 to 360 become empty and the point is kept, as the collector does with OpenSky: the rules skip a missing value |
 | `BL_AU_SOL` | The dataset has no such field. True when the speed is under 40 kt and the altitude under 3 000 ft. A speed under 40 kt at a higher altitude is a glitch: the speed is emptied. A simplification to validate with R4, since a takeoff roll above 40 kt counts as airborne; ground points are only 0.05 % of the data |
 | Safety | A database that holds observations dated outside 2022 is refused, since the synthetic codes could collide with real ICAO24 addresses. Use a database of its own |
-| Restart | Each daily file is one transaction. A file already loaded is recognised by its row count and skipped, so the command can be stopped and started again |
-| Check | After each file, the database must hold as many observations for its aircraft as the file holds points, otherwise the file is rolled back and never deleted |
+| Parallelism | The aircraft and flights of a file are committed first, then the batches of 50 000 observations go through a queue to `--workers` tasks (default 5, at most 6), each with its own connection and one transaction per batch. DuckDB is limited to 2 threads. With the client, the import stays within 6 of the 8 cores |
+| Restart | A file stopped halfway is completed by running it again: the batches never share a row, a batch already stored is skipped, and a file already complete is recognised by its row count and skipped |
+| Check | After each file, the database must hold as many observations for its aircraft as the file holds points, otherwise the command stops with an error and the file is never deleted |
 
 Run from `src/api`, with the password of the target database. Start with a dry run on one day: it reads the file and reports the points, the flights and a rough size, without a database. Then load that day, and compare the time and `pg_total_relation_size('"OBSERVATION"')` with the estimates before loading more.
 
@@ -144,15 +145,25 @@ Loaded on 2026-11-12 into the PostgreSQL of `docker compose` (PostGIS 17, defaul
 | --- | --- |
 | Load | 3 740 123 points, 1 272 aircraft and 1 278 flights in 5 min 02 s, so **12 370 points a second**. The client side (DuckDB 3.1 s, batches to Python 4.4 s, keys 0.8 s) takes 8 s of the 302: the rest is the `INSERT` |
 | Size | Table 530 MB and six indexes 605 MB, so **318 bytes a point** (my first estimate was 150). Indexes: position GiST 152 MB, unique pair 113 MB, (flight, position time) 113 MB, (flight, last contact) 113 MB, primary key 80 MB, last contact 36 MB |
-| Journal | 2.9 GB of WAL written for 1.1 GB of data, 7 checkpoints forced by a full WAL (`max_wal_size` is 1 GB), none on the timer; `shared_buffers` is 160 MB, below the 605 MB of indexes |
-| Year, France | 1.05 billion points at 318 bytes: **about 334 GB**, which does not fit on the development disk. At 12 370 points a second, about 24 hours, and probably more, since the indexes slow the inserts as they grow |
+| Journal | 2.9 GB of WAL written for 1.1 GB of data, 7 checkpoints forced by a full WAL (`max_wal_size` is 1 GB), none on the timer; `shared_buffers` is 128 MB, below the 605 MB of indexes |
+| Year, France | 1.05 billion points at 318 bytes: **about 334 GB**, which does not fit on the development disk. At 12 370 points a second (one connection), about 24 hours; see the measures below |
 | Year, Île-de-France | 4.8 % of the points of France on this day (180 306 against 3.74 million), so about 16 GB |
 
 Why it is not faster although no resource is at 100 % in the task manager: one `INSERT` runs in one PostgreSQL process, so on one core, and a saturated core is under 10 % of a processor with many threads. The disk is almost idle (about 10 MB/s). The time goes into the maintenance of six indexes and into the checkpoints, not into the client.
 
-Levers, none applied yet:
-- PostgreSQL settings for a bulk load: a larger `max_wal_size` and `checkpoint_timeout`, a larger `shared_buffers`, `wal_compression`. Expected to help, not measured.
-- Parallel inserts over several connections. It needs a commit per batch instead of one per file, which the row-count check already makes safe.
+### Bulk-load settings and parallel inserts
+
+Two levers tried on 2026-11-12, on the days 2022-07-02 and 2022-07-03 (about 4 million points each), against the 12 370 points a second of the first day.
+
+| Try | Points a second | What changed |
+| --- | --- | --- |
+| PostgreSQL settings, one connection (`shared_buffers` 2 GB, `wal_buffers` 64 MB, `max_wal_size` 16 GB, `min_wal_size` 4 GB, `checkpoint_timeout` 30 min, `wal_compression` lz4) | 12 800 (13 000 to 13 400 while inserting) | **+5 %.** Checkpoints forced by a full WAL went from 7 to 0 and the WAL from 0.77 to 0.69 KB a point, so the checkpoints were not the bottleneck |
+| Five insert workers (a commit per batch), container limited to 6 CPU | **24 600** (25 900 while inserting) | **×2.** 3 833 439 points in 2 min 36 s; the counts add up (11 604 727 observations for the three days, 3 829 aircraft, 3 839 flights) |
+
+The parallel run is far from five times faster, so something else limits it. Not measured, so not claimed: the contention on the pages of the indexes that every worker writes to (the last contact time, the position GiST), or the WAL insertion lock. The settings above were applied to the development container only (`ALTER SYSTEM`), not to `docker-compose.yaml`.
+
+Levers left:
+- More workers (6) or larger batches: a small gain at best, to measure.
 - Fewer or deferred indexes during the load. This changes the schema outside the migrations, so it needs a decision.
 - A smaller selection: Île-de-France, or fewer days.
 
