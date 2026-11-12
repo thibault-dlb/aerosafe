@@ -125,8 +125,9 @@ class ConsoleProgress:
         return text
 
     def _draw(self, text: str) -> None:
-        text = text[: max(self._columns() - 1, 20)]
         if self._interactive:
+            # A line wider than the terminal would wrap, and the next redraw would not erase it.
+            text = text[: max(self._columns() - 1, 20)]
             padding = " " * max(self._live_width - len(text), 0)
             self._stream.write("\r" + text + padding)
             self._live_width = max(len(text), self._live_width)

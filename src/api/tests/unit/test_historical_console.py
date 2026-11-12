@@ -173,6 +173,16 @@ class TestRedraw:
         assert len(console.output.removeprefix("\r")) == 39
 
 
+class TestLogLines:
+    def test_a_log_line_is_never_cut_to_the_width_of_a_terminal(self) -> None:
+        console = Console(interactive=False, columns=40)
+
+        console.insert(0, at=0)
+        console.insert(500, at=100)
+
+        assert "file: 1 min 40 s left" in console.output
+
+
 class TestLog:
     def test_a_redirected_output_gets_lines_never_carriage_returns(self) -> None:
         console = Console(interactive=False, interval=LOG_INTERVAL)
