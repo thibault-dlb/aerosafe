@@ -228,11 +228,14 @@ Measured on 2026-11-12 on the Ryzen 5 5500 (12 threads), with `scripts/bench-imp
 | 2 | 4 | 3 | 18 908 | 6 303 |
 | 1 | 8 | 3 | 16 115 | 5 372 |
 | 3 | 3 | 2 | 10 799 | 5 400 |
+| 1 | 2 | 9 | 19 050 | 2 117 |
 
-- **The CPU of PostgreSQL decides the speed**: about 5 300 to 6 300 points a second for each CPU it is given, whatever the number of workers or files. With 2, 3, 5 and 6 CPU, the speed is in proportion.
+The last row was measured afterwards, on 2022-07-01 only (3 078 038 points in 2 min 42 s).
+
+- **The speed is limited by the smaller of the workers and the CPU of PostgreSQL**: each worker is one PostgreSQL process, so about one core. When the workers are at least as many as the CPU, the speed is about 5 300 to 6 300 points a second for each CPU, in proportion with 2, 3, 5 and 6 CPU. With only 2 workers on 9 CPU, seven CPU stay idle and the speed is 19 050 points a second, 9 500 for each worker.
 - **Several files at the same time do not help**: at equal CPU, 3 x 2 workers (29 899) is 4 % above 1 x 6 (28 729) and 2 x 3 (28 383) is 1 % under it, which is within the noise of a single run; 2 x 4 is 17 % above 1 x 8 on 3 CPU, again a single run. In the 2 x 4 run, the third file, alone, went at 20 953 points a second, more than the two together (17 500).
-- **More workers than needed do not help**: 8 workers on 3 CPU are not faster than 4 workers on 3 CPU.
-- **Not measured**: the CPU used by the client. The workers are tasks of one Python process, so the client probably needs only one or two cores, and giving PostgreSQL 7 to 9 CPU with 2 to 4 workers would then be faster (about 40 000 points a second if the proportion holds, an estimate and not a measure). To test.
+- **More workers than CPU do not help**: 8 workers on 3 CPU are not faster than 4 workers on 3 CPU.
+- **Not measured**: the CPU used by the client. The workers are tasks of one Python process, so the client probably needs only one or two cores, which would let PostgreSQL have 8 or 9 CPU with as many workers. My first guess, that 2 to 4 workers on 7 to 9 CPU would reach about 40 000 points a second, was wrong (see the last row). To test: 8 workers on 9 CPU.
 - **Year with `france-100km`**: 856 million points at 31 526 points a second make at least **7.5 h** (a lower bound, the indexes slow the inserts as they grow), against 9.3 h at the speed of the second measure.
 
 ## Next steps
