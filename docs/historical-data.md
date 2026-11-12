@@ -136,7 +136,25 @@ uv run python -m services.historical.cli ..\..\data\prc2024 --from 2022-07-01 --
 
 `--delete-source` deletes each daily file once its points are verified in the database, to free the disk as the import goes (only the `.parquet` files, never `flight_list.csv` or the README). Keep a copy elsewhere first. Run `ANALYZE "OBSERVATION"` as the table owner after a large import.
 
-Not measured yet: the size and the time of the import. At 150 to 200 bytes a point with the indexes (rough estimate), the year inside France is about 150 to 210 GB, and the GiST index on the position slows the inserts down. The first real day gives the actual figures.
+### First measure: the day 2022-07-01
+
+Loaded on 2026-11-12 into the PostgreSQL of `docker compose` (PostGIS 17, default settings), on the Windows development machine.
+
+| Topic | Measure |
+| --- | --- |
+| Load | 3 740 123 points, 1 272 aircraft and 1 278 flights in 5 min 02 s, so **12 370 points a second**. The client side (DuckDB 3.1 s, batches to Python 4.4 s, keys 0.8 s) takes 8 s of the 302: the rest is the `INSERT` |
+| Size | Table 530 MB and six indexes 605 MB, so **318 bytes a point** (my first estimate was 150). Indexes: position GiST 152 MB, unique pair 113 MB, (flight, position time) 113 MB, (flight, last contact) 113 MB, primary key 80 MB, last contact 36 MB |
+| Journal | 2.9 GB of WAL written for 1.1 GB of data, 7 checkpoints forced by a full WAL (`max_wal_size` is 1 GB), none on the timer; `shared_buffers` is 160 MB, below the 605 MB of indexes |
+| Year, France | 1.05 billion points at 318 bytes: **about 334 GB**, which does not fit on the development disk. At 12 370 points a second, about 24 hours, and probably more, since the indexes slow the inserts as they grow |
+| Year, Île-de-France | 4.8 % of the points of France on this day (180 306 against 3.74 million), so about 16 GB |
+
+Why it is not faster although no resource is at 100 % in the task manager: one `INSERT` runs in one PostgreSQL process, so on one core, and a saturated core is under 10 % of a processor with many threads. The disk is almost idle (about 10 MB/s). The time goes into the maintenance of six indexes and into the checkpoints, not into the client.
+
+Levers, none applied yet:
+- PostgreSQL settings for a bulk load: a larger `max_wal_size` and `checkpoint_timeout`, a larger `shared_buffers`, `wal_compression`. Expected to help, not measured.
+- Parallel inserts over several connections. It needs a commit per batch instead of one per file, which the row-count check already makes safe.
+- Fewer or deferred indexes during the load. This changes the schema outside the migrations, so it needs a decision.
+- A smaller selection: Île-de-France, or fewer days.
 
 ## Next steps
 
