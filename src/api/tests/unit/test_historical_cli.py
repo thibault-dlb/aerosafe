@@ -353,7 +353,7 @@ class TestLiveProgress:
         with pytest.raises(HistoricalImportError):
             await command.run(None, None)
 
-        assert stream.getvalue().endswith("\r")  # the last thing written clears the line
+        assert stream.getvalue().endswith("\x1b[J")  # the last thing written erases the bars
 
 
 async def _fail():
