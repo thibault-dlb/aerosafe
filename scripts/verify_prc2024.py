@@ -14,6 +14,12 @@ README) get their size and a SHA-256. A copy that has lost or changed a single b
 `write` is run on the folder that is known to be good, `check` on the copy. Both read the whole
 dataset (about 306 GB): expect several minutes, with a progress line for each file. DuckDB is
 limited to 6 threads, as the rest of the import.
+
+`--manifest FILE` reads or writes the manifest somewhere else than in the data folder. The
+manifest of the good folder is versioned (`scripts/prc2024-manifest.csv`), so a machine that
+already has the data only has to pull the repository:
+
+    uv run scripts/verify_prc2024.py check data/prc2024 --manifest scripts/prc2024-manifest.csv
 """
 
 import argparse
@@ -138,15 +144,15 @@ def write_manifest(path: Path, entries: list[Entry]) -> None:
             writer.writerow([e.name, e.kind, e.size, "" if e.rows is None else e.rows, e.checksum])
 
 
-def run(mode: str, folder: Path) -> int:
+def run(mode: str, folder: Path, manifest: Path | None = None) -> int:
     if not folder.is_dir():
         print(f"{folder} is not a folder")
         return 2
-    manifest_path = folder / MANIFEST
+    manifest_path = manifest or folder / MANIFEST
     expected: dict[str, Entry] = {}
     if mode == "check":
         if not manifest_path.is_file():
-            print(f"No {MANIFEST} in {folder}: copy it with the data, or run `write` on the good folder")
+            print(f"No manifest at {manifest_path}: give --manifest, or run `write` on the good folder")
             return 2
         expected = read_manifest(manifest_path)
 
@@ -197,8 +203,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("mode", choices=["write", "check"])
     parser.add_argument("folder", type=Path)
+    parser.add_argument("--manifest", type=Path, help=f"manifest file; default: {MANIFEST} in the folder")
     arguments = parser.parse_args()
-    raise SystemExit(run(arguments.mode, arguments.folder))
+    raise SystemExit(run(arguments.mode, arguments.folder, arguments.manifest))
 
 
 if __name__ == "__main__":
