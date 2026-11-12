@@ -1,0 +1,127 @@
+/*
+ * Design tokens. Source: docs/brand/brand-guidelines.md (section 3).
+ * Dark theme (E, Golden radar) is the default. The light theme (B, Papyrus) is used when the
+ * user picks it with the switch (`data-theme="light"`) or, without a choice, when the system
+ * asks for it. No component uses a literal colour: it reads these variables.
+ */
+
+:root {
+  /* Fonts, with fallbacks: the interface still reads if the font files are missing. */
+  --font-display: "Cinzel Variable", Cinzel, "Trajan Pro", serif;
+  --font-ui: "Inter Variable", Inter, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, Consolas, monospace;
+
+  /* Type scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.5rem;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Radii and layout */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --page-width: 80rem;
+  --gutter: var(--space-4);
+
+  /* Dark theme (default) */
+  color-scheme: dark;
+  --color-bg: #1c110b;
+  --color-surface: #2a1b12;
+  --color-raised: #38251a;
+  --color-border: #4a3425;
+  --color-text: #f1e6cf;
+  --color-text-muted: #b0a08a;
+  --color-primary: #3dd6c4;
+  --color-on-primary: #0a1f1e;
+  --color-link: #e3b23c;
+  --color-selection: #e3b23c;
+  --color-data: #3dd6c4;
+  --color-danger: #e5604d;
+  --color-warning: #f28c28;
+  --color-brand: #e3b23c;
+
+  --map-bg: #130e04;
+  --map-land: #221808;
+  --map-grid: #4a3a12;
+  --map-text: #c2a560;
+  --map-selected: #3dd6c4;
+  --map-aircraft-low: #b07a1c;
+  --map-aircraft-mid: #e3b23c;
+  --map-aircraft-high: #f5d77e;
+  --map-beam: #3dd6c4;
+  --map-rings: #a07a25;
+}
+
+/* Light theme (B, Papyrus) */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #fbf5e6;
+  --color-surface: #f1e6cf;
+  --color-raised: #fffdf6;
+  --color-border: #d9c9a5;
+  --color-text: #1c110b;
+  --color-text-muted: #6b5a48;
+  --color-primary: #1f6f63;
+  --color-on-primary: #fbf5e6;
+  --color-link: #7a5200;
+  --color-selection: #7a5200;
+  --color-data: #1f6f63;
+  --color-danger: #a8341f;
+  --color-warning: #8f4a00;
+  --color-brand: #7a5200;
+
+  --map-bg: #eadfc2;
+  --map-land: #f7f0dc;
+  --map-grid: #d9c9a5;
+  --map-text: #6b5a48;
+  --map-selected: #1f6f63;
+  --map-aircraft-low: #9a7000;
+  --map-aircraft-mid: #7f5f00;
+  --map-aircraft-high: #4f3a00;
+  --map-beam: #1f6f63;
+  --map-rings: #9a7420;
+}
+
+/* Without a choice from the user, follow the system setting. Keep in step with the block above. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --color-bg: #fbf5e6;
+    --color-surface: #f1e6cf;
+    --color-raised: #fffdf6;
+    --color-border: #d9c9a5;
+    --color-text: #1c110b;
+    --color-text-muted: #6b5a48;
+    --color-primary: #1f6f63;
+    --color-on-primary: #fbf5e6;
+    --color-link: #7a5200;
+    --color-selection: #7a5200;
+    --color-data: #1f6f63;
+    --color-danger: #a8341f;
+    --color-warning: #8f4a00;
+    --color-brand: #7a5200;
+
+    --map-bg: #eadfc2;
+    --map-land: #f7f0dc;
+    --map-grid: #d9c9a5;
+    --map-text: #6b5a48;
+    --map-selected: #1f6f63;
+    --map-aircraft-low: #9a7000;
+    --map-aircraft-mid: #7f5f00;
+    --map-aircraft-high: #4f3a00;
+    --map-beam: #1f6f63;
+    --map-rings: #9a7420;
+  }
+}
