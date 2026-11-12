@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 
 import { type MapPosition, MapService } from "@/services/MapService";
 
+import styles from "./AircraftMap.module.css";
+
 export interface AircraftMapProps {
   /** Aircraft markers to draw. */
   aircraft: MapPosition[];
@@ -39,7 +41,7 @@ export default function AircraftMap({ aircraft, trajectory = EMPTY }: AircraftMa
       ref={container}
       aria-label={`Map of ${aircraft.length} aircraft`}
       role="img"
-      style={{ height: 420, width: "100%" }}
+      className={styles.map}
     />
   );
 }

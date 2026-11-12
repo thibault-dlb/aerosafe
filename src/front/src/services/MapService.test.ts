@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ATTRIBUTION, MapService } from "./MapService";
+import { MapTheme } from "./MapTheme";
 
 const PARIS = { latitude: 48.85, longitude: 2.35, label: "D-AIBD" };
 const LYON = { latitude: 45.76, longitude: 4.83 };
@@ -75,6 +76,52 @@ describe("MapService", () => {
     service.showSegments([]);
 
     expect(service.counts).toEqual({ aircraft: 0, segments: 0 });
+  });
+
+  it("shades the markers by altitude", () => {
+    mounted();
+
+    service.showAircraft([
+      { ...PARIS, altitude: 1000 },
+      { ...PARIS, altitude: 7000 },
+      { ...PARIS, altitude: 11000 },
+      PARIS,
+    ]);
+
+    const [low, mid, high, unknown] = service.aircraftColors;
+    expect(new Set([low, mid, high]).size).toBe(3);
+    expect(unknown).toBe(mid);
+  });
+
+  it("draws again with the new colours when the theme changes", async () => {
+    const colors = { low: "#111111", mid: "#222222", high: "#333333", selected: "#444444" };
+    const theme = new MapTheme();
+    const read = vi.spyOn(theme, "colors").mockReturnValue(colors);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    service = new MapService(theme);
+    service.mount(container);
+    service.showAircraft([PARIS]);
+    expect(service.aircraftColors).toEqual(["#222222"]);
+
+    read.mockReturnValue({ ...colors, mid: "#abcdef" });
+    document.documentElement.setAttribute("data-theme", "light");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(service.aircraftColors).toEqual(["#abcdef"]);
+    document.documentElement.removeAttribute("data-theme");
+  });
+
+  it("stops watching the theme once destroyed", async () => {
+    mounted();
+    service.showAircraft([PARIS]);
+    service.destroy();
+
+    document.documentElement.setAttribute("data-theme", "light");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(service.counts.aircraft).toBe(1);
+    document.documentElement.removeAttribute("data-theme");
   });
 
   it("can be destroyed more than once", () => {
