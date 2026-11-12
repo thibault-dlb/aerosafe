@@ -202,6 +202,19 @@ Levers left:
 - Fewer or deferred indexes during the load. This changes the schema outside the migrations, so it needs a decision.
 - A smaller selection: Île-de-France, or fewer days.
 
+### Second measure: the day 2022-07-01 with `france-100km`
+
+Loaded on 2026-11-12 into a new database, the first real run of the `france-100km` mask. Another machine than the first measures: AMD Ryzen 5 5500 (6 cores, 12 threads), 16 GB of memory, Docker Desktop with 8 GB. Limit of 10 threads out of 12: 6 insert workers, PostgreSQL limited to 4 CPU (`docker update --cpus 4`), PostgreSQL default settings.
+
+| Topic | Measure |
+| --- | --- |
+| Selection | 3 078 038 points (82.3 % of the 3 740 123 of the rectangle, as the dry run said), 1 126 aircraft, 1 130 flights. The dry run took 4 s |
+| Load | 2 min 00 s, so **25 627 points a second** (24 600 on the first machine with 5 workers and 6 CPU for PostgreSQL: +4 %, which is not a gain beyond the noise, since the machines differ) |
+| Size | `pg_total_relation_size('"OBSERVATION"')` is 981 917 696 bytes, so **319 bytes a point** (318 measured before): table 458 MB (149 bytes) and six indexes 524 MB (170 bytes). Indexes: position GiST 126 MB, flight 93 MB, flight and last contact 93 MB, unique pair 93 MB, primary key 66 MB, last contact 29 MB |
+| Counts | 3 078 038 observations, 1 126 aircraft and 1 130 flights, as in the file |
+
+Consequence for the year with `france-100km`: 856 million points at 319 bytes make about **273 GB**, and at 25 627 points a second at least **9.3 h** (a lower bound: the indexes slow the inserts as they grow). Not measured: how the speed evolves over many days, and the peak size of the WAL.
+
 ## Next steps
 
 1. ~~Test d10 on one day~~ Done on 2022-07-01, see above. Remaining: check the `BL_AU_SOL` rule and the outlier limits on the first imported day, with R3 to R5.
