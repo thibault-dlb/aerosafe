@@ -1,3 +1,4 @@
+import io
 from datetime import date
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from services.historical.cli import (
     format_duration,
     parse_arguments,
 )
+from services.historical.console import ConsoleProgress
 from services.historical.importer import HistoricalImportError
 from services.historical.prc2024 import Prc2024Archive, Prc2024Reader
 from tests.historical_support import FLIGHT, OTHER_FLIGHT, FakeSink, Point, write_day
@@ -79,6 +81,10 @@ class Folder:
     def dry_run(self) -> DryRunCommand:
         return DryRunCommand(Prc2024Archive(self.path), Prc2024Reader(FRANCE), self.messages.append)
 
+    def lines(self) -> list[str]:
+        """The per-file lines, without the announcements around them."""
+        return [message for message in self.messages if message.startswith("[")]
+
     def files(self) -> list[str]:
         return sorted(path.name for path in self.path.iterdir())
 
@@ -108,7 +114,7 @@ class TestDryRun:
         code = folder.dry_run().run(None, None)
 
         assert code == EXIT_OK
-        assert "[1/2] 2022-07-01.parquet: 2 points in 1 flights" in folder.messages[0]
+        assert "[1/2] 2022-07-01.parquet: 2 points in 1 flights" in folder.lines()[0]
         assert "Dry run: 4 points in 2 files" in folder.messages[-1]
         assert "Nothing was written" in folder.messages[-1]
 
@@ -140,11 +146,21 @@ class TestImport:
 
         assert (
             "[1/2] 2022-07-01.parquet: 2 points, 1 aircraft, 1 flights, 2 stored"
-            in (folder.messages[0])
+            in (folder.lines()[0])
         )
-        assert "Remaining: about" in folder.messages[0]
+        assert "Remaining: about" in folder.lines()[0]
         assert folder.messages[-1].startswith("Done: 4 points from 2 files")
         assert 'ANALYZE "OBSERVATION"' in folder.messages[-1]
+
+    async def test_the_plan_and_the_target_are_announced_before_the_first_file(
+        self, folder: Folder
+    ) -> None:
+        await folder.importing().run(None, None)
+
+        assert folder.messages[:2] == [
+            "Checking that the database only holds the dataset...",
+            "Importing 2 file(s), 2022-07-01.parquet to 2022-07-02.parquet, into the database.",
+        ]
 
     async def test_the_files_stay_where_they_are_by_default(self, folder: Folder) -> None:
         before = folder.files()
@@ -159,14 +175,14 @@ class TestImport:
 
         await folder.importing().run(None, None)
 
-        assert "already loaded" in folder.messages[0]
+        assert "already loaded" in folder.lines()[0]
         assert len(folder.sink.stored) == 4
 
     async def test_only_the_requested_period_is_imported(self, folder: Folder) -> None:
         await folder.importing().run(date(2022, 7, 2), date(2022, 7, 2))
 
         assert len(folder.sink.stored) == 2
-        assert "2022-07-02.parquet" in folder.messages[0]
+        assert "2022-07-02.parquet" in folder.lines()[0]
 
     async def test_a_period_without_a_file_imports_nothing(self, folder: Folder) -> None:
         code = await folder.importing().run(date(2030, 1, 1), None)
@@ -184,7 +200,7 @@ class TestImport:
         assert code == EXIT_FOREIGN_DATABASE
         assert folder.sink.calls == ["has_observations_outside"]
         assert "2022-07-01.parquet" in folder.files()
-        assert "import into a database of its own" in folder.messages[0]
+        assert any("import into a database of its own" in m for m in folder.messages)
 
 
 class TestDeleteSource:
@@ -218,7 +234,7 @@ class TestDeleteSource:
     async def test_the_deletion_is_announced(self, folder: Folder) -> None:
         await folder.importing(delete_source=True).run(None, None)
 
-        assert folder.messages[0].startswith("--delete-source")
+        assert any(m.startswith("--delete-source") for m in folder.messages)
 
 
 class TestArguments:
@@ -256,3 +272,71 @@ class TestArguments:
     def test_an_invalid_date_is_refused(self) -> None:
         with pytest.raises(SystemExit):
             parse_arguments(["data/prc2024", "--from", "01/07/2022"])
+
+
+class TestLiveProgress:
+    """The commands with the real console display, writing to a string."""
+
+    @staticmethod
+    def console() -> tuple[ConsoleProgress, io.StringIO]:
+        stream = io.StringIO()
+        return ConsoleProgress(stream, interactive=False, interval=0), stream
+
+    async def test_every_file_shows_its_phases_and_its_points(self, folder: Folder) -> None:
+        progress, stream = self.console()
+        command = ImportCommand(
+            Prc2024Archive(folder.path),
+            Prc2024Reader(FRANCE),
+            lambda: FakeSession(folder.transactions),
+            lambda session: folder.sink,
+            batch_size=1,
+            say=progress.line,
+            progress=progress,
+            target="aerosafe_user@127.0.0.1:5432/aerosafe_db",
+        )
+
+        await command.run(None, None)
+
+        output = stream.getvalue()
+        assert "Importing 2 file(s), 2022-07-01.parquet to 2022-07-02.parquet" in output
+        assert "into aerosafe_user@127.0.0.1:5432/aerosafe_db." in output
+        assert "[1/2] 2022-07-01.parquet  reading and cleaning the file..." in output
+        assert "[1/2] 2022-07-01.parquet  inserting 1 / 2 points (50.0 %)" in output
+        assert "[2/2] 2022-07-02.parquet  inserting 2 / 2 points (100.0 %)" in output
+        assert "[2/2] 2022-07-02.parquet  checking the database..." in output
+        assert "Done: 4 points from 2 files" in output
+
+    def test_a_dry_run_shows_the_file_being_read_and_the_time_left(self, folder: Folder) -> None:
+        progress, stream = self.console()
+        command = DryRunCommand(
+            Prc2024Archive(folder.path), Prc2024Reader(FRANCE), progress.line, progress
+        )
+
+        command.run(None, None)
+
+        output = stream.getvalue()
+        assert "Reading 2 file(s), 2022-07-01.parquet to 2022-07-02.parquet." in output
+        assert "[2/2] 2022-07-02.parquet  reading and cleaning the file..." in output
+        assert "Remaining: about" in output
+
+    async def test_the_progress_line_is_erased_even_when_a_file_fails(self, folder: Folder) -> None:
+        stream = io.StringIO()
+        progress = ConsoleProgress(stream, interactive=True, interval=0)
+        folder.sink.insert_observations = lambda batch: _fail()  # type: ignore[assignment]
+        command = ImportCommand(
+            Prc2024Archive(folder.path),
+            Prc2024Reader(FRANCE),
+            lambda: FakeSession(folder.transactions),
+            lambda session: folder.sink,
+            say=progress.line,
+            progress=progress,
+        )
+
+        with pytest.raises(HistoricalImportError):
+            await command.run(None, None)
+
+        assert stream.getvalue().endswith("\r")  # the last thing written clears the line
+
+
+async def _fail():
+    raise HistoricalImportError("boom")

@@ -20,11 +20,14 @@ from pathlib import Path
 from typing import Any
 
 from services.collection.profiles import BoundingBox
+from services.historical.console import ConsoleProgress, format_duration
 from services.historical.importer import (
     DEFAULT_BATCH_SIZE,
     FileReport,
     HistoricalImporter,
     ObservationSink,
+    Phase,
+    Progress,
 )
 from services.historical.prc2024 import (
     DATASET_END,
@@ -33,22 +36,13 @@ from services.historical.prc2024 import (
     Prc2024Reader,
 )
 
-# A rough size of one observation in PostgreSQL with its indexes, to be measured on a real day.
-ESTIMATED_BYTES_PER_POINT = 150
+# Measured on 2022-07-01: 318 bytes a point in PostgreSQL (142 for the table, 162 for its six
+# indexes), 1.1 GB for the 3.7 million points of that day (docs/historical-data.md).
+ESTIMATED_BYTES_PER_POINT = 320
 
 EXIT_OK = 0
 EXIT_NO_FILE = 1
 EXIT_FOREIGN_DATABASE = 2
-
-
-def format_duration(seconds: float) -> str:
-    minutes, seconds_left = divmod(round(seconds), 60)
-    hours, minutes = divmod(minutes, 60)
-    if hours:
-        return f"{hours} h {minutes:02d} min"
-    if minutes:
-        return f"{minutes} min {seconds_left:02d} s"
-    return f"{seconds_left} s"
 
 
 class DryRunCommand:
@@ -59,26 +53,44 @@ class DryRunCommand:
         archive: Prc2024Archive,
         reader: Prc2024Reader,
         say: Callable[[str], None] = print,
+        progress: ConsoleProgress | None = None,
     ) -> None:
         self._archive = archive
         self._reader = reader
         self._say = say
+        self._progress = progress
 
     def run(self, first: date | None, last: date | None) -> int:
         files = self._archive.day_files(first, last)
         if not files:
             self._say("No daily file to read.")
             return EXIT_NO_FILE
+        self._say(
+            f"Reading {len(files)} file(s), {files[0].name} to {files[-1].name}. "
+            "Nothing is written."
+        )
+        if self._progress:
+            self._progress.begin(len(files))
+        started = time.monotonic()
         total = 0
-        for index, path in enumerate(files, start=1):
-            started = time.monotonic()
-            points = self._reader.load(path)
-            flights = len(self._reader.segments())
-            total += points
-            self._say(
-                f"[{index}/{len(files)}] {path.name}: {points:,} points in {flights:,} flights "
-                f"({format_duration(time.monotonic() - started)})"
-            )
+        try:
+            for index, path in enumerate(files, start=1):
+                if self._progress:
+                    self._progress.begin_file(index)
+                    self._progress.update(Progress(path, Phase.READING))
+                file_started = time.monotonic()
+                points = self._reader.load(path)
+                flights = len(self._reader.segments())
+                total += points
+                remaining = (time.monotonic() - started) / index * (len(files) - index)
+                self._say(
+                    f"[{index}/{len(files)}] {path.name}: {points:,} points in {flights:,} flights "
+                    f"({format_duration(time.monotonic() - file_started)}). "
+                    f"Remaining: about {format_duration(remaining)}"
+                )
+        finally:
+            if self._progress:
+                self._progress.clear()
         self._say(
             f"Dry run: {total:,} points in {len(files)} files, about "
             f"{total * ESTIMATED_BYTES_PER_POINT / 1e9:,.1f} GB in PostgreSQL "
@@ -99,13 +111,19 @@ class ImportCommand:
         batch_size: int = DEFAULT_BATCH_SIZE,
         delete_source: bool = False,
         say: Callable[[str], None] = print,
+        progress: ConsoleProgress | None = None,
+        target: str = "the database",
     ) -> None:
         self._archive = archive
         self._session_factory = session_factory
         self._sink_factory = sink_factory
-        self._importer = HistoricalImporter(reader, batch_size)
+        self._importer = HistoricalImporter(
+            reader, batch_size, progress.update if progress else None
+        )
         self._delete_source = delete_source
         self._say = say
+        self._progress = progress
+        self._target = target
 
     async def run(self, first: date | None, last: date | None) -> int:
         files = self._archive.day_files(first, last)
@@ -113,6 +131,7 @@ class ImportCommand:
             self._say("No daily file to import.")
             return EXIT_NO_FILE
 
+        self._say(f"Checking that {self._target} only holds the dataset...")
         async with self._session_factory() as session:
             sink = self._sink_factory(session)
             if await sink.has_observations_outside(DATASET_START, DATASET_END):
@@ -123,19 +142,31 @@ class ImportCommand:
                 )
                 return EXIT_FOREIGN_DATABASE
 
+        self._say(
+            f"Importing {len(files)} file(s), {files[0].name} to {files[-1].name}, into "
+            f"{self._target}."
+        )
         if self._delete_source:
             self._say("--delete-source: each file is deleted once it is verified in the database.")
+        if self._progress:
+            self._progress.begin(len(files))
         started = time.monotonic()
         points_done = 0
-        for index, path in enumerate(files, start=1):
-            # One transaction per file: all of it is in the database, or none of it.
-            async with self._session_factory() as session, session.begin():
-                report = await self._importer.import_file(self._sink_factory(session), path)
-            points_done += report.points
-            remaining = (time.monotonic() - started) / index * (len(files) - index)
-            self._say(self._line(index, len(files), report, remaining))
-            if self._delete_source:
-                self._delete(path)
+        try:
+            for index, path in enumerate(files, start=1):
+                if self._progress:
+                    self._progress.begin_file(index)
+                # One transaction per file: all of it is in the database, or none of it.
+                async with self._session_factory() as session, session.begin():
+                    report = await self._importer.import_file(self._sink_factory(session), path)
+                points_done += report.points
+                remaining = (time.monotonic() - started) / index * (len(files) - index)
+                self._say(self._line(index, len(files), report, remaining))
+                if self._delete_source:
+                    self._delete(path)
+        finally:
+            if self._progress:
+                self._progress.clear()
         self._say(
             f"Done: {points_done:,} points from {len(files)} files "
             f"in {format_duration(time.monotonic() - started)}. "
@@ -194,9 +225,12 @@ async def main(arguments: argparse.Namespace) -> int:  # pragma: no cover - need
         archive = Prc2024Archive(arguments.source)
     except (ValueError, FileNotFoundError) as error:
         raise SystemExit(f"Invalid arguments: {error}") from error
+    progress = ConsoleProgress()
     with Prc2024Reader(area) as reader:
         if arguments.dry_run:
-            return DryRunCommand(archive, reader).run(arguments.first, arguments.last)
+            return DryRunCommand(archive, reader, progress.line, progress).run(
+                arguments.first, arguments.last
+            )
 
         engine = create_async_engine(database_settings.DATABASE_ASYNC_URL, pool_pre_ping=True)
         try:
@@ -207,6 +241,12 @@ async def main(arguments: argparse.Namespace) -> int:  # pragma: no cover - need
                 HistoricalStore,
                 arguments.batch_size,
                 arguments.delete_source,
+                say=progress.line,
+                progress=progress,
+                target=(
+                    f"{database_settings.DB_USER}@{database_settings.DB_HOST}:"
+                    f"{database_settings.DB_PORT}/{database_settings.DB_NAME}"
+                ),
             )
             return await command.run(arguments.first, arguments.last)
         finally:

@@ -3,7 +3,12 @@ from pathlib import Path
 import pytest
 
 from services.collection.profiles import BoundingBox
-from services.historical.importer import HistoricalImporter, HistoricalImportError
+from services.historical.importer import (
+    HistoricalImporter,
+    HistoricalImportError,
+    Phase,
+    Progress,
+)
 from services.historical.prc2024 import ObservationBatch, Prc2024Reader, icao24_from_flight_id
 from tests.historical_support import (
     DAY,
@@ -170,3 +175,39 @@ async def test_a_flight_identifier_that_fits_no_icao24_code_stops_the_import(
 def test_the_batch_size_must_be_positive(reader: Prc2024Reader) -> None:
     with pytest.raises(ValueError, match="positive"):
         HistoricalImporter(reader, batch_size=0)
+
+
+async def test_the_progress_follows_the_phases_and_the_batches(
+    reader: Prc2024Reader, day: Path
+) -> None:
+    events: list[Progress] = []
+
+    await HistoricalImporter(reader, batch_size=3, on_progress=events.append).import_file(
+        FakeSink(), day
+    )
+
+    assert [(e.phase, e.done, e.total) for e in events] == [
+        (Phase.READING, 0, 0),
+        (Phase.PREPARING, 0, 4),
+        (Phase.INSERTING, 0, 4),
+        (Phase.INSERTING, 3, 4),
+        (Phase.INSERTING, 4, 4),
+        (Phase.VERIFYING, 4, 4),
+    ]
+    assert {e.path for e in events} == {day}
+
+
+async def test_a_file_already_loaded_reports_no_insert(reader: Prc2024Reader, day: Path) -> None:
+    sink = FakeSink()
+    await HistoricalImporter(reader).import_file(sink, day)
+    events: list[Progress] = []
+
+    await HistoricalImporter(reader, on_progress=events.append).import_file(sink, day)
+
+    assert [e.phase for e in events] == [Phase.READING, Phase.PREPARING]
+
+
+async def test_without_a_listener_nothing_is_reported(reader: Prc2024Reader, day: Path) -> None:
+    report = await HistoricalImporter(reader).import_file(FakeSink(), day)
+
+    assert report.inserted == 4

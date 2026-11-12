@@ -1,7 +1,8 @@
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Protocol
 
@@ -34,6 +35,28 @@ class ObservationSink(Protocol):
     async def insert_observations(self, batch: ObservationBatch) -> int: ...
 
 
+class Phase(Enum):
+    """The steps of one file, in order. Only the insert has a measurable progress."""
+
+    READING = "reading and cleaning the file"
+    PREPARING = "creating the aircraft and the flights"
+    INSERTING = "inserting the observations"
+    VERIFYING = "checking the database"
+
+
+@dataclass(frozen=True)
+class Progress:
+    """Where the import of a file stands: `done` of `total` points once inserting."""
+
+    path: Path
+    phase: Phase
+    done: int = 0
+    total: int = 0
+
+
+ProgressCallback = Callable[[Progress], None]
+
+
 @dataclass(frozen=True)
 class FileReport:
     """What importing one daily file did."""
@@ -56,16 +79,29 @@ class HistoricalImporter:
     points. The check is also what makes a second run of the same file cost almost nothing.
     """
 
-    def __init__(self, reader: Prc2024Reader, batch_size: int = DEFAULT_BATCH_SIZE) -> None:
+    def __init__(
+        self,
+        reader: Prc2024Reader,
+        batch_size: int = DEFAULT_BATCH_SIZE,
+        on_progress: ProgressCallback | None = None,
+    ) -> None:
         if batch_size <= 0:
             raise ValueError("The batch size must be positive")
         self._reader = reader
         self._batch_size = batch_size
+        self._on_progress = on_progress
+
+    def _notify(self, path: Path, phase: Phase, done: int = 0, total: int = 0) -> None:
+        if self._on_progress:
+            self._on_progress(Progress(path, phase, done, total))
 
     async def import_file(self, sink: ObservationSink, path: Path) -> FileReport:
         started = time.monotonic()
+        self._notify(path, Phase.READING)
         points = self._reader.load(path)
         segments = self._reader.segments()
+
+        self._notify(path, Phase.PREPARING, total=points)
 
         icao24s = sorted({icao24_from_flight_id(segment.source_id) for segment in segments})
         aircraft = await sink.ensure_aircraft(icao24s)
@@ -102,8 +138,13 @@ class HistoricalImporter:
                     )
                 )
             self._reader.attach(keys)
+            sent = 0
+            self._notify(path, Phase.INSERTING, sent, points)
             for batch in self._reader.batches(self._batch_size):
                 inserted += await sink.insert_observations(batch)
+                sent += len(batch)
+                self._notify(path, Phase.INSERTING, sent, points)
+            self._notify(path, Phase.VERIFYING, sent, points)
             stored = await sink.count_observations(aircraft_ids)
             if stored != points:
                 raise HistoricalImportError(
