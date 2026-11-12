@@ -1,0 +1,60 @@
+import type { Aircraft } from "@/models/Aircraft";
+import { ApiError } from "@/services/ApiClient";
+import { type Area, AircraftService } from "@/services/AircraftService";
+import { AlertService } from "@/services/AlertService";
+
+/** What one request gave: its data, or the reason there is none. */
+export type Loaded<T> =
+  | { state: "ready"; data: T }
+  | { state: "unauthenticated" }
+  | { state: "forbidden" }
+  | { state: "failed" };
+
+/** What the home page shows once the user is logged in. Each part loads on its own. */
+export interface HomeOverview {
+  /** Aircraft with a known position in the Île-de-France area. */
+  aircraft: Loaded<Aircraft[]>;
+  /** Alerts whose situation lasts (Supervisor only). */
+  activeAlerts: Loaded<number>;
+  /** Alerts of the last 24 hours (Supervisor only). */
+  dayAlerts: Loaded<number>;
+}
+
+/** Collects the live figures of the home page from the aircraft and alert endpoints. */
+export class HomeOverviewService {
+  /** The Île-de-France collection area (docs/open-points.md): latitude 48.0 to 49.3, longitude 1.4 to 3.6. */
+  static readonly AREA: Area = { south: 48.0, west: 1.4, north: 49.3, east: 3.6 };
+  static readonly MAX_AIRCRAFT = 200;
+
+  constructor(
+    private readonly aircraft: AircraftService = new AircraftService(),
+    private readonly alerts: AlertService = new AlertService(),
+  ) {}
+
+  async load(): Promise<HomeOverview> {
+    const [aircraft, active, day] = await Promise.allSettled([
+      this.aircraft.search({ area: HomeOverviewService.AREA, limit: HomeOverviewService.MAX_AIRCRAFT }),
+      this.alerts.search({ status: "active", limit: 1 }),
+      this.alerts.statistics(),
+    ]);
+    return {
+      aircraft: HomeOverviewService.settle(aircraft, (list) => list.filter((item) => item.hasPosition)),
+      activeAlerts: HomeOverviewService.settle(active, (page) => page.total),
+      dayAlerts: HomeOverviewService.settle(day, (statistics) => statistics.total),
+    };
+  }
+
+  private static settle<S, T>(result: PromiseSettledResult<S>, read: (value: S) => T): Loaded<T> {
+    if (result.status === "fulfilled") {
+      return { state: "ready", data: read(result.value) };
+    }
+    const reason: unknown = result.reason;
+    if (reason instanceof ApiError && reason.status === 401) {
+      return { state: "unauthenticated" };
+    }
+    if (reason instanceof ApiError && reason.status === 403) {
+      return { state: "forbidden" };
+    }
+    return { state: "failed" };
+  }
+}

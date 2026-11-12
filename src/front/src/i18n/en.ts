@@ -25,6 +25,26 @@ export const en: Record<TranslationKey, string> = {
 
   "layout.skipToContent": "Skip to the content",
 
+  "home.tagline": "Live aeronautical data monitoring",
+  "home.pitch":
+    "AeroSafe tracks aircraft over France, spots abnormal situations with five business rules and raises alerts for supervisors.",
+  "home.cta.login": "Log in",
+  "home.cta.search": "Search for an aircraft",
+  "home.disclaimer":
+    "Educational project: AeroSafe is not a certified air traffic surveillance or management tool. It must never be used operationally.",
+  "home.live.title": "Live · Île-de-France",
+  "home.live.loading": "Loading the data…",
+  "home.live.login": "Log in to see the live traffic.",
+  "home.live.error": "Some data could not be loaded. Trying again in a few seconds.",
+  "home.stat.aircraft": "Tracked aircraft",
+  "home.stat.active": "Active alerts",
+  "home.stat.day": "Alerts (24 h)",
+  "home.features.title": "Explore",
+  "home.features.aircraft": "Search for an aircraft, open its record and the trajectory of its flights.",
+  "home.features.dashboard": "Follow the state of the collection and the active alerts.",
+  "home.features.alerts": "Review the alerts and mark them as processed.",
+  "home.features.rules": "Adjust the thresholds of rules R1 to R5.",
+
   "footer.disclaimer":
     "AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally.",
   "footer.data": "Data: The OpenSky Network. Map: © OpenStreetMap contributors.",
