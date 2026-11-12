@@ -157,7 +157,7 @@ The import has no `--step` option yet: it keeps the resolution of the dataset. R
 | Outliers | An altitude outside −500 to 60 000 ft, a speed below 0 or above 700 kt, a heading outside 0 to 360 become empty and the point is kept, as the collector does with OpenSky: the rules skip a missing value |
 | `BL_AU_SOL` | The dataset has no such field. True when the speed is under 40 kt and the altitude under 3 000 ft. A speed under 40 kt at a higher altitude is a glitch: the speed is emptied. A simplification to validate with R4, since a takeoff roll above 40 kt counts as airborne; ground points are only 0.05 % of the data |
 | Safety | A database that holds observations dated outside 2022 is refused, since the synthetic codes could collide with real ICAO24 addresses. Use a database of its own |
-| Parallelism | The aircraft and flights of a file are committed first, then the batches of 50 000 observations go through a queue to `--workers` tasks (default 6, no upper limit: choose it for the machine and keep the connections under PostgreSQL's `max_connections`), each with its own connection and one transaction per batch. DuckDB is limited to 2 threads for each file. `--parallel-files N` (default 1) imports N daily files at the same time, each with its own reader, its own `--workers` and its own progress line: the connections and the cores add up (files x workers). DuckDB reads in a thread, so a file is read while the others insert. Not measured yet: whether N files with W workers beat one file with N x W workers |
+| Parallelism | The aircraft and flights of a file are committed first, then the batches of 50 000 observations go through a queue to `--workers` tasks (default 6, no upper limit: choose it for the machine and keep the connections under PostgreSQL's `max_connections`), each with its own connection and one transaction per batch. DuckDB is limited to 2 threads for each file. `--parallel-files N` (default 1) imports N daily files at the same time, each with its own reader, its own `--workers` and its own progress line: the connections and the cores add up (files x workers). DuckDB reads in a thread, so a file is read while the others insert. Measured: N files with W workers are not faster than one file with N x W workers, see the third measure |
 | Restart | A file stopped halfway is completed by running it again: the batches never share a row, a batch already stored is skipped, and a file already complete is recognised by its row count and skipped |
 | Check | After each file, the database must hold as many observations for its aircraft as the file holds points, otherwise the command stops with an error and the file is never deleted |
 
@@ -214,6 +214,26 @@ Loaded on 2026-11-12 into a new database, the first real run of the `france-100k
 | Counts | 3 078 038 observations, 1 126 aircraft and 1 130 flights, as in the file |
 
 Consequence for the year with `france-100km`: 856 million points at 319 bytes make about **273 GB**, and at 25 627 points a second at least **9.3 h** (a lower bound: the indexes slow the inserts as they grow). Not measured: how the speed evolves over many days, and the peak size of the WAL.
+
+### Third measure: workers, files at the same time and CPU of PostgreSQL
+
+Measured on 2026-11-12 on the Ryzen 5 5500 (12 threads), with `scripts/bench-import-workers.ps1` (not versioned): the same 3 days (2022-07-01 to 07-03, 9 530 758 points with `france-100km`) loaded from an empty database for each config, 11 threads at most (the client plus the CPU given to PostgreSQL with `docker update --cpus`). Speed is that of the whole command.
+
+| Files at a time | Workers each | CPU of PostgreSQL | Points a second | Points a second and per CPU of PostgreSQL |
+| --- | --- | --- | --- | --- |
+| 1 | 5 | 6 | **31 526** | 5 254 |
+| 3 | 2 | 5 | 29 899 | 5 980 |
+| 1 | 6 | 5 | 28 729 | 5 746 |
+| 2 | 3 | 5 | 28 383 | 5 677 |
+| 2 | 4 | 3 | 18 908 | 6 303 |
+| 1 | 8 | 3 | 16 115 | 5 372 |
+| 3 | 3 | 2 | 10 799 | 5 400 |
+
+- **The CPU of PostgreSQL decides the speed**: about 5 300 to 6 300 points a second for each CPU it is given, whatever the number of workers or files. With 2, 3, 5 and 6 CPU, the speed is in proportion.
+- **Several files at the same time do not help**: at equal CPU, 3 x 2 workers (29 899) is 4 % above 1 x 6 (28 729) and 2 x 3 (28 383) is 1 % under it, which is within the noise of a single run; 2 x 4 is 17 % above 1 x 8 on 3 CPU, again a single run. In the 2 x 4 run, the third file, alone, went at 20 953 points a second, more than the two together (17 500).
+- **More workers than needed do not help**: 8 workers on 3 CPU are not faster than 4 workers on 3 CPU.
+- **Not measured**: the CPU used by the client. The workers are tasks of one Python process, so the client probably needs only one or two cores, and giving PostgreSQL 7 to 9 CPU with 2 to 4 workers would then be faster (about 40 000 points a second if the proportion holds, an estimate and not a measure). To test.
+- **Year with `france-100km`**: 856 million points at 31 526 points a second make at least **7.5 h** (a lower bound, the indexes slow the inserts as they grow), against 9.3 h at the speed of the second measure.
 
 ## Next steps
 
