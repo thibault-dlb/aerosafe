@@ -17,35 +17,16 @@ from services.historical.cli import (
 from services.historical.console import ConsoleProgress
 from services.historical.importer import HistoricalImportError
 from services.historical.prc2024 import Prc2024Archive, Prc2024Reader
-from tests.historical_support import FLIGHT, OTHER_FLIGHT, FakeSink, Point, write_day
+from tests.historical_support import (
+    FLIGHT,
+    OTHER_FLIGHT,
+    FakeSink,
+    FakeUnitOfWork,
+    Point,
+    write_day,
+)
 
 FRANCE = BoundingBox(41.3, 51.1, -5.2, 9.6)
-
-
-class FakeTransaction:
-    def __init__(self, log: list[str]) -> None:
-        self._log = log
-
-    async def __aenter__(self) -> "FakeTransaction":
-        self._log.append("begin")
-        return self
-
-    async def __aexit__(self, exc_type: object, *rest: object) -> None:
-        self._log.append("rollback" if exc_type else "commit")
-
-
-class FakeSession:
-    def __init__(self, log: list[str]) -> None:
-        self._log = log
-
-    async def __aenter__(self) -> "FakeSession":
-        return self
-
-    async def __aexit__(self, *exc_info: object) -> None:
-        return None
-
-    def begin(self) -> FakeTransaction:
-        return FakeTransaction(self._log)
 
 
 class Folder:
@@ -66,13 +47,13 @@ class Folder:
         self.messages: list[str] = []
         self.transactions: list[str] = []
         self.sink = FakeSink()
+        self.unit = FakeUnitOfWork(self.sink, self.transactions)
 
     def importing(self, delete_source: bool = False) -> ImportCommand:
         return ImportCommand(
             Prc2024Archive(self.path),
             Prc2024Reader(FRANCE),
-            lambda: FakeSession(self.transactions),
-            lambda session: self.sink,
+            self.unit,
             batch_size=10,
             delete_source=delete_source,
             say=self.messages.append,
@@ -134,12 +115,13 @@ class TestDryRun:
 
 
 class TestImport:
-    async def test_every_file_is_imported_in_its_own_transaction(self, folder: Folder) -> None:
+    async def test_every_step_is_committed_on_its_own(self, folder: Folder) -> None:
         code = await folder.importing().run(None, None)
 
         assert code == EXIT_OK
         assert len(folder.sink.stored) == 4
-        assert folder.transactions == ["begin", "commit", "begin", "commit"]
+        # The check of the database, then for each file: aircraft and flights, one batch, count.
+        assert folder.transactions == ["begin", "commit"] * 7
 
     async def test_the_progress_and_the_end_are_reported(self, folder: Folder) -> None:
         await folder.importing().run(None, None)
@@ -159,7 +141,8 @@ class TestImport:
 
         assert folder.messages[:2] == [
             "Checking that the database only holds the dataset...",
-            "Importing 2 file(s), 2022-07-01.parquet to 2022-07-02.parquet, into the database.",
+            "Importing 2 file(s), 2022-07-01.parquet to 2022-07-02.parquet, into the database, "
+            "with 5 insert worker(s).",
         ]
 
     async def test_the_files_stay_where_they_are_by_default(self, folder: Folder) -> None:
@@ -213,7 +196,7 @@ class TestDeleteSource:
         assert any(message.startswith("Deleted 2022-07-01.parquet") for message in folder.messages)
 
     async def test_a_file_that_fails_the_check_is_not_deleted(self, folder: Folder) -> None:
-        # The first file is fine; the second one is refused because of a foreign observation.
+        # The first file is fine; the second one loses its rows, so its check fails.
         command = folder.importing(delete_source=True)
         original = folder.sink.insert_observations
         calls = 0
@@ -229,7 +212,6 @@ class TestDeleteSource:
             await command.run(None, None)
 
         assert folder.files() == ["2022-07-02.parquet", "flight_list.csv"]
-        assert folder.transactions[-1] == "rollback"
 
     async def test_the_deletion_is_announced(self, folder: Folder) -> None:
         await folder.importing(delete_source=True).run(None, None)
@@ -245,6 +227,7 @@ class TestArguments:
         assert (arguments.first, arguments.last, arguments.bbox) == (None, None, None)
         assert (arguments.dry_run, arguments.delete_source) == (False, False)
         assert arguments.batch_size == 50_000
+        assert arguments.workers == 5
 
     def test_the_options(self) -> None:
         arguments = parse_arguments(
@@ -269,9 +252,45 @@ class TestArguments:
         assert arguments.batch_size == 1000
         assert arguments.dry_run and arguments.delete_source
 
+    def test_the_workers_can_go_up_to_six(self) -> None:
+        assert parse_arguments(["data/prc2024", "--workers", "6"]).workers == 6
+        assert parse_arguments(["data/prc2024", "--workers", "1"]).workers == 1
+
+    @pytest.mark.parametrize("workers", ["0", "7", "-2", "many"])
+    def test_more_than_six_workers_or_none_is_refused(
+        self, workers: str, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with pytest.raises(SystemExit):
+            parse_arguments(["data/prc2024", "--workers", workers])
+
+        assert "--workers" in capsys.readouterr().err
+
     def test_an_invalid_date_is_refused(self) -> None:
         with pytest.raises(SystemExit):
             parse_arguments(["data/prc2024", "--from", "01/07/2022"])
+
+
+class TestWorkersOfTheCommand:
+    async def test_the_command_hands_its_workers_to_the_importer(self, folder: Folder) -> None:
+        command = ImportCommand(
+            Prc2024Archive(folder.path),
+            Prc2024Reader(FRANCE),
+            folder.unit,
+            batch_size=1,
+            say=folder.messages.append,
+            workers=2,
+        )
+
+        await command.run(None, None)
+
+        assert any("with 2 insert worker(s)" in message for message in folder.messages)
+        assert folder.unit.max_active <= 2
+
+    def test_more_than_six_workers_is_refused_before_anything_starts(self, folder: Folder) -> None:
+        with pytest.raises(ValueError, match="from 1 to 6"):
+            ImportCommand(
+                Prc2024Archive(folder.path), Prc2024Reader(FRANCE), folder.unit, workers=7
+            )
 
 
 class TestLiveProgress:
@@ -287,8 +306,7 @@ class TestLiveProgress:
         command = ImportCommand(
             Prc2024Archive(folder.path),
             Prc2024Reader(FRANCE),
-            lambda: FakeSession(folder.transactions),
-            lambda session: folder.sink,
+            folder.unit,
             batch_size=1,
             say=progress.line,
             progress=progress,
@@ -299,7 +317,7 @@ class TestLiveProgress:
 
         output = stream.getvalue()
         assert "Importing 2 file(s), 2022-07-01.parquet to 2022-07-02.parquet" in output
-        assert "into aerosafe_user@127.0.0.1:5432/aerosafe_db." in output
+        assert "into aerosafe_user@127.0.0.1:5432/aerosafe_db, with 5 insert worker(s)." in output
         assert "[1/2] 2022-07-01.parquet  reading and cleaning the file..." in output
         assert "[1/2] 2022-07-01.parquet  inserting 1 / 2 points (50.0 %)" in output
         assert "[2/2] 2022-07-02.parquet  inserting 2 / 2 points (100.0 %)" in output
@@ -326,8 +344,7 @@ class TestLiveProgress:
         command = ImportCommand(
             Prc2024Archive(folder.path),
             Prc2024Reader(FRANCE),
-            lambda: FakeSession(folder.transactions),
-            lambda session: folder.sink,
+            folder.unit,
             say=progress.line,
             progress=progress,
         )

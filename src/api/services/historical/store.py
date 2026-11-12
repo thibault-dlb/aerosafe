@@ -1,4 +1,5 @@
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Callable, Sequence
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -189,3 +190,21 @@ class HistoricalStore:
             },
         )
         return int(result.rowcount or 0)
+
+
+class HistoricalUnitOfWork:
+    """Gives a store with its own session and transaction, committed when the block ends.
+
+    The importer opens one for each step and for each batch, so that several batches are written
+    at the same time over several connections, and a failed batch is rolled back alone.
+    """
+
+    def __init__(
+        self, session_factory: Callable[[], AbstractAsyncContextManager[AsyncSession]]
+    ) -> None:
+        self._session_factory = session_factory
+
+    @asynccontextmanager
+    async def __call__(self) -> AsyncIterator[HistoricalStore]:
+        async with self._session_factory() as session, session.begin():
+            yield HistoricalStore(session)

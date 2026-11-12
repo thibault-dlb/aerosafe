@@ -14,20 +14,20 @@ import argparse
 import asyncio
 import time
 from collections.abc import Callable
-from contextlib import AbstractAsyncContextManager
 from datetime import date
 from pathlib import Path
-from typing import Any
 
 from services.collection.profiles import BoundingBox
 from services.historical.console import ConsoleProgress, format_duration
 from services.historical.importer import (
     DEFAULT_BATCH_SIZE,
+    DEFAULT_WORKERS,
+    MAX_WORKERS,
     FileReport,
     HistoricalImporter,
-    ObservationSink,
     Phase,
     Progress,
+    UnitOfWork,
 )
 from services.historical.prc2024 import (
     DATASET_END,
@@ -106,20 +106,24 @@ class ImportCommand:
         self,
         archive: Prc2024Archive,
         reader: Prc2024Reader,
-        session_factory: Callable[[], AbstractAsyncContextManager[Any]],
-        sink_factory: Callable[[Any], ObservationSink],
+        unit_of_work: UnitOfWork,
         batch_size: int = DEFAULT_BATCH_SIZE,
         delete_source: bool = False,
         say: Callable[[str], None] = print,
         progress: ConsoleProgress | None = None,
         target: str = "the database",
+        workers: int = DEFAULT_WORKERS,
     ) -> None:
         self._archive = archive
-        self._session_factory = session_factory
-        self._sink_factory = sink_factory
+        self._unit_of_work = unit_of_work
         self._importer = HistoricalImporter(
-            reader, batch_size, progress.update if progress else None
+            reader,
+            unit_of_work,
+            batch_size,
+            workers,
+            progress.update if progress else None,
         )
+        self._workers = workers
         self._delete_source = delete_source
         self._say = say
         self._progress = progress
@@ -132,8 +136,7 @@ class ImportCommand:
             return EXIT_NO_FILE
 
         self._say(f"Checking that {self._target} only holds the dataset...")
-        async with self._session_factory() as session:
-            sink = self._sink_factory(session)
+        async with self._unit_of_work() as sink:
             if await sink.has_observations_outside(DATASET_START, DATASET_END):
                 self._say(
                     "This database holds observations dated outside 2022. The synthetic aircraft "
@@ -144,7 +147,7 @@ class ImportCommand:
 
         self._say(
             f"Importing {len(files)} file(s), {files[0].name} to {files[-1].name}, into "
-            f"{self._target}."
+            f"{self._target}, with {self._workers} insert worker(s)."
         )
         if self._delete_source:
             self._say("--delete-source: each file is deleted once it is verified in the database.")
@@ -156,9 +159,7 @@ class ImportCommand:
             for index, path in enumerate(files, start=1):
                 if self._progress:
                     self._progress.begin_file(index)
-                # One transaction per file: all of it is in the database, or none of it.
-                async with self._session_factory() as session, session.begin():
-                    report = await self._importer.import_file(self._sink_factory(session), path)
+                report = await self._importer.import_file(path)
                 points_done += report.points
                 remaining = (time.monotonic() - started) / index * (len(files) - index)
                 self._say(self._line(index, len(files), report, remaining))
@@ -191,6 +192,17 @@ class ImportCommand:
         self._say(f"Deleted {path.name} ({size / 1e9:.2f} GB freed).")
 
 
+def workers_count(text: str) -> int:
+    """An argument of `--workers`: a whole number from 1 to the maximum."""
+    try:
+        count = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a number") from None
+    if not 1 <= count <= MAX_WORKERS:
+        raise argparse.ArgumentTypeError(f"the workers go from 1 to {MAX_WORKERS}, not {count}")
+    return count
+
+
 def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("source", type=Path, help="folder holding the YYYY-MM-DD.parquet files")
@@ -202,6 +214,14 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         help="area to keep; default: the COLLECTION_BBOX_FRANCE setting",
     )
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
+    parser.add_argument(
+        "--workers",
+        type=workers_count,
+        default=DEFAULT_WORKERS,
+        help=f"insert workers, each with its own connection, from 1 to {MAX_WORKERS} "
+        f"(default {DEFAULT_WORKERS}: with the client, the import stays within "
+        f"{MAX_WORKERS} cores)",
+    )
     parser.add_argument(
         "--dry-run", action="store_true", help="read the files and report, without a database"
     )
@@ -218,7 +238,7 @@ async def main(arguments: argparse.Namespace) -> int:  # pragma: no cover - need
 
     from config.database import settings as database_settings
     from config.opensky import settings as opensky_settings
-    from services.historical.store import HistoricalStore
+    from services.historical.store import HistoricalUnitOfWork
 
     try:
         area = BoundingBox.parse(arguments.bbox or opensky_settings.COLLECTION_BBOX_FRANCE)
@@ -232,13 +252,18 @@ async def main(arguments: argparse.Namespace) -> int:  # pragma: no cover - need
                 arguments.first, arguments.last
             )
 
-        engine = create_async_engine(database_settings.DATABASE_ASYNC_URL, pool_pre_ping=True)
+        # One connection for each worker, and one more for the steps around the batches.
+        engine = create_async_engine(
+            database_settings.DATABASE_ASYNC_URL,
+            pool_pre_ping=True,
+            pool_size=arguments.workers + 1,
+            max_overflow=0,
+        )
         try:
             command = ImportCommand(
                 archive,
                 reader,
-                async_sessionmaker(engine, expire_on_commit=False),
-                HistoricalStore,
+                HistoricalUnitOfWork(async_sessionmaker(engine, expire_on_commit=False)),
                 arguments.batch_size,
                 arguments.delete_source,
                 say=progress.line,
@@ -247,6 +272,7 @@ async def main(arguments: argparse.Namespace) -> int:  # pragma: no cover - need
                     f"{database_settings.DB_USER}@{database_settings.DB_HOST}:"
                     f"{database_settings.DB_PORT}/{database_settings.DB_NAME}"
                 ),
+                workers=arguments.workers,
             )
             return await command.run(arguments.first, arguments.last)
         finally:

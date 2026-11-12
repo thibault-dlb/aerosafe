@@ -302,6 +302,16 @@ class TestBatches:
         assert count == 1
         assert [s.points for s in reader.segments()] == [1]
 
+    def test_the_threads_of_duckdb_are_limited(self, tmp_path: Path) -> None:
+        reader = Prc2024Reader(FRANCE, threads=1)
+
+        assert reader.load(write_day(tmp_path / f"{DAY}.parquet", [Point()])) == 1
+        reader.close()
+
+    def test_duckdb_needs_at_least_one_thread(self) -> None:
+        with pytest.raises(ValueError, match="at least one thread"):
+            Prc2024Reader(FRANCE, threads=0)
+
     def test_the_reader_works_as_a_context_manager(self, tmp_path: Path) -> None:
         with Prc2024Reader(FRANCE) as reader:
             assert reader.load(write_day(tmp_path / f"{DAY}.parquet", [Point()])) == 1

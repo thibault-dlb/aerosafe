@@ -10,6 +10,7 @@ from services.historical.prc2024 import DATASET_END, DATASET_START, ObservationB
 from services.historical.store import (
     _INSERT_OBSERVATIONS,
     HistoricalStore,
+    HistoricalUnitOfWork,
     NewFlight,
     from_microseconds,
     to_microseconds,
@@ -196,3 +197,63 @@ class TestInsertObservations:
         session = FakeSession([SimpleNamespace(all=lambda: [], rowcount=None)])
 
         assert await HistoricalStore(session).insert_observations(batch()) == 0  # type: ignore[arg-type]
+
+
+class Transaction:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def __aenter__(self) -> "Transaction":
+        self._log.append("begin")
+        return self
+
+    async def __aexit__(self, exc_type: object, *rest: object) -> None:
+        self._log.append("rollback" if exc_type else "commit")
+
+
+class TransactionalSession(FakeSession):
+    """A session that logs how its transaction ends, like the one the unit of work opens."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.log: list[str] = []
+
+    async def __aenter__(self) -> "TransactionalSession":
+        self.log.append("open")
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        self.log.append("closed")
+
+    def begin(self) -> Transaction:
+        return Transaction(self.log)
+
+
+class TestUnitOfWork:
+    async def test_a_unit_gives_a_store_on_its_own_session_and_commits_at_the_end(self) -> None:
+        sessions: list[TransactionalSession] = []
+
+        def new_session() -> TransactionalSession:
+            sessions.append(TransactionalSession())
+            return sessions[-1]
+
+        unit = HistoricalUnitOfWork(new_session)  # type: ignore[arg-type]
+
+        async with unit() as store:
+            assert isinstance(store, HistoricalStore)
+            assert sessions[0].log == ["open", "begin"]
+        async with unit():
+            pass
+
+        assert len(sessions) == 2  # one session for each unit, so one connection each
+        assert sessions[0].log == ["open", "begin", "commit", "closed"]
+
+    async def test_an_error_rolls_the_unit_back_and_is_raised_again(self) -> None:
+        session = TransactionalSession()
+        unit = HistoricalUnitOfWork(lambda: session)  # type: ignore[arg-type]
+
+        with pytest.raises(RuntimeError, match="boom"):
+            async with unit():
+                raise RuntimeError("boom")
+
+        assert session.log == ["open", "begin", "rollback", "closed"]

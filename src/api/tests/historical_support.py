@@ -1,6 +1,8 @@
 """Helpers of the historical import tests: daily parquet files and an in-memory database."""
 
-from collections.abc import Sequence
+import asyncio
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -107,3 +109,39 @@ class FakeSink(ObservationSink):
         }
         self.stored |= new
         return len(new)
+
+
+class SlowSink(FakeSink):
+    """A database that takes time to insert, so that several batches are in progress at once."""
+
+    async def insert_observations(self, batch: ObservationBatch) -> int:
+        await asyncio.sleep(0.01)
+        return await super().insert_observations(batch)
+
+
+class FakeUnitOfWork:
+    """Gives the same fake database to every unit, and records the transactions.
+
+    `max_active` is the most units open at the same time: the workers that insert together.
+    """
+
+    def __init__(self, sink: FakeSink, log: list[str] | None = None) -> None:
+        self.sink = sink
+        self.log = log if log is not None else []
+        self.active = 0
+        self.max_active = 0
+
+    @asynccontextmanager
+    async def __call__(self) -> AsyncIterator[FakeSink]:
+        self.log.append("begin")
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        try:
+            yield self.sink
+        except BaseException:
+            self.log.append("rollback")
+            raise
+        else:
+            self.log.append("commit")
+        finally:
+            self.active -= 1

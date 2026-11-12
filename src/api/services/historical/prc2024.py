@@ -17,6 +17,9 @@ import duckdb
 
 from services.collection.profiles import BoundingBox
 
+# Threads DuckDB may use while it reads a file. It is idle while the observations are inserted.
+DEFAULT_THREADS = 2
+
 FEET_TO_METRES = 0.3048
 KNOTS_TO_METRES_PER_SECOND = 1852 / 3600
 
@@ -194,10 +197,18 @@ class Prc2024Reader:
     database keys they got, then `batches` to read the observations.
     """
 
-    def __init__(self, area: BoundingBox, rules: CleaningRules | None = None) -> None:
+    def __init__(
+        self,
+        area: BoundingBox,
+        rules: CleaningRules | None = None,
+        threads: int = DEFAULT_THREADS,
+    ) -> None:
+        if threads < 1:
+            raise ValueError("DuckDB needs at least one thread")
         self._area = area
         self._rules = rules or CleaningRules()
-        self._connection = duckdb.connect()
+        # DuckDB uses every core by default; the import shares the machine with PostgreSQL.
+        self._connection = duckdb.connect(config={"threads": threads})
 
     def load(self, path: Path) -> int:
         """Read, clip and clean a file; return the number of points kept."""
