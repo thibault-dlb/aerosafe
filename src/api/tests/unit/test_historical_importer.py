@@ -5,7 +5,6 @@ import pytest
 from services.collection.profiles import BoundingBox
 from services.historical.importer import (
     DEFAULT_WORKERS,
-    MAX_WORKERS,
     HistoricalImporter,
     HistoricalImportError,
     Phase,
@@ -229,18 +228,18 @@ class TestWorkers:
             tmp_path / f"{DAY}.parquet", [Point(at=at(0, second)) for second in range(12)]
         )
 
-    def test_the_default_leaves_room_for_the_client_within_six_cores(self) -> None:
-        assert (DEFAULT_WORKERS, MAX_WORKERS) == (5, 6)
+    def test_the_default_is_six_workers(self) -> None:
+        assert DEFAULT_WORKERS == 6
 
-    @pytest.mark.parametrize("workers", [0, -1, MAX_WORKERS + 1, 64])
-    def test_the_number_of_workers_is_limited_to_six(
-        self, reader: Prc2024Reader, workers: int
-    ) -> None:
-        with pytest.raises(ValueError, match="from 1 to 6"):
+    @pytest.mark.parametrize("workers", [0, -1])
+    def test_at_least_one_worker_is_needed(self, reader: Prc2024Reader, workers: int) -> None:
+        with pytest.raises(ValueError, match="at least one worker"):
             HistoricalImporter(reader, FakeUnitOfWork(FakeSink()), workers=workers)
 
-    @pytest.mark.parametrize("workers", [1, 3, MAX_WORKERS])
-    def test_one_to_six_workers_are_accepted(self, reader: Prc2024Reader, workers: int) -> None:
+    @pytest.mark.parametrize("workers", [1, 3, 6, 16, 64])
+    def test_the_number_of_workers_has_no_upper_limit(
+        self, reader: Prc2024Reader, workers: int
+    ) -> None:
         HistoricalImporter(reader, FakeUnitOfWork(FakeSink()), workers=workers)
 
     async def test_several_workers_insert_at_the_same_time_but_never_more_than_asked(
@@ -268,7 +267,7 @@ class TestWorkers:
         self, reader: Prc2024Reader, points: Path
     ) -> None:
         sink = SlowSink()
-        loader, _ = importer(reader, sink, batch_size=2, workers=MAX_WORKERS)
+        loader, _ = importer(reader, sink, batch_size=2, workers=DEFAULT_WORKERS)
 
         await loader.import_file(points)
 

@@ -157,7 +157,7 @@ The import has no `--step` option yet: it keeps the resolution of the dataset. R
 | Outliers | An altitude outside −500 to 60 000 ft, a speed below 0 or above 700 kt, a heading outside 0 to 360 become empty and the point is kept, as the collector does with OpenSky: the rules skip a missing value |
 | `BL_AU_SOL` | The dataset has no such field. True when the speed is under 40 kt and the altitude under 3 000 ft. A speed under 40 kt at a higher altitude is a glitch: the speed is emptied. A simplification to validate with R4, since a takeoff roll above 40 kt counts as airborne; ground points are only 0.05 % of the data |
 | Safety | A database that holds observations dated outside 2022 is refused, since the synthetic codes could collide with real ICAO24 addresses. Use a database of its own |
-| Parallelism | The aircraft and flights of a file are committed first, then the batches of 50 000 observations go through a queue to `--workers` tasks (default 5, at most 6), each with its own connection and one transaction per batch. DuckDB is limited to 2 threads. With the client, the import stays within 6 of the 8 cores |
+| Parallelism | The aircraft and flights of a file are committed first, then the batches of 50 000 observations go through a queue to `--workers` tasks (default 6, no upper limit: choose it for the machine and keep the connections under PostgreSQL's `max_connections`), each with its own connection and one transaction per batch. DuckDB is limited to 2 threads |
 | Restart | A file stopped halfway is completed by running it again: the batches never share a row, a batch already stored is skipped, and a file already complete is recognised by its row count and skipped |
 | Check | After each file, the database must hold as many observations for its aircraft as the file holds points, otherwise the command stops with an error and the file is never deleted |
 
@@ -198,7 +198,7 @@ Two levers tried on 2026-11-12, on the days 2022-07-02 and 2022-07-03 (about 4 m
 The parallel run is far from five times faster, so something else limits it. Not measured, so not claimed: the contention on the pages of the indexes that every worker writes to (the last contact time, the position GiST), or the WAL insertion lock. The settings above were applied to the development container only (`ALTER SYSTEM`), not to `docker-compose.yaml`.
 
 Levers left:
-- More workers (6) or larger batches: a small gain at best, to measure.
+- More workers (the default is now 6, and there is no limit) or larger batches: a small gain at best, to measure. The measurement above used five workers.
 - Fewer or deferred indexes during the load. This changes the schema outside the migrations, so it needs a decision.
 - A smaller selection: Île-de-France, or fewer days.
 

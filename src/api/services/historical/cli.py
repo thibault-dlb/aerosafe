@@ -25,7 +25,6 @@ from services.historical.console import ConsoleProgress, format_duration
 from services.historical.importer import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_WORKERS,
-    MAX_WORKERS,
     FileReport,
     HistoricalImporter,
     Phase,
@@ -196,13 +195,13 @@ class ImportCommand:
 
 
 def workers_count(text: str) -> int:
-    """An argument of `--workers`: a whole number from 1 to the maximum."""
+    """An argument of `--workers`: a whole number, one or more."""
     try:
         count = int(text)
     except ValueError:
         raise argparse.ArgumentTypeError(f"{text!r} is not a number") from None
-    if not 1 <= count <= MAX_WORKERS:
-        raise argparse.ArgumentTypeError(f"the workers go from 1 to {MAX_WORKERS}, not {count}")
+    if count < 1:
+        raise argparse.ArgumentTypeError(f"there must be at least one worker, not {count}")
     return count
 
 
@@ -234,9 +233,8 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         "--workers",
         type=workers_count,
         default=DEFAULT_WORKERS,
-        help=f"insert workers, each with its own connection, from 1 to {MAX_WORKERS} "
-        f"(default {DEFAULT_WORKERS}: with the client, the import stays within "
-        f"{MAX_WORKERS} cores)",
+        help=f"insert workers, each with its own connection and about one core of PostgreSQL; "
+        f"no upper limit (default {DEFAULT_WORKERS}); keep them under PostgreSQL's max_connections",
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="read the files and report, without a database"

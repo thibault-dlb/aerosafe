@@ -143,7 +143,7 @@ class TestImport:
         assert folder.messages[:2] == [
             "Checking that the database only holds the dataset...",
             "Importing 2 file(s), 2022-07-01.parquet to 2022-07-02.parquet, into the database, "
-            "with 5 insert worker(s).",
+            "with 6 insert worker(s).",
         ]
 
     async def test_the_files_stay_where_they_are_by_default(self, folder: Folder) -> None:
@@ -228,7 +228,7 @@ class TestArguments:
         assert (arguments.first, arguments.last, arguments.bbox) == (None, None, None)
         assert (arguments.dry_run, arguments.delete_source) == (False, False)
         assert arguments.batch_size == 50_000
-        assert arguments.workers == 5
+        assert arguments.workers == 6
 
     def test_the_options(self) -> None:
         arguments = parse_arguments(
@@ -253,12 +253,12 @@ class TestArguments:
         assert arguments.batch_size == 1000
         assert arguments.dry_run and arguments.delete_source
 
-    def test_the_workers_can_go_up_to_six(self) -> None:
-        assert parse_arguments(["data/prc2024", "--workers", "6"]).workers == 6
-        assert parse_arguments(["data/prc2024", "--workers", "1"]).workers == 1
+    @pytest.mark.parametrize("workers", [1, 6, 7, 16, 64])
+    def test_the_workers_have_no_upper_limit(self, workers: int) -> None:
+        assert parse_arguments(["data/prc2024", "--workers", str(workers)]).workers == workers
 
-    @pytest.mark.parametrize("workers", ["0", "7", "-2", "many"])
-    def test_more_than_six_workers_or_none_is_refused(
+    @pytest.mark.parametrize("workers", ["0", "-2", "many"])
+    def test_no_worker_or_not_a_number_is_refused(
         self, workers: str, capsys: pytest.CaptureFixture[str]
     ) -> None:
         with pytest.raises(SystemExit):
@@ -287,10 +287,10 @@ class TestWorkersOfTheCommand:
         assert any("with 2 insert worker(s)" in message for message in folder.messages)
         assert folder.unit.max_active <= 2
 
-    def test_more_than_six_workers_is_refused_before_anything_starts(self, folder: Folder) -> None:
-        with pytest.raises(ValueError, match="from 1 to 6"):
+    def test_no_worker_is_refused_before_anything_starts(self, folder: Folder) -> None:
+        with pytest.raises(ValueError, match="at least one worker"):
             ImportCommand(
-                Prc2024Archive(folder.path), Prc2024Reader(FRANCE), folder.unit, workers=7
+                Prc2024Archive(folder.path), Prc2024Reader(FRANCE), folder.unit, workers=0
             )
 
 
@@ -318,7 +318,7 @@ class TestLiveProgress:
 
         output = stream.getvalue()
         assert "Importing 2 file(s), 2022-07-01.parquet to 2022-07-02.parquet" in output
-        assert "into aerosafe_user@127.0.0.1:5432/aerosafe_db, with 5 insert worker(s)." in output
+        assert "into aerosafe_user@127.0.0.1:5432/aerosafe_db, with 6 insert worker(s)." in output
         assert "[1/2] 2022-07-01.parquet  reading and cleaning the file..." in output
         assert "[1/2] 2022-07-01.parquet  inserting 1 / 2 points (50.0 %)" in output
         assert "[2/2] 2022-07-02.parquet  inserting 2 / 2 points (100.0 %)" in output

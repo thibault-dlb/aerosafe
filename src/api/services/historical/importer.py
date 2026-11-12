@@ -17,10 +17,9 @@ from services.historical.prc2024 import (
 from services.historical.store import NewFlight
 
 DEFAULT_BATCH_SIZE = 50_000
-# The machine has 8 cores and PostgreSQL runs one process per connection: with the client
-# (reading and sending the batches) the import stays within 6 cores.
-MAX_WORKERS = 6
-DEFAULT_WORKERS = 5
+# PostgreSQL runs one process per connection, so each worker is about one core. There is no upper
+# limit: the caller chooses it for its machine (the connections must stay under `max_connections`).
+DEFAULT_WORKERS = 6
 
 
 class HistoricalImportError(RuntimeError):
@@ -105,8 +104,8 @@ class HistoricalImporter:
     ) -> None:
         if batch_size <= 0:
             raise ValueError("The batch size must be positive")
-        if not 1 <= workers <= MAX_WORKERS:
-            raise ValueError(f"The number of workers must be from 1 to {MAX_WORKERS}")
+        if workers < 1:
+            raise ValueError("There must be at least one worker")
         self._reader = reader
         self._unit_of_work = unit_of_work
         self._batch_size = batch_size
