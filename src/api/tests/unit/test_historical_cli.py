@@ -1,3 +1,4 @@
+import asyncio
 import io
 from datetime import date
 from pathlib import Path
@@ -50,15 +51,37 @@ class Folder:
         self.sink = FakeSink()
         self.unit = FakeUnitOfWork(self.sink, self.transactions)
 
-    def importing(self, delete_source: bool = False) -> ImportCommand:
+    def importing(
+        self,
+        delete_source: bool = False,
+        parallel: int = 1,
+        progress: ConsoleProgress | None = None,
+    ) -> ImportCommand:
         return ImportCommand(
             Prc2024Archive(self.path),
-            Prc2024Reader(FRANCE),
+            [Prc2024Reader(FRANCE) for _ in range(parallel)],
             self.unit,
             batch_size=10,
             delete_source=delete_source,
             say=self.messages.append,
+            progress=progress,
         )
+
+    def hold_inserts_until_all_files_have_started(self, files: int = 2) -> None:
+        """Make an insert wait for the insert of every other file: it only ends if they overlap."""
+        original = self.sink.insert_observations
+        arrived = 0
+        together = asyncio.Event()
+
+        async def wait_for_the_others(batch):
+            nonlocal arrived
+            arrived += 1
+            if arrived == files:
+                together.set()
+            await asyncio.wait_for(together.wait(), timeout=5)
+            return await original(batch)
+
+        self.sink.insert_observations = wait_for_the_others  # type: ignore[assignment]
 
     def dry_run(self) -> DryRunCommand:
         return DryRunCommand(Prc2024Archive(self.path), Prc2024Reader(FRANCE), self.messages.append)
@@ -266,6 +289,24 @@ class TestArguments:
 
         assert "--workers" in capsys.readouterr().err
 
+    def test_one_file_at_a_time_by_default(self) -> None:
+        assert parse_arguments(["data/prc2024"]).parallel_files == 1
+
+    @pytest.mark.parametrize("files", [1, 2, 8])
+    def test_several_files_can_be_imported_in_parallel(self, files: int) -> None:
+        arguments = parse_arguments(["data/prc2024", "--parallel-files", str(files)])
+
+        assert arguments.parallel_files == files
+
+    @pytest.mark.parametrize("files", ["0", "-1", "all"])
+    def test_no_file_or_not_a_number_is_refused(
+        self, files: str, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with pytest.raises(SystemExit):
+            parse_arguments(["data/prc2024", "--parallel-files", files])
+
+        assert "--parallel-files" in capsys.readouterr().err
+
     def test_an_invalid_date_is_refused(self) -> None:
         with pytest.raises(SystemExit):
             parse_arguments(["data/prc2024", "--from", "01/07/2022"])
@@ -292,6 +333,104 @@ class TestWorkersOfTheCommand:
             ImportCommand(
                 Prc2024Archive(folder.path), Prc2024Reader(FRANCE), folder.unit, workers=0
             )
+
+
+class Recorder:
+    """A progress display that only remembers what it was told, in order."""
+
+    def __init__(self) -> None:
+        self.events: list[str] = []
+
+    def begin(self, files: int) -> None:
+        self.events.append(f"begin {files}")
+
+    def begin_file(self, index: int, path: Path) -> None:
+        self.events.append(f"start {path.name}")
+
+    def end_file(self, path: Path) -> None:
+        self.events.append(f"end {path.name}")
+
+    def update(self, progress) -> None:
+        pass
+
+    def line(self, text: str) -> None:
+        pass
+
+    def clear(self) -> None:
+        self.events.append("clear")
+
+
+class TestParallelFiles:
+    async def test_two_files_are_imported_at_the_same_time(self, folder: Folder) -> None:
+        # Each insert waits for the insert of the other file: one by one, this would time out.
+        folder.hold_inserts_until_all_files_have_started()
+
+        code = await folder.importing(parallel=2).run(None, None)
+
+        assert code == EXIT_OK
+        assert len(folder.sink.stored) == 4
+
+    async def test_both_files_are_shown_in_progress_before_the_first_one_ends(
+        self, folder: Folder
+    ) -> None:
+        folder.hold_inserts_until_all_files_have_started()
+        recorder = Recorder()
+
+        await folder.importing(parallel=2, progress=recorder).run(None, None)  # type: ignore[arg-type]
+
+        events = recorder.events
+        assert events[0] == "begin 2"
+        assert set(events[1:3]) == {"start 2022-07-01.parquet", "start 2022-07-02.parquet"}
+        assert {event for event in events[3:5]} == {
+            "end 2022-07-01.parquet",
+            "end 2022-07-02.parquet",
+        }
+        assert events[-1] == "clear"
+
+    async def test_the_report_names_every_file_and_the_parallelism(self, folder: Folder) -> None:
+        await folder.importing(parallel=2).run(None, None)
+
+        assert any(
+            "with 6 insert worker(s) for each of 2 files loaded at the same time" in m
+            for m in folder.messages
+        )
+        assert sorted(line.split(":")[0] for line in folder.lines()) == [
+            "[1/2] 2022-07-01.parquet",
+            "[2/2] 2022-07-02.parquet",
+        ]
+        assert folder.messages[-1].startswith("Done: 4 points from 2 files")
+
+    async def test_there_is_no_mention_of_parallelism_for_one_file_at_a_time(
+        self, folder: Folder
+    ) -> None:
+        await folder.importing().run(None, None)
+
+        assert not any("at the same time" in message for message in folder.messages)
+
+    async def test_more_readers_than_files_leave_the_extra_ones_idle(self, folder: Folder) -> None:
+        code = await folder.importing(parallel=5).run(None, None)
+
+        assert code == EXIT_OK
+        assert len(folder.sink.stored) == 4
+
+    async def test_every_file_is_deleted_once_it_is_verified(self, folder: Folder) -> None:
+        await folder.importing(delete_source=True, parallel=2).run(None, None)
+
+        assert folder.files() == ["flight_list.csv"]
+
+    async def test_a_failure_is_raised_as_it_is_and_nothing_is_deleted(
+        self, folder: Folder
+    ) -> None:
+        folder.sink.insert_observations = lambda batch: _fail()  # type: ignore[assignment]
+
+        with pytest.raises(HistoricalImportError, match="boom"):
+            await folder.importing(delete_source=True, parallel=2).run(None, None)
+
+        assert folder.files() == ["2022-07-01.parquet", "2022-07-02.parquet", "flight_list.csv"]
+
+    def test_without_a_reader_nothing_can_be_imported(self, folder: Folder) -> None:
+        with pytest.raises(ValueError, match="at least one reader"):
+            ImportCommand(Prc2024Archive(folder.path), [], folder.unit)
 
 
 class TestLiveProgress:

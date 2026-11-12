@@ -119,7 +119,8 @@ class HistoricalImporter:
     async def import_file(self, path: Path) -> FileReport:
         started = time.monotonic()
         self._notify(path, Phase.READING)
-        points = self._reader.load(path)
+        # DuckDB works in a thread, so the other files being imported keep going meanwhile.
+        points = await asyncio.to_thread(self._reader.load, path)
         segments = self._reader.segments()
 
         self._notify(path, Phase.PREPARING, total=points)
@@ -180,7 +181,9 @@ class HistoricalImporter:
         inserted = 0
 
         async def produce() -> None:
-            for batch in self._reader.batches(self._batch_size):
+            batches = self._reader.batches(self._batch_size)
+            # Each batch is read by DuckDB in a thread, one at a time, never blocking the loop.
+            while (batch := await asyncio.to_thread(next, batches, None)) is not None:
                 await queue.put(batch)
             for _ in range(self._workers):
                 await queue.put(None)

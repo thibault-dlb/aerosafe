@@ -10,12 +10,14 @@ Usage, from `src/api`, with the DB_HOST and DB_PASS variables of the target data
 with `--dry-run`: it reads the files and reports what would be loaded, without a database.
     python -m services.historical.cli ../../data/prc2024 --from 2022-07-01 --to 2022-07-01 --dry-run
     python -m services.historical.cli ../../data/prc2024 --area france-100km --delete-source
+Several daily files can be imported at the same time with `--parallel-files N`.
 """
 
 import argparse
 import asyncio
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from contextlib import ExitStack
 from datetime import date
 from pathlib import Path
 
@@ -78,12 +80,14 @@ class DryRunCommand:
         try:
             for index, path in enumerate(files, start=1):
                 if self._progress:
-                    self._progress.begin_file(index)
+                    self._progress.begin_file(index, path)
                     self._progress.update(Progress(path, Phase.READING))
                 file_started = time.monotonic()
                 points = self._reader.load(path)
                 flights = len(self._reader.segments())
                 total += points
+                if self._progress:
+                    self._progress.end_file(path)
                 remaining = (time.monotonic() - started) / index * (len(files) - index)
                 self._say(
                     f"[{index}/{len(files)}] {path.name}: {points:,} points in {flights:,} flights "
@@ -102,12 +106,17 @@ class DryRunCommand:
 
 
 class ImportCommand:
-    """Imports the daily files one after the other and reports the progress."""
+    """Imports the daily files and reports the progress.
+
+    It takes one reader for each file loaded at the same time (a reader holds the state of one
+    file): with one reader, the files go one after the other; with several, as many files are
+    imported in parallel, each with its own insert workers.
+    """
 
     def __init__(
         self,
         archive: Prc2024Archive,
-        reader: Prc2024Reader,
+        readers: Prc2024Reader | Sequence[Prc2024Reader],
         unit_of_work: UnitOfWork,
         batch_size: int = DEFAULT_BATCH_SIZE,
         delete_source: bool = False,
@@ -116,15 +125,21 @@ class ImportCommand:
         target: str = "the database",
         workers: int = DEFAULT_WORKERS,
     ) -> None:
+        reader_list = [readers] if isinstance(readers, Prc2024Reader) else list(readers)
+        if not reader_list:
+            raise ValueError("There must be at least one reader")
         self._archive = archive
         self._unit_of_work = unit_of_work
-        self._importer = HistoricalImporter(
-            reader,
-            unit_of_work,
-            batch_size,
-            workers,
-            progress.update if progress else None,
-        )
+        self._importers = [
+            HistoricalImporter(
+                reader,
+                unit_of_work,
+                batch_size,
+                workers,
+                progress.update if progress else None,
+            )
+            for reader in reader_list
+        ]
         self._workers = workers
         self._delete_source = delete_source
         self._say = say
@@ -147,9 +162,11 @@ class ImportCommand:
                 )
                 return EXIT_FOREIGN_DATABASE
 
+        parallel = len(self._importers)
+        together = f" for each of {parallel} files loaded at the same time" if parallel > 1 else ""
         self._say(
             f"Importing {len(files)} file(s), {files[0].name} to {files[-1].name}, into "
-            f"{self._target}, with {self._workers} insert worker(s)."
+            f"{self._target}, with {self._workers} insert worker(s){together}."
         )
         if self._delete_source:
             self._say("--delete-source: each file is deleted once it is verified in the database.")
@@ -157,16 +174,35 @@ class ImportCommand:
             self._progress.begin(len(files))
         started = time.monotonic()
         points_done = 0
-        try:
-            for index, path in enumerate(files, start=1):
+        files_done = 0
+        waiting: asyncio.Queue[tuple[int, Path]] = asyncio.Queue()
+        for index, path in enumerate(files, start=1):
+            waiting.put_nowait((index, path))
+
+        async def work(importer: HistoricalImporter) -> None:
+            """Take the next file, import it, and start again until none is left."""
+            nonlocal points_done, files_done
+            while not waiting.empty():
+                index, path = waiting.get_nowait()
                 if self._progress:
-                    self._progress.begin_file(index)
-                report = await self._importer.import_file(path)
+                    self._progress.begin_file(index, path)
+                report = await importer.import_file(path)
+                if self._progress:
+                    self._progress.end_file(path)
                 points_done += report.points
-                remaining = (time.monotonic() - started) / index * (len(files) - index)
+                files_done += 1
+                remaining = (time.monotonic() - started) / files_done * (len(files) - files_done)
                 self._say(self._line(index, len(files), report, remaining))
                 if self._delete_source:
                     self._delete(path)
+
+        try:
+            async with asyncio.TaskGroup() as group:
+                for importer in self._importers:
+                    group.create_task(work(importer))
+        except ExceptionGroup as failure:
+            # The first failure stops the others; report it as it is, not wrapped in a group.
+            raise failure.exceptions[0] from failure
         finally:
             if self._progress:
                 self._progress.clear()
@@ -194,15 +230,23 @@ class ImportCommand:
         self._say(f"Deleted {path.name} ({size / 1e9:.2f} GB freed).")
 
 
-def workers_count(text: str) -> int:
-    """An argument of `--workers`: a whole number, one or more."""
-    try:
-        count = int(text)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{text!r} is not a number") from None
-    if count < 1:
-        raise argparse.ArgumentTypeError(f"there must be at least one worker, not {count}")
-    return count
+def positive_count(what: str) -> Callable[[str], int]:
+    """An argument parser for a whole number, one or more, of `what`."""
+
+    def parse(text: str) -> int:
+        try:
+            count = int(text)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{text!r} is not a number") from None
+        if count < 1:
+            raise argparse.ArgumentTypeError(f"there must be at least one {what}, not {count}")
+        return count
+
+    return parse
+
+
+workers_count = positive_count("worker")
+files_count = positive_count("file")
 
 
 def choose_area(arguments: argparse.Namespace, default_bbox: str) -> Area:
@@ -237,6 +281,13 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         f"no upper limit (default {DEFAULT_WORKERS}); keep them under PostgreSQL's max_connections",
     )
     parser.add_argument(
+        "--parallel-files",
+        type=files_count,
+        default=1,
+        help="daily files imported at the same time, each with its own --workers and its own "
+        "DuckDB reader (default 1); the connections and cores add up: files x workers",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true", help="read the files and report, without a database"
     )
     parser.add_argument(
@@ -261,23 +312,26 @@ async def main(arguments: argparse.Namespace) -> int:  # pragma: no cover - need
         raise SystemExit(f"Invalid arguments: {error}") from error
     progress = ConsoleProgress()
     progress.line(f"Area: {area.description}.")
-    with Prc2024Reader(area) as reader:
+    # A reader holds the state of one file, so each file loaded at the same time has its own.
+    parallel = 1 if arguments.dry_run else arguments.parallel_files
+    with ExitStack() as readers_stack:
+        readers = [readers_stack.enter_context(Prc2024Reader(area)) for _ in range(parallel)]
         if arguments.dry_run:
-            return DryRunCommand(archive, reader, progress.line, progress).run(
+            return DryRunCommand(archive, readers[0], progress.line, progress).run(
                 arguments.first, arguments.last
             )
 
-        # One connection for each worker, and one more for the steps around the batches.
+        # For each file, one connection for each worker and one more for the steps around them.
         engine = create_async_engine(
             database_settings.DATABASE_ASYNC_URL,
             pool_pre_ping=True,
-            pool_size=arguments.workers + 1,
+            pool_size=(arguments.workers + 1) * parallel,
             max_overflow=0,
         )
         try:
             command = ImportCommand(
                 archive,
-                reader,
+                readers,
                 HistoricalUnitOfWork(async_sessionmaker(engine, expire_on_commit=False)),
                 arguments.batch_size,
                 arguments.delete_source,

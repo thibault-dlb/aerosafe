@@ -17,6 +17,7 @@ from services.historical.console import (
 from services.historical.importer import Phase, Progress
 
 FILE = Path("2022-07-01.parquet")
+OTHER = Path("2022-07-02.parquet")
 
 
 class Clock:
@@ -37,10 +38,17 @@ class Console:
             self.stream, self.clock, interactive, interval, lambda: columns
         )
 
-    def insert(self, done: int, total: int = 1000, at: float | None = None) -> None:
+    def insert(
+        self, done: int, total: int = 1000, at: float | None = None, path: Path = FILE
+    ) -> None:
         if at is not None:
             self.clock.now = at
-        self.progress.update(Progress(FILE, Phase.INSERTING, done, total))
+        self.progress.update(Progress(path, Phase.INSERTING, done, total))
+
+    def finish(self, path: Path, index: int = 1) -> None:
+        """A file that was loaded and is done."""
+        self.progress.begin_file(index, path)
+        self.progress.end_file(path)
 
     @property
     def output(self) -> str:
@@ -48,9 +56,9 @@ class Console:
 
     @property
     def frame(self) -> list[str]:
-        """The two lines of the last drawing: all the files, then the current file."""
+        """The lines of the last drawing: all the files, then each file being loaded."""
         last = self.output.split("\r")[-1]
-        return last.replace(ERASE_LINE_END, "").split("\n")
+        return last.replace(ERASE_LINE_END, "").replace(ERASE_SCREEN_END, "").split("\n")
 
 
 class TestFormatDuration:
@@ -89,14 +97,15 @@ class TestPhases:
     def test_the_file_and_the_phase_are_named(self) -> None:
         console = Console()
         console.progress.begin(3)
-        console.progress.begin_file(2)
+        console.finish(FILE)
+        console.progress.begin_file(2, OTHER)
 
-        console.progress.update(Progress(FILE, Phase.READING))
+        console.progress.update(Progress(OTHER, Phase.READING))
 
         all_files, current = console.frame
         assert all_files.startswith("All files")
-        assert "33.3 %  file 2/3" in all_files  # one file of three is done
-        assert current.startswith("2022-07-01.parquet")
+        assert "33.3 %  1/3 files done" in all_files  # one file of three is done
+        assert current.startswith("2022-07-02.parquet")
         assert current.endswith("0.0 %  reading and cleaning the file...")
 
     def test_the_number_of_points_kept_is_shown_while_the_flights_are_created(self) -> None:
@@ -131,19 +140,20 @@ class TestInserting:
         all_files, current = console.frame
         assert "25.0 %" in current
         assert current.endswith("250 / 1,000 points  25 pts/s  left 30 s")
-        assert "25.0 %  file 1/1  elapsed 10 s  left 30 s" in all_files  # one file: same as it
+        assert "25.0 %  0/1 files done  elapsed 10 s  left 30 s" in all_files  # one file: same
 
     def test_the_total_time_left_counts_the_files_still_to_do(self) -> None:
         console = Console()
         console.progress.begin(4)
-        console.progress.begin_file(2)
+        console.finish(OTHER)
+        console.progress.begin_file(2, FILE)
         console.insert(0, at=0)
 
         # Half of the second file after 100 s: 1.5 files of 4 are done, so 166.7 s are left.
         console.insert(500, at=100)
 
         all_files, current = console.frame
-        assert "37.5 %  file 2/4  elapsed 1 min 40 s  left 2 min 47 s" in all_files
+        assert "37.5 %  1/4 files done  elapsed 1 min 40 s  left 2 min 47 s" in all_files
         assert current.endswith("500 / 1,000 points  5 pts/s  left 1 min 40 s")
 
     def test_the_total_has_no_time_left_before_anything_is_stored(self) -> None:
@@ -155,7 +165,8 @@ class TestInserting:
     def test_the_bars_follow_the_fractions(self) -> None:
         console = Console()
         console.progress.begin(2)
-        console.progress.begin_file(2)
+        console.finish(OTHER)
+        console.progress.begin_file(2, FILE)
 
         console.insert(1000, at=1)
 
@@ -171,8 +182,84 @@ class TestInserting:
         assert "nothing to insert" in console.output
 
 
+class TestSeveralFiles:
+    def test_each_file_being_loaded_has_its_own_line_in_the_order_of_the_files(self) -> None:
+        console = Console()
+        console.progress.begin(3)
+        console.progress.begin_file(2, OTHER)  # started first, but it is the second file
+        console.progress.begin_file(1, FILE)
+
+        console.insert(0, at=0, path=OTHER)
+        console.insert(500, at=0, path=FILE)
+
+        all_files, first, second = console.frame
+        assert all_files.startswith("All files")
+        assert first.startswith("2022-07-01.parquet")
+        assert second.startswith("2022-07-02.parquet")
+        assert "16.7 %" in all_files  # half of one file out of three
+
+    def test_the_speed_of_a_file_is_its_own(self) -> None:
+        console = Console(interval=0)
+        console.progress.begin(2)
+        console.progress.begin_file(1, FILE)
+        console.progress.begin_file(2, OTHER)
+        console.insert(0, at=0, path=FILE)
+        console.insert(0, at=0, path=OTHER)
+
+        console.insert(500, at=10, path=FILE)  # 50 points a second
+        console.insert(100, at=10, path=OTHER)  # 10 points a second
+
+        _, first, second = console.frame
+        assert "50 pts/s" in first
+        assert "10 pts/s" in second
+
+    def test_a_finished_file_leaves_the_screen_and_counts_in_the_total(self) -> None:
+        console = Console()
+        console.progress.begin(2)
+        console.progress.begin_file(1, FILE)
+        console.progress.begin_file(2, OTHER)
+        console.insert(1000, at=0, path=FILE)
+        console.insert(10, at=0, path=OTHER)
+        assert len(console.frame) == 3
+
+        console.progress.end_file(FILE)
+        console.insert(20, at=1, path=OTHER)
+
+        all_files, remaining = console.frame
+        assert "1/2 files done" in all_files
+        assert remaining.startswith("2022-07-02.parquet")
+        # The drawing before had one more line: the cursor goes up two lines, and the leftover
+        # third line of the old drawing is erased at the end of the new one.
+        assert console.output.split("\r")[-2].endswith(CURSOR_UP * 2)
+        assert console.output.endswith(ERASE_SCREEN_END)
+
+    def test_ending_a_file_that_never_started_is_harmless(self) -> None:
+        console = Console()
+        console.progress.begin(2)
+
+        console.progress.end_file(FILE)
+        console.insert(0, at=0)
+
+        assert "0/2 files done" in console.frame[0]
+
+    def test_a_log_has_a_line_for_each_file_whatever_the_other_one_did(self) -> None:
+        console = Console(interactive=False, interval=10)
+        console.progress.begin(2)
+        console.progress.begin_file(1, FILE)
+        console.progress.begin_file(2, OTHER)
+
+        console.insert(0, at=0, path=FILE)
+        console.insert(0, at=1, path=OTHER)  # inside the interval of the other file: still shown
+        console.insert(10, at=2, path=FILE)  # same phase, inside its interval: skipped
+
+        lines = console.output.splitlines()
+        assert len(lines) == 2
+        assert lines[0].startswith("[1/2] 2022-07-01.parquet  inserting")
+        assert lines[1].startswith("[2/2] 2022-07-02.parquet  inserting")
+
+
 class TestRedraw:
-    def test_a_terminal_redraws_the_two_lines_in_place(self) -> None:
+    def test_a_terminal_redraws_the_lines_in_place(self) -> None:
         console = Console(interactive=True)
 
         console.insert(0, at=0)
@@ -226,7 +313,7 @@ class TestRedraw:
 
         last = console.output.split("\r")[-1]
         assert last.count(ERASE_LINE_END) == 2
-        assert last.endswith(ERASE_LINE_END)
+        assert last.endswith(ERASE_SCREEN_END)
 
     def test_a_line_longer_than_the_terminal_is_cut(self) -> None:
         console = Console(columns=40)
@@ -269,7 +356,8 @@ class TestLog:
     def test_the_total_time_left_is_part_of_a_log_line(self) -> None:
         console = Console(interactive=False)
         console.progress.begin(4)
-        console.progress.begin_file(2)
+        console.finish(OTHER)
+        console.progress.begin_file(2, FILE)
         console.insert(0, at=0)
 
         console.insert(500, at=100)
@@ -289,6 +377,17 @@ class TestPermanentLines:
 
         erase = CURSOR_UP + "\r" + ERASE_SCREEN_END  # back to the first bar, then wipe both
         assert console.output.endswith(erase + "[1/1] 2022-07-01.parquet: done\n")
+
+    def test_the_whole_drawing_is_wiped_when_several_files_are_shown(self) -> None:
+        console = Console()
+        console.progress.begin_file(1, FILE)
+        console.progress.begin_file(2, OTHER)
+        console.insert(0, at=0, path=FILE)
+        console.insert(0, at=0, path=OTHER)
+
+        console.progress.clear()
+
+        assert console.output.endswith(CURSOR_UP * 2 + "\r" + ERASE_SCREEN_END)
 
     def test_the_bars_are_drawn_again_below_a_permanent_line(self) -> None:
         console = Console(interval=0)
