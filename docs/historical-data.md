@@ -76,6 +76,15 @@ Other days are listed on the 4TU page, each with its own file link.
 .\scripts\download-prc2024.ps1
 ```
 
+### Verify the files, and a copy of them
+
+`scripts/verify_prc2024.py` reads every column of every row of the 365 files (about 306 GB, several minutes, one progress line a file, DuckDB limited to 6 threads) and keeps, for each file, its size, its number of rows and a checksum of all its values; `flight_list.csv` and the README get a SHA-256. `write` records them in `data/prc2024/MANIFEST.csv` on a folder known to be good, `check` compares a folder with that manifest, so a copy that lost or changed a byte is found. The manifest is copied with the data (the `data` folder is not versioned).
+
+```powershell
+uv run scripts/verify_prc2024.py write data/prc2024
+uv run scripts/verify_prc2024.py check data/prc2024
+```
+
 ### Test on one day (2022-07-01)
 
 Checked on 2026-11-09 with pyarrow on the files above.
