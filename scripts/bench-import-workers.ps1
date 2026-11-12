@@ -34,7 +34,8 @@ function Invoke-Sql([string]$sql) {
     if ($LASTEXITCODE -ne 0) { throw "psql failed: $sql" }
 }
 
-$dbUser = Get-EnvValue 'DB_USER'
+# The application user cannot TRUNCATE or CHECKPOINT: the administrator of the container does it.
+$dbUser = Get-EnvValue 'POSTGRES_USER'
 $dbName = Get-EnvValue 'DB_NAME'
 $dbPass = Get-EnvValue 'DB_PASS'
 
