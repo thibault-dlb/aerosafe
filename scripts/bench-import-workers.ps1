@@ -1,14 +1,17 @@
 param(
     [int]$MaxThreads = 11,
-    [int[]]$Workers = @(3, 4, 5, 6, 7, 8),
-    [string]$Day = '2022-07-01',
+    # Each config is "files:workers": that many daily files at the same time, each with that many insert workers.
+    # PostgreSQL gets what is left of MaxThreads (files x workers + PostgreSQL CPU <= MaxThreads).
+    [string[]]$Configs = @('1:5', '1:6', '1:8', '2:3', '2:4', '3:2', '3:3'),
+    [string]$FirstDay = '2022-07-01',
+    [int]$Days = 3,
     [string]$Container = 'aerosafe_postgres',
     [switch]$DryRun
 )
 
-# Finds the fastest split of the threads between the insert workers and PostgreSQL.
-# For each number of workers W, PostgreSQL gets MaxThreads - W CPU (docker update --cpus), the database is
-# emptied, then one day is imported. DESTRUCTIVE: it empties AERONEF, VOL, OBSERVATION and ALERTE of the
+# Finds the fastest split of the threads between the files imported at the same time, the insert workers of
+# each file and PostgreSQL. For each config, PostgreSQL is limited (docker update --cpus), the database is
+# emptied, then the same days are imported. DESTRUCTIVE: it empties AERONEF, VOL, OBSERVATION and ALERTE of the
 # database of the container, before every run and at the end. Use it on the development database only.
 # ASCII only on purpose.
 
@@ -16,7 +19,6 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $api = Join-Path $repoRoot 'src\api'
 $envFile = Join-Path $repoRoot '.env'
-$parquet = Join-Path $repoRoot "data\prc2024\$Day.parquet"
 
 function Get-EnvValue([string]$name) {
     $m = Select-String -Path $envFile -Pattern "^$name=(.*)$" | Select-Object -First 1
@@ -39,11 +41,21 @@ $dbUser = Get-EnvValue 'POSTGRES_USER'
 $dbName = Get-EnvValue 'DB_NAME'
 $dbPass = Get-EnvValue 'DB_PASS'
 
-$plan = @($Workers | ForEach-Object { [pscustomobject]@{ Workers = $_; PostgresCpu = $MaxThreads - $_ } })
-if ($plan | Where-Object { $_.Workers -lt 1 -or $_.PostgresCpu -lt 1 }) { throw 'Every run needs at least one worker and one CPU for PostgreSQL.' }
-if (-not (Test-Path $parquet)) { throw "File not found: $parquet" }
+$first = [datetime]::ParseExact($FirstDay, 'yyyy-MM-dd', $null)
+$lastDay = $first.AddDays($Days - 1).ToString('yyyy-MM-dd')
+foreach ($offset in 0..($Days - 1)) {
+    $file = Join-Path $repoRoot ('data\prc2024\{0}.parquet' -f $first.AddDays($offset).ToString('yyyy-MM-dd'))
+    if (-not (Test-Path $file)) { throw "File not found: $file" }
+}
 
-Write-Host ('Day {0}, {1} threads at most (workers + PostgreSQL CPU), database {2} in {3}' -f $Day, $MaxThreads, $dbName, $Container) -ForegroundColor Cyan
+$plan = @($Configs | ForEach-Object {
+    $files, $workers = $_ -split ':' | ForEach-Object { [int]$_ }
+    [pscustomobject]@{ Files = $files; Workers = $workers; ClientThreads = $files * $workers; PostgresCpu = $MaxThreads - $files * $workers }
+})
+if ($plan | Where-Object { $_.Files -lt 1 -or $_.Workers -lt 1 -or $_.PostgresCpu -lt 1 }) { throw 'Every run needs at least one file, one worker and one CPU for PostgreSQL.' }
+if ($plan | Where-Object { $_.Files -gt $Days }) { throw "More files at the same time than days ($Days): use -Days or fewer parallel files." }
+
+Write-Host ('Days {0} to {1}, {2} threads at most (client + PostgreSQL CPU), database {3} in {4}' -f $FirstDay, $lastDay, $MaxThreads, $dbName, $Container) -ForegroundColor Cyan
 $plan | Format-Table -AutoSize | Out-Host
 if ($DryRun) { Write-Host 'Dry run: nothing was changed.' -ForegroundColor Yellow; return }
 
@@ -59,22 +71,22 @@ $i = 0
 
 foreach ($run in $plan) {
     $i++
-    Write-Host ("`n[{0}/{1}] {2} workers, PostgreSQL limited to {3} CPU" -f $i, $plan.Count, $run.Workers, $run.PostgresCpu) -ForegroundColor Cyan
+    Write-Host ("`n[{0}/{1}] {2} file(s) at a time x {3} workers, PostgreSQL limited to {4} CPU" -f $i, $plan.Count, $run.Files, $run.Workers, $run.PostgresCpu) -ForegroundColor Cyan
     docker update --cpus $run.PostgresCpu $Container | Out-Null
     Invoke-Sql 'TRUNCATE TABLE "OBSERVATION", "VOL", "AERONEF", "ALERTE" RESTART IDENTITY;' | Out-Null
     Invoke-Sql 'CHECKPOINT;' | Out-Null
 
     Push-Location $api
     $clock = [System.Diagnostics.Stopwatch]::StartNew()
-    uv run python -m services.historical.cli ..\..\data\prc2024 --area france-100km --from $Day --to $Day --workers $run.Workers
+    uv run python -m services.historical.cli ..\..\data\prc2024 --area france-100km --from $FirstDay --to $lastDay --workers $run.Workers --parallel-files $run.Files
     $code = $LASTEXITCODE
     $seconds = $clock.Elapsed.TotalSeconds
     Pop-Location
-    if ($code -ne 0) { throw ("The import failed (exit code {0}) with {1} workers." -f $code, $run.Workers) }
+    if ($code -ne 0) { throw ("The import failed (exit code {0}) with {1} file(s) x {2} workers." -f $code, $run.Files, $run.Workers) }
 
     $points = [long](Invoke-Sql 'SELECT count(*) FROM "OBSERVATION";')
     $rate = $points / $seconds
-    $results.Add([pscustomobject]@{ Workers = $run.Workers; PostgresCpu = $run.PostgresCpu; Points = $points; Seconds = [math]::Round($seconds, 1); PointsPerSecond = [math]::Round($rate) })
+    $results.Add([pscustomobject]@{ Files = $run.Files; Workers = $run.Workers; PostgresCpu = $run.PostgresCpu; Points = $points; Seconds = [math]::Round($seconds, 1); PointsPerSecond = [math]::Round($rate) })
     Write-Host ('    {0:N0} points in {1} s: {2:N0} points/s (whole command, reading and checks included)' -f $points, [math]::Round($seconds), $rate) -ForegroundColor Green
 }
 
@@ -84,5 +96,5 @@ docker update --cpus $best.PostgresCpu $Container | Out-Null
 
 Write-Host "`nResults, fastest first (the database was emptied again):" -ForegroundColor Cyan
 $results | Sort-Object PointsPerSecond -Descending | Format-Table -AutoSize | Out-Host
-Write-Host ('Fastest: {0} workers and {1} CPU for PostgreSQL ({2:N0} points/s). PostgreSQL stays limited to {1} CPU.' -f $best.Workers, $best.PostgresCpu, $best.PointsPerSecond) -ForegroundColor Green
+Write-Host ('Fastest: {0} file(s) at a time x {1} workers and {2} CPU for PostgreSQL ({3:N0} points/s). PostgreSQL stays limited to {2} CPU.' -f $best.Files, $best.Workers, $best.PostgresCpu, $best.PointsPerSecond) -ForegroundColor Green
 Write-Host ('Total time: {0}' -f (Format-Time $overall.Elapsed.TotalSeconds))
