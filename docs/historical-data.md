@@ -229,8 +229,9 @@ Measured on 2026-11-12 on the Ryzen 5 5500 (12 threads), with `scripts/bench-imp
 | 1 | 8 | 3 | 16 115 | 5 372 |
 | 3 | 3 | 2 | 10 799 | 5 400 |
 | 1 | 2 | 9 | 19 050 | 2 117 |
+| 1 | 8 | 9 | **36 856** | 4 095 |
 
-The last row was measured afterwards, on 2022-07-01 only (3 078 038 points in 2 min 42 s).
+The last two rows were measured afterwards, on 2022-07-01 only (3 078 038 points in 2 min 42 s with 2 workers, in 1 min 24 s with 8). On the same day, 5 workers on 6 CPU took 1 min 34 s (32 860 points a second): going to 8 workers and 9 CPU gains 12 % only, against 50 % more CPU. The speed for each CPU falls (5 254, then 4 095), so beyond about 6 CPU something shared limits the inserts; not measured, probably the contention on the indexes. At 36 856 points a second the year with `france-100km` takes at least 6.5 h (856 million points, a lower bound).
 
 - **The speed is limited by the smaller of the workers and the CPU of PostgreSQL**: each worker is one PostgreSQL process, so about one core. When the workers are at least as many as the CPU, the speed is about 5 300 to 6 300 points a second for each CPU, in proportion with 2, 3, 5 and 6 CPU. With only 2 workers on 9 CPU, seven CPU stay idle and the speed is 19 050 points a second, 9 500 for each worker.
 - **Several files at the same time do not help**: at equal CPU, 3 x 2 workers (29 899) is 4 % above 1 x 6 (28 729) and 2 x 3 (28 383) is 1 % under it, which is within the noise of a single run; 2 x 4 is 17 % above 1 x 8 on 3 CPU, again a single run. In the 2 x 4 run, the third file, alone, went at 20 953 points a second, more than the two together (17 500).
