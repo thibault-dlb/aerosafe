@@ -85,6 +85,8 @@ uv run scripts/verify_prc2024.py write data/prc2024
 uv run scripts/verify_prc2024.py check data/prc2024
 ```
 
+`scripts/copy-prc2024.ps1 -Destination <folder>` copies the whole `data` folder (the files, `MANIFEST.csv` and anything else in it) with a live progress: files, GB, speed and time left. A file already at the destination with the same size is skipped, so a stopped copy is resumed by running it again, and nothing is ever deleted at the destination. At the end it compares every size; then run `check` on the copy.
+
 ### Test on one day (2022-07-01)
 
 Checked on 2026-11-09 with pyarrow on the files above.
