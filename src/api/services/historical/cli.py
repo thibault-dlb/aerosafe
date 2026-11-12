@@ -1,13 +1,15 @@
 """Load the PRC Data Challenge 2024 trajectories into PostgreSQL (docs/historical-data.md).
 
-Only the points inside the area are kept (France by default), at the resolution of the dataset:
-one point per second. Each daily file is loaded in its own transaction, so the import can be
+Only the points inside the area are kept, at the resolution of the dataset: one point per
+second. The area is a named mask that follows a border (`--area france-100km`: France without
+Corsica plus 100 km all around), or a rectangle (`--bbox`, by default the rectangle of the
+FRANCE collection profile). Each daily file is loaded in its own transaction, so the import can be
 stopped and started again at any time.
 
 Usage, from `src/api`, with the DB_HOST and DB_PASS variables of the target database. Start
 with `--dry-run`: it reads the files and reports what would be loaded, without a database.
     python -m services.historical.cli ../../data/prc2024 --from 2022-07-01 --to 2022-07-01 --dry-run
-    python -m services.historical.cli ../../data/prc2024 --delete-source
+    python -m services.historical.cli ../../data/prc2024 --area france-100km --delete-source
 """
 
 import argparse
@@ -18,6 +20,7 @@ from datetime import date
 from pathlib import Path
 
 from services.collection.profiles import BoundingBox
+from services.historical.areas import AREA_NAMES, Area
 from services.historical.console import ConsoleProgress, format_duration
 from services.historical.importer import (
     DEFAULT_BATCH_SIZE,
@@ -203,15 +206,28 @@ def workers_count(text: str) -> int:
     return count
 
 
+def choose_area(arguments: argparse.Namespace, default_bbox: str) -> Area:
+    """The area to keep: a named mask, the rectangle given, or the default rectangle."""
+    if arguments.area:
+        return Area.named(arguments.area)
+    return Area.rectangle(BoundingBox.parse(arguments.bbox or default_bbox))
+
+
 def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("source", type=Path, help="folder holding the YYYY-MM-DD.parquet files")
     parser.add_argument("--from", dest="first", type=date.fromisoformat, metavar="YYYY-MM-DD")
     parser.add_argument("--to", dest="last", type=date.fromisoformat, metavar="YYYY-MM-DD")
-    parser.add_argument(
+    where = parser.add_mutually_exclusive_group()
+    where.add_argument(
+        "--area",
+        choices=AREA_NAMES,
+        help="a named area that follows a border, shipped with the import",
+    )
+    where.add_argument(
         "--bbox",
         metavar="LAT_MIN,LAT_MAX,LON_MIN,LON_MAX",
-        help="area to keep; default: the COLLECTION_BBOX_FRANCE setting",
+        help="a rectangle to keep; default: the COLLECTION_BBOX_FRANCE setting",
     )
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument(
@@ -241,11 +257,12 @@ async def main(arguments: argparse.Namespace) -> int:  # pragma: no cover - need
     from services.historical.store import HistoricalUnitOfWork
 
     try:
-        area = BoundingBox.parse(arguments.bbox or opensky_settings.COLLECTION_BBOX_FRANCE)
+        area = choose_area(arguments, opensky_settings.COLLECTION_BBOX_FRANCE)
         archive = Prc2024Archive(arguments.source)
     except (ValueError, FileNotFoundError) as error:
         raise SystemExit(f"Invalid arguments: {error}") from error
     progress = ConsoleProgress()
+    progress.line(f"Area: {area.description}.")
     with Prc2024Reader(area) as reader:
         if arguments.dry_run:
             return DryRunCommand(archive, reader, progress.line, progress).run(

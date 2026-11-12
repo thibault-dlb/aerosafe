@@ -11,6 +11,7 @@ from services.historical.cli import (
     EXIT_OK,
     DryRunCommand,
     ImportCommand,
+    choose_area,
     format_duration,
     parse_arguments,
 )
@@ -357,3 +358,47 @@ class TestLiveProgress:
 
 async def _fail():
     raise HistoricalImportError("boom")
+
+
+class TestAreaArgument:
+    DEFAULT = "41.3,51.1,-5.2,9.6"
+
+    def test_a_named_area_is_the_mask_of_that_name(self) -> None:
+        arguments = parse_arguments(["data/prc2024", "--area", "france-100km"])
+
+        area = choose_area(arguments, self.DEFAULT)
+
+        assert (area.name, area.is_mask) == ("france-100km", True)
+
+    def test_without_an_option_the_rectangle_of_the_france_profile_is_kept(self) -> None:
+        area = choose_area(parse_arguments(["data/prc2024"]), self.DEFAULT)
+
+        assert area.is_mask is False
+        assert (area.bounds.lat_min, area.bounds.lon_max) == (41.3, 9.6)
+
+    def test_a_rectangle_can_be_given(self) -> None:
+        arguments = parse_arguments(["data/prc2024", "--bbox", "48.0,49.3,1.4,3.6"])
+
+        assert choose_area(arguments, self.DEFAULT).bounds.lat_max == 49.3
+
+    def test_a_bad_rectangle_is_a_value_error_for_main_to_report(self) -> None:
+        arguments = parse_arguments(["data/prc2024", "--bbox", "1,2,3"])
+
+        with pytest.raises(ValueError, match="4 numbers"):
+            choose_area(arguments, self.DEFAULT)
+
+    def test_an_unknown_area_is_refused_by_the_parser(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with pytest.raises(SystemExit):
+            parse_arguments(["data/prc2024", "--area", "spain"])
+
+        assert "invalid choice" in capsys.readouterr().err
+
+    def test_an_area_and_a_rectangle_cannot_be_given_together(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with pytest.raises(SystemExit):
+            parse_arguments(["data/prc2024", "--area", "france-100km", "--bbox", "1,2,3,4"])
+
+        assert "not allowed with argument" in capsys.readouterr().err

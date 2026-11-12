@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from services.collection.profiles import BoundingBox
+from services.historical.areas import Area, Run
 from services.historical.prc2024 import (
     FLIGHT_ID_OFFSET,
     ICAO24_ADDRESSES,
@@ -352,3 +353,69 @@ class TestArchive:
     def test_a_missing_folder_is_refused(self, tmp_path: Path) -> None:
         with pytest.raises(FileNotFoundError):
             Prc2024Archive(tmp_path / "absent")
+
+
+class TestMaskArea:
+    """The cells of a mask decide, not the rectangle around them."""
+
+    # Row 4850 is the latitudes 48.50 to 48.51, and the columns 240 to 245 and 250 to 255 are
+    # the longitudes 2.40 to 2.46 and 2.50 to 2.56: two blocks with a hole between them.
+    MASK = Area.from_runs("test", "two blocks", [Run(4850, 240, 245), Run(4850, 250, 255)])
+
+    def read_points(self, tmp_path: Path, longitudes: list[float]) -> list[float]:
+        reader = Prc2024Reader(self.MASK)
+        points = [
+            Point(at=at(0, second), latitude=48.505, longitude=longitude)
+            for second, longitude in enumerate(longitudes)
+        ]
+        reader.load(write_day(tmp_path / f"{DAY}.parquet", points))
+        reader.attach(FlightKey(s.source_id, s.started_us, 7, 1) for s in reader.segments())
+        return [value for batch in reader.batches(100) for value in batch.longitudes]
+
+    def test_the_points_in_the_cells_are_kept(self, tmp_path: Path) -> None:
+        assert self.read_points(tmp_path, [2.405, 2.455, 2.505, 2.555]) == [
+            2.405,
+            2.455,
+            2.505,
+            2.555,
+        ]
+
+    def test_a_point_in_the_hole_is_dropped_though_it_is_in_the_rectangle_of_the_mask(
+        self, tmp_path: Path
+    ) -> None:
+        assert self.read_points(tmp_path, [2.475]) == []
+
+    def test_the_points_outside_the_rectangle_of_the_mask_are_dropped(self, tmp_path: Path) -> None:
+        assert self.read_points(tmp_path, [2.395, 2.565, 5.0]) == []
+
+    def test_the_rows_of_the_mask_are_the_latitudes(self, tmp_path: Path) -> None:
+        reader = Prc2024Reader(self.MASK)
+        points = [
+            Point(at=at(0, 0), latitude=48.505, longitude=2.405),  # row 4850
+            Point(at=at(0, 1), latitude=48.515, longitude=2.405),  # row 4851: not in the mask
+            Point(at=at(0, 2), latitude=48.495, longitude=2.405),  # row 4849: not in the mask
+        ]
+
+        assert reader.load(write_day(tmp_path / f"{DAY}.parquet", points)) == 1
+
+    def test_the_area_is_kept_for_the_commands_to_describe(self) -> None:
+        assert Prc2024Reader(self.MASK).area is self.MASK
+
+    def test_a_rectangle_given_as_it_is_still_works(self) -> None:
+        reader = Prc2024Reader(FRANCE)
+
+        assert reader.area.is_mask is False
+        assert reader.area.bounds == FRANCE
+
+    def test_the_mask_of_france_keeps_paris_and_drops_ajaccio_and_london(
+        self, tmp_path: Path
+    ) -> None:
+        reader = Prc2024Reader(Area.named("france-100km"))
+        places = [
+            Point(flight_id=FLIGHT, at=at(0, 0), latitude=48.8566, longitude=2.3522),  # Paris
+            Point(flight_id=FLIGHT, at=at(0, 1), latitude=41.9192, longitude=8.7386),  # Ajaccio
+            Point(flight_id=FLIGHT, at=at(0, 2), latitude=51.5072, longitude=-0.1276),  # London
+            Point(flight_id=FLIGHT, at=at(0, 3), latitude=45.7640, longitude=4.8357),  # Lyon
+        ]
+
+        assert reader.load(write_day(tmp_path / f"{DAY}.parquet", places)) == 2

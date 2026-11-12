@@ -16,6 +16,7 @@ from typing import Any
 import duckdb
 
 from services.collection.profiles import BoundingBox
+from services.historical.areas import CELL_DEGREES, Area
 
 # Threads DuckDB may use while it reads a file. It is idle while the observations are inserted.
 DEFAULT_THREADS = 2
@@ -125,6 +126,11 @@ class FlightKey:
     flight_id: int
 
 
+# A point is in a mask when its cell is one of the cells of the mask.
+_AREA_JOIN = f"""JOIN area_cells
+      ON area_cells.cell_row = CAST(floor(latitude / {CELL_DEGREES}) AS INTEGER)
+     AND area_cells.cell_col = CAST(floor(longitude / {CELL_DEGREES}) AS INTEGER)"""
+
 # Every query lists its columns: the conventions forbid `SELECT *`.
 _LOAD_SQL = """
 CREATE OR REPLACE TEMP TABLE clean AS
@@ -133,6 +139,7 @@ WITH located AS (
            CAST("timestamp" AS TIMESTAMPTZ) AS observed_at,
            latitude, longitude, altitude, groundspeed, track
     FROM read_parquet($path)
+    -- AREA JOIN
     WHERE flight_id IS NOT NULL
       AND "timestamp" IS NOT NULL
       AND latitude BETWEEN $lat_min AND $lat_max
@@ -195,32 +202,58 @@ class Prc2024Reader:
 
     Usage for a file: `load`, then `segments` to create the flights, `attach` to say which
     database keys they got, then `batches` to read the observations.
+
+    The area is a rectangle or a mask of cells (`Area`). A mask is turned into a table of cells
+    once, and each file is joined with it: the rectangle of the mask only lets DuckDB skip the
+    parquet blocks that are far away, the cells decide.
     """
 
     def __init__(
         self,
-        area: BoundingBox,
+        area: BoundingBox | Area,
         rules: CleaningRules | None = None,
         threads: int = DEFAULT_THREADS,
     ) -> None:
         if threads < 1:
             raise ValueError("DuckDB needs at least one thread")
-        self._area = area
+        self._area = area if isinstance(area, Area) else Area.rectangle(area)
         self._rules = rules or CleaningRules()
         # DuckDB uses every core by default; the import shares the machine with PostgreSQL.
         self._connection = duckdb.connect(config={"threads": threads})
+        self._load_sql = _LOAD_SQL.replace("-- AREA JOIN", _AREA_JOIN if self._area.is_mask else "")
+        if self._area.runs is not None:
+            self._create_cells(self._area)
+
+    def _create_cells(self, area: Area) -> None:
+        """Expand the runs of the mask into one row for each cell, to join the points with."""
+        self._connection.execute(
+            "CREATE TEMP TABLE area_runs (cell_row INTEGER, first_col INTEGER, last_col INTEGER)"
+        )
+        self._connection.executemany(
+            "INSERT INTO area_runs (cell_row, first_col, last_col) VALUES (?, ?, ?)",
+            [[run.row, run.first, run.last] for run in area.runs or ()],
+        )
+        self._connection.execute(
+            "CREATE TEMP TABLE area_cells AS "
+            "SELECT cell_row, unnest(range(first_col, last_col + 1)) AS cell_col FROM area_runs"
+        )
+
+    @property
+    def area(self) -> Area:
+        return self._area
 
     def load(self, path: Path) -> int:
         """Read, clip and clean a file; return the number of points kept."""
         rules = self._rules
+        bounds = self._area.bounds
         self._connection.execute(
-            _LOAD_SQL,
+            self._load_sql,
             {
                 "path": str(path),
-                "lat_min": self._area.lat_min,
-                "lat_max": self._area.lat_max,
-                "lon_min": self._area.lon_min,
-                "lon_max": self._area.lon_max,
+                "lat_min": bounds.lat_min,
+                "lat_max": bounds.lat_max,
+                "lon_min": bounds.lon_min,
+                "lon_max": bounds.lon_max,
                 "ground_speed": rules.ground_speed_kt,
                 "ground_altitude": rules.ground_altitude_ft,
                 "gap_seconds": rules.flight_gap.total_seconds(),
