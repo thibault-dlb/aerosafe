@@ -1,6 +1,6 @@
 # Brand guidelines
 
-Visual identity choices for AeroSafe: the logo, the two colour themes and the fonts. These choices are not applied to the code yet.
+Visual identity choices for AeroSafe: the logo, the two colour themes and the fonts. They are applied to the code by `feat/interface-design`; the choices below remain the reference.
 
 - Logo: [`aerosafe-logo.svg`](aerosafe-logo.svg), an Eye of Horus whose pupil is a radar.
 - Interactive comparison page (five palettes, three font sets, flight tracking mock-up): https://claude.ai/artifact/AtqHFG8M3wJH8E8PmpoU3m
