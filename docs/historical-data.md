@@ -142,6 +142,8 @@ Europe, overflights included (a rectangle from 35° to 70° of latitude and −1
 | 10 s | 550 million | 175 GB | 6 h |
 | 30 s | 183 million | 58 GB | 2 h |
 
+The whole year was then loaded with `france-100km` (see the fourth measure): 855 808 655 points and 272 GB, so 318 bytes a point as estimated, in about 7 h 45 of inserts plus 31 min to rebuild the position index. The estimate of 9.7 h was too high because the position index was dropped during the load.
+
 The import has no `--step` option yet: it keeps the resolution of the dataset. R3 to R5 ignore two points less than 10 s apart, so a step under 10 s would need the engine to compare a point with the one two or more steps before.
 
 ## Import into PostgreSQL
@@ -172,6 +174,32 @@ uv run python -m services.historical.cli ..\..\data\prc2024 --area france-100km 
 
 `--delete-source` deletes each daily file once its points are verified in the database, to free the disk as the import goes (only the `.parquet` files, never `flight_list.csv` or the README). Keep a copy elsewhere first. Run `ANALYZE "OBSERVATION"` as the table owner after a large import.
 
+### Load a large selection
+
+The procedure used for the whole year on 2026-11-12 and 13 (fourth measure). It is manual: the command line does not drop or rebuild an index itself. Two roles matter: `aerosafe_user`, the role of the application and of the import, can neither drop an index of `OBSERVATION` (the owner is `aerosafe_migrator`) nor change a server setting. The superuser `aerosafe_admin` does both.
+
+1. **Drop the position index.** With it, the speed fell from 35 700 to 9 600 points a second over the first 95 million points (see the fourth measure). Without it, the speed stayed flat over the 757 million points that followed. The schema differs from the migrations until step 5, which recreates the index with the same name and definition as migration 0011. The application does not need the index meanwhile: its only spatial filter, `ST_Intersects` in `services/aircraft/service.py`, applies to a subquery of the latest positions, which this index cannot serve.
+2. **Give PostgreSQL its memory**, and check it with `SHOW shared_buffers`. These settings only apply to the container where they are set, and `shared_buffers` was found back at 128 MB before the year, although it had been set to 2 GB for the second measure; the cause was not found.
+3. **Restart cleanly.** `docker restart` gives PostgreSQL 10 seconds to stop. After a long load, its last checkpoint takes longer, so it is killed and replays its WAL at the next start: 15 minutes during the fourth measure, with the database closed. Run a `CHECKPOINT` first and give it time with `-t 600`.
+4. **Run the import** with as many workers as PostgreSQL has CPU, and `--delete-source` if the disk is short (see the third measure).
+5. **Rebuild the index and analyse the table** at the end. It takes one core and space for the sort, on top of the index itself (about 41 bytes a point).
+
+```powershell
+# 1 to 3, from any folder
+docker exec aerosafe_postgres psql -U aerosafe_admin -d aerosafe_db -c 'DROP INDEX idx_observation_position' -c "ALTER SYSTEM SET shared_buffers = '2GB'" -c "ALTER SYSTEM SET wal_buffers = '64MB'" -c 'CHECKPOINT'
+docker restart -t 600 aerosafe_postgres
+docker exec aerosafe_postgres psql -U aerosafe_admin -d aerosafe_db -c 'SHOW shared_buffers' -c 'SHOW wal_buffers'
+
+# 4, from src\api
+docker update --cpus 9 aerosafe_postgres
+uv run python -m services.historical.cli ..\..\data\prc2024 --area france-100km --workers 8 --delete-source
+
+# 5
+docker exec aerosafe_postgres psql -U aerosafe_admin -d aerosafe_db -c '\timing on' -c "SET maintenance_work_mem = '2GB'" -c 'CREATE INDEX idx_observation_position ON "OBSERVATION" USING gist ("GEO_POSITION")' -c 'ANALYZE "OBSERVATION"'
+```
+
+The disk of Docker Desktop (`%LOCALAPPDATA%\Docker\wsl\disk\docker_data.vhdx`) grows with the database and never gives space back to Windows by itself. The sort files of step 5 are deleted inside, but their space stays held by this file (about 22 GB for the year). Compacting it needs Docker Desktop and WSL stopped (`wsl --shutdown`), then `Optimize-VHD` as administrator; not done so far.
+
 ### First measure: the day 2022-07-01
 
 Loaded on 2026-11-12 into the PostgreSQL of `docker compose` (PostGIS 17, default settings), on the Windows development machine.
@@ -199,7 +227,7 @@ The parallel run is far from five times faster, so something else limits it. Not
 
 Levers left:
 - More workers (the default is now 6, and there is no limit) or larger batches: a small gain at best, to measure. The measurement above used five workers.
-- Fewer or deferred indexes during the load. This changes the schema outside the migrations, so it needs a decision.
+- Fewer or deferred indexes during the load. Done by hand for the position index on the whole year, which the speed needed (see the fourth measure). Doing it in the command line, or for other indexes, still needs a decision, since the schema differs from the migrations until the index is rebuilt.
 - A smaller selection: Île-de-France, or fewer days.
 
 ### Second measure: the day 2022-07-01 with `france-100km`
@@ -236,11 +264,60 @@ The last two rows were measured afterwards, on 2022-07-01 only (3 078 038 points
 - **The speed is limited by the smaller of the workers and the CPU of PostgreSQL**: each worker is one PostgreSQL process, so about one core. When the workers are at least as many as the CPU, the speed is about 5 300 to 6 300 points a second for each CPU, in proportion with 2, 3, 5 and 6 CPU. With only 2 workers on 9 CPU, seven CPU stay idle and the speed is 19 050 points a second, 9 500 for each worker.
 - **Several files at the same time do not help**: at equal CPU, 3 x 2 workers (29 899) is 4 % above 1 x 6 (28 729) and 2 x 3 (28 383) is 1 % under it, which is within the noise of a single run; 2 x 4 is 17 % above 1 x 8 on 3 CPU, again a single run. In the 2 x 4 run, the third file, alone, went at 20 953 points a second, more than the two together (17 500).
 - **More workers than CPU do not help**: 8 workers on 3 CPU are not faster than 4 workers on 3 CPU.
-- **Not measured**: the CPU used by the client. The workers are tasks of one Python process, so the client probably needs only one or two cores, which would let PostgreSQL have 8 or 9 CPU with as many workers. My first guess, that 2 to 4 workers on 7 to 9 CPU would reach about 40 000 points a second, was wrong (see the last row). To test: 8 workers on 9 CPU.
+- **Not measured**: the CPU used by the client. The workers are tasks of one Python process, so the client probably needs only one or two cores, which would let PostgreSQL have 8 or 9 CPU with as many workers. My first guess, that 2 to 4 workers on 7 to 9 CPU would reach about 40 000 points a second, was wrong (see the last row, 8 workers on 9 CPU).
 - **Year with `france-100km`**: 856 million points at 31 526 points a second make at least **7.5 h** (a lower bound, the indexes slow the inserts as they grow), against 9.3 h at the speed of the second measure.
+
+### Fourth measure: the whole year with `france-100km`
+
+Loaded from 2026-11-12 to 2026-11-13 on the Ryzen 5 5500, in the PostgreSQL of `docker compose` (PostgreSQL 17.11, PostGIS), with 8 insert workers, PostgreSQL on 9 CPU (`docker update --cpus 9`) and `--delete-source`. Docker Desktop has 7.8 GB of memory, half of the 15.8 GB of the machine.
+
+**First run, with the six indexes.** The speed fell as the table grew: 35 737 points a second on the first file, 17 700 to 27 200 on files 20 to 30, 9 600 to 14 700 on files 55 to 65. The run was stopped after 67 files (2022-01-01 to 2022-03-08, about 1 h 30). What PostgreSQL showed at 95 million points:
+
+| Topic | Measure |
+| --- | --- |
+| Size | Table 13 GB, indexes 15.6 GB, of which the position GiST 3.8 GB |
+| Reads outside `shared_buffers` | Position GiST **31 163 174 blocks**, last contact 1 144 868, the four other indexes under 440 000 together |
+| Settings | `shared_buffers` 128 MB (not the 2 GB of the bulk-load try), so `wal_buffers` 4 MB |
+| WAL, over one minute | 1.15 GB and 144 870 full-page images for 792 637 points, so 1.5 KB a point (0.69 KB on three days) |
+| Waits of the insert workers | `WALWrite` and `BufferContent` |
+
+The B-tree indexes take each new row at their right end, since their keys grow with the import (the row key, the aircraft and flight keys, the time within a day), so only their last pages are written. The GiST puts a point where its position is, so the inserts touch pages all over the index. Once the index is larger than the memory, each insert reads pages back. After each checkpoint, the first change of a page writes the whole page into the WAL, so the WAL grows too. The GiST then grows with the table, up to 35 GB for the year, more than four times the memory of Docker Desktop, so the speed would have kept falling.
+
+**Second run, without the position index**, with `shared_buffers` 2 GB and `wal_buffers` 64 MB, following [Load a large selection](#load-a-large-selection). The restart before it was not clean (see step 3 there): 907 s of recovery.
+
+| Topic | Measure |
+| --- | --- |
+| Load | 298 files (2022-03-09 to 2022-12-31) in 6 h 14 min: 757 587 630 points inserted, so **33 760 points a second** over the run |
+| Speed along the run | 31 000 to 40 000 points a second a file on the first 14 files, 33 000 to 37 600 on the last 20: **no decline** |
+| Slowdowns | Seven stretches at 21 000 to 30 000 points a second, around files 15, 53, 77, 105, 142, 185 and 253, further and further apart. PostgreSQL ran 8 autovacuums of `OBSERVATION` during the run, and an insert-only table is vacuumed each time it grows by 20 % (`autovacuum_vacuum_insert_scale_factor`), which matches the growing gaps. Probable cause, times not matched one by one |
+| Files already loaded | 2022-07-01, left by the earlier measures, was recognised as complete in 5 s and deleted |
+
+The counts add up: the final line reports 760 665 668 points, which counts the 3 078 038 points of 2022-07-01 already in the database, and the table went from 98 221 025 to 855 808 655 rows, so 757 587 630 more. 2022-03-09, the file the stop interrupted, had nothing committed and was loaded in full.
+
+**Rebuilding the position index**: 30 min 46 s on one core (the scan of the table took about 7 min, estimated from its progress, then the sort and the writing), and 3.4 s for `ANALYZE`. Sort files reached 7.2 GB at a third of the scan; their peak was not measured. A search on a rectangle around Paris uses the index (`Index Scan using idx_observation_position`).
+
+**Result**, measured with `pg_relation_size` (`pg_size_pretty` writes the total 253 GB, since it counts in units of 1 024):
+
+| Object | Bytes | Bytes a point |
+| --- | --- | --- |
+| `OBSERVATION`, table | 127 393 767 424 | 148.9 |
+| Position GiST | 35 411 771 392 | 41.4 |
+| (flight, position time) | 27 168 702 464 | 31.7 |
+| (flight, last contact) | 27 168 718 848 | 31.7 |
+| (aircraft, last contact), unique | 27 158 626 304 | 31.7 |
+| Primary key | 19 229 401 088 | 22.5 |
+| Last contact | 8 550 424 576 | 10.0 |
+| **Total** | **272 116 260 864** | **318.0** |
+
+855 808 655 observations from 2022-01-01 03:30:38 to 2022-12-31 23:59:59 UTC, 318 277 aircraft and 318 623 flights. The size per point is the one of the first day, so the estimates above hold.
+
+**Disk C:**, in units of 1 024 as Windows counts: 63.9 GB free when the second run started, 85.5 GB after a cleanup outside the project, 142.7 GB at the end of the import (250 GB of parquet deleted, 195 GB more in the database), 86.9 GB after the index: the disk of Docker Desktop went from 243.9 to 299.3 GB, for an index of 33 GB in these units, so about 22 GB stay held by the deleted sort files.
+
+**Total time**: about 7 h 45 of inserts over the two runs, 15 min of recovery and 31 min of index.
 
 ## Next steps
 
 1. ~~Test d10 on one day~~ Done on 2022-07-01, see above. Remaining: check the `BL_AU_SOL` rule and the outlier limits on the first imported day, with R3 to R5.
 2. Ask OpenSky where the d1 and d11 files went, together with V-01.
 3. If the team keeps a historical mode, reopen D-05 in [open points](open-points.md), and record the source of each collection run (live or import) in a reference table, following the [database conventions](database-conventions.md). The import does not touch `EXECUTION_COLLECTE`.
+4. Decide whether the command line should drop and rebuild the position index itself for a large import (an option, run as a role that owns the table), and whether the bulk-load settings belong in `docker-compose.yaml` rather than in one container.
