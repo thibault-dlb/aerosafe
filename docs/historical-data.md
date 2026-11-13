@@ -245,7 +245,7 @@ Consequence for the year with `france-100km`: 856 million points at 319 bytes ma
 
 ### Third measure: workers, files at the same time and CPU of PostgreSQL
 
-Measured on 2026-11-12 on the Ryzen 5 5500 (12 threads), with `scripts/bench-import-workers.ps1` (not versioned): the same 3 days (2022-07-01 to 07-03, 9 530 758 points with `france-100km`) loaded from an empty database for each config, 11 threads at most (the client plus the CPU given to PostgreSQL with `docker update --cpus`). Speed is that of the whole command.
+Measured on 2026-11-12 on the Ryzen 5 5500 (12 threads), with `scripts/bench-import-workers.ps1`: the same 3 days (2022-07-01 to 07-03, 9 530 758 points with `france-100km`) loaded from an empty database for each config, 11 threads at most (the client plus the CPU given to PostgreSQL with `docker update --cpus`). Speed is that of the whole command.
 
 | Files at a time | Workers each | CPU of PostgreSQL | Points a second | Points a second and per CPU of PostgreSQL |
 | --- | --- | --- | --- | --- |
