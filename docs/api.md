@@ -51,7 +51,7 @@ No access token needed. E-mails are trimmed and lowercased.
 | `POST /auth/refresh` | None, reads the refresh cookie | 200, same body as login, and sets a new refresh cookie | 401 missing, unknown, revoked or expired token; the cookie is cleared |
 | `POST /auth/logout` | None, reads the refresh cookie | 204, revokes the token and clears the cookie | None |
 
-`id` is always the public ULID, never the internal key. The first Supervisor is created with a command, see [installation](installation.md#installation).
+`id` is always the public ULID, never the internal key. A default Supervisor account (`admin@aerosafe.com`) is created by the migrations, and other Supervisors are promoted with a command, see [installation](installation.md#installation).
 
 ### Accounts (`/api/v1/users`)
 
