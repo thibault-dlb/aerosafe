@@ -41,6 +41,7 @@ This table lists what has been chosen so far. Check each licence against the exa
 | Docker | Containers | `TBD` | `TBD` |
 | Leaflet | Trajectory map, used directly without `react-leaflet` (D-01) | 1.9 | BSD-2-Clause |
 | @types/leaflet | Leaflet type definitions | 1.9 | MIT |
+| GSAP (with its ScrollTrigger plugin) | Scroll-driven scene of the home page | 3.15 | GSAP Standard "no charge" licence (free, also for commercial use, see https://gsap.com/standard-license) |
 
 ## Data source
 
