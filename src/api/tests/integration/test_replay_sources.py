@@ -331,20 +331,21 @@ class TestStore:
         self, session: AsyncSession
     ) -> None:
         aircraft, _ = await replayed(session, icao24(), {0: 1000.0, 10: 1000.0})
-        r3 = await rule(session, "R3")
+        r3, r4 = await rule(session, "R3"), await rule(session, "R4")
         restart = T0 + timedelta(seconds=60)
 
-        def alert(seconds: int) -> Alert:
+        def alert(seconds: int, raised: Rule) -> Alert:
+            # One open episode per aircraft and rule, so the two alerts use two rules.
             return Alert(
                 aircraft_id=aircraft,
-                rule_id=r3.id,
-                message="r3",
+                rule_id=raised.id,
+                message=raised.code,
                 triggered_at=T0 + timedelta(seconds=seconds),
                 observed_value=Decimal("40"),
                 threshold=Decimal("30"),
             )
 
-        before, after = alert(10), alert(120)
+        before, after = alert(10, r3), alert(120, r4)
         session.add_all([before, after])
         await session.flush()
 
