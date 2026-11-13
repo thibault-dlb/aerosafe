@@ -7,6 +7,7 @@ from routes.v1.auth import router as auth_router
 from routes.v1.collection import router as collection_router
 from routes.v1.dashboard import router as dashboard_router
 from routes.v1.flights import router as flights_router
+from routes.v1.replay import router as replay_router
 from routes.v1.rules import router as rules_router
 from routes.v1.users import router as users_router
 
@@ -21,5 +22,6 @@ api_router.include_router(rules_router)
 api_router.include_router(alerts_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(collection_router)
+api_router.include_router(replay_router)
 
 __all__ = ["api_router", "health_router"]
