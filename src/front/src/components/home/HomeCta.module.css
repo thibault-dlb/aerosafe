@@ -1,0 +1,39 @@
+.section {
+  padding: clamp(5rem, 14vw, 10rem) var(--gutter);
+  background:
+    radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--color-brand) 18%, transparent), transparent 65%),
+    var(--color-bg);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.9s ease,
+    transform 0.9s ease;
+}
+
+.seen {
+  opacity: 1;
+  transform: none;
+}
+
+.title {
+  max-width: 20ch;
+  margin: 0 auto var(--space-4);
+  font-size: clamp(2rem, 5.5vw, 4rem);
+  letter-spacing: 0.04em;
+}
+
+.text {
+  max-width: 44ch;
+  margin: 0 auto;
+  color: var(--color-text-muted);
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}

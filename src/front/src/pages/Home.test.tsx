@@ -49,17 +49,33 @@ describe("Home", () => {
     expect(screen.queryByText(/pédagogique/)).not.toBeInTheDocument();
   });
 
-  it("leads to the main screens", async () => {
+  it("leads to the main screens, from the hero, the features and the closing band", async () => {
     await renderHome();
 
-    for (const [name, href] of [
-      ["Aéronefs", "/aircraft"],
-      ["Tableau de bord", "/dashboard"],
-      ["Alertes", "/alerts"],
-      ["Règles", "/rules"],
+    for (const [name, href, count] of [
+      ["Ouvrir le tableau de bord", "/dashboard", 3],
+      ["Se connecter", "/login", 2],
+      ["Rechercher un aéronef", "/aircraft", 1],
+      ["Voir les alertes", "/alerts", 1],
+      ["Régler les règles", "/rules", 1],
     ] as const) {
-      expect(screen.getByRole("link", { name: new RegExp(`^${name}`) })).toHaveAttribute("href", href);
+      const links = screen.getAllByRole("link", { name, hidden: true });
+      expect(links).toHaveLength(count);
+      links.forEach((link) => expect(link).toHaveAttribute("href", href));
     }
+  });
+
+  it("runs from the scene to the closing band", async () => {
+    await renderHome();
+
+    const headings = screen.getAllByRole("heading", { level: 2, hidden: true }).map((item) => item.textContent);
+    expect(headings).toEqual([
+      "Suivre.",
+      "Détecter.",
+      "Tout pour garder le contrôle du ciel.",
+      "Comment ça marche",
+      "Prêt à surveiller le ciel ?",
+    ]);
   });
 
   it("is in French by default and follows the language", async () => {

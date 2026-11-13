@@ -1,34 +1,95 @@
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: var(--space-4);
+.section {
+  width: 100%;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: clamp(4rem, 12vw, 9rem) var(--gutter);
+}
+
+.eyebrow {
+  margin-bottom: var(--space-3);
+  color: var(--color-data);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.title {
+  max-width: 22ch;
+  margin: 0 auto clamp(3rem, 8vw, 6rem);
+  font-size: clamp(1.8rem, 4.5vw, 3.2rem);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3rem, 9vw, 7rem);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.card {
-  display: block;
-  height: 100%;
-  padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text);
-  text-decoration: none;
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1.5rem, 6vw, 5rem);
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
 }
 
-.card:hover {
-  border-color: var(--color-link);
+.seen {
+  opacity: 1;
+  transform: none;
 }
 
-.card h3 {
-  margin-bottom: var(--space-2);
-  color: var(--color-link);
+.flipped .art {
+  order: 2;
 }
 
-.card p {
-  margin: 0;
+.art {
+  padding: var(--space-3);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-brand) 14%, transparent), transparent 70%);
+}
+
+.copy h3 {
+  margin-bottom: var(--space-3);
+  color: var(--color-brand);
+  font-size: clamp(1.3rem, 2.6vw, 2rem);
+  letter-spacing: 0.05em;
+}
+
+.copy p {
+  max-width: 46ch;
+  margin-bottom: var(--space-4);
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
+  font-size: clamp(1rem, 1.4vw, 1.15rem);
+}
+
+.link {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-brand);
+  padding-bottom: 2px;
+}
+
+.link:hover {
+  color: var(--color-brand);
+}
+
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .flipped .art {
+    order: 0;
+  }
 }

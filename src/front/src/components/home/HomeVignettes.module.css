@@ -1,0 +1,92 @@
+.vignette {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.frame {
+  fill: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  stroke: var(--color-border);
+}
+
+.grid {
+  fill: none;
+  stroke: var(--map-grid);
+  stroke-width: 1;
+  opacity: 0.5;
+}
+
+.trail {
+  fill: none;
+  stroke: var(--color-data);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.gap {
+  fill: none;
+  stroke: var(--color-warning);
+  stroke-width: 3;
+  stroke-dasharray: 3 7;
+  stroke-linecap: round;
+}
+
+.dot {
+  fill: var(--color-brand);
+}
+
+.chip,
+.chipOn {
+  fill: color-mix(in srgb, var(--color-raised) 90%, transparent);
+  stroke: var(--color-border);
+}
+
+.chipOn {
+  fill: color-mix(in srgb, var(--color-brand) 22%, transparent);
+  stroke: var(--color-brand);
+}
+
+.mono {
+  fill: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.clock {
+  fill: var(--color-brand);
+  font-family: var(--font-mono);
+  font-size: 30px;
+  letter-spacing: 0.1em;
+}
+
+.row {
+  fill: color-mix(in srgb, var(--color-raised) 90%, transparent);
+  stroke: var(--color-border);
+}
+
+.danger {
+  fill: var(--color-danger);
+}
+
+.warning {
+  fill: var(--color-warning);
+}
+
+.bar {
+  fill: var(--color-border);
+}
+
+.track {
+  fill: var(--color-border);
+}
+
+.fill {
+  fill: var(--color-brand);
+}
+
+.knob {
+  fill: var(--color-bg);
+  stroke: var(--color-brand);
+  stroke-width: 2;
+}
