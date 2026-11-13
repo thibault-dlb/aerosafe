@@ -8,6 +8,7 @@ import {
   type Criticality,
 } from "@/models/Alert";
 import { ApiClient } from "@/services/ApiClient";
+import { DataModeService } from "@/services/DataModeService";
 
 export type AlertStatus = "active" | "unprocessed" | "processed";
 export type AlertSort = "triggered_at" | "criticality" | "rule";
@@ -26,9 +27,15 @@ export interface AlertFilters {
   offset?: number;
 }
 
-/** Calls the alert endpoints of the API (BF-12, UC-04). */
+/**
+ * Calls the alert endpoints of the API (BF-12, UC-04). In the replay mode, the list and the
+ * statistics carry `source=replay`: the alerts of the replayed traffic up to the simulated instant.
+ */
 export class AlertService {
-  constructor(private readonly client: ApiClient = new ApiClient()) {}
+  constructor(
+    private readonly client: ApiClient = new ApiClient(),
+    private readonly modes: DataModeService = new DataModeService(),
+  ) {}
 
   static query(filters: AlertFilters): string {
     const params = new URLSearchParams();
@@ -47,7 +54,9 @@ export class AlertService {
   }
 
   async search(filters: AlertFilters = {}): Promise<AlertPage> {
-    const json = await this.client.get<AlertPageJson>(`/v1/alerts${AlertService.query(filters)}`);
+    const json = await this.client.get<AlertPageJson>(
+      `/v1/alerts${this.modes.withSource(AlertService.query(filters))}`,
+    );
     return AlertPage.fromJson(json);
   }
 
@@ -69,7 +78,7 @@ export class AlertService {
     const params = new URLSearchParams();
     if (start) params.set("start", start.toISOString());
     if (end) params.set("end", end.toISOString());
-    const query = params.toString() ? `?${params.toString()}` : "";
+    const query = this.modes.withSource(params.toString() ? `?${params.toString()}` : "");
     const json = await this.client.get<AlertStatisticsJson>(`/v1/alerts/statistics${query}`);
     return AlertStatistics.fromJson(json);
   }
