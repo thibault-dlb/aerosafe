@@ -40,7 +40,10 @@ export default function AppLayout() {
   const landing = pathname === "/";
   const scrolled = useScrolled();
   const frameClass = landing ? `${styles.frame} ${styles.landing} darkScope` : styles.frame;
-  const barClass = landing && (scrolled || menuOpen) ? `${styles.bar} ${styles.barSolid}` : styles.bar;
+  // In the replay the bar stays in the flow, so the replay bar under it is not covered.
+  const overlay = landing && mode !== "replay";
+  const barClasses = [styles.bar, overlay && styles.overlay, overlay && (scrolled || menuOpen) && styles.barSolid];
+  const barClass = barClasses.filter(Boolean).join(" ");
 
   return (
     <ReplayProvider>

@@ -162,7 +162,7 @@
 }
 
 /* Landing page: the bar floats over the scene and the page runs edge to edge. */
-.landing .bar {
+.overlay {
   position: fixed;
   right: 0;
   left: 0;
@@ -173,7 +173,7 @@
     border-color 0.3s;
 }
 
-.landing .barSolid {
+.barSolid {
   background: color-mix(in srgb, var(--color-bg) 82%, transparent);
   border-bottom-color: var(--color-border);
   backdrop-filter: blur(14px);
