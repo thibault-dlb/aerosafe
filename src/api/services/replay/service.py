@@ -102,8 +102,7 @@ class ReplayService:
         self._check_speed(speed)
         if not bounds.contains(at):
             raise ReplayOutOfBounds(f"The replay covers {bounds.start} to {bounds.end}")
-        await self._store.reset_alerts(at)
-        await self._store.save(
+        await self._store.restart(
             ReplayState(
                 simulated_at=at,
                 changed_at=self._now(),

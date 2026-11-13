@@ -1,5 +1,7 @@
+from datetime import timedelta
 from types import SimpleNamespace
 
+import pytest
 from sqlalchemy.dialects import postgresql
 
 from models import ReplayParameter
@@ -84,31 +86,60 @@ class TestBounds:
         assert await DatabaseReplayStore(session_factory(session)).bounds() is None
 
 
-class TestResetAlerts:
+def restarted() -> ReplayState:
+    return ReplayState(T0, REAL, 10, False, T0 - timedelta(seconds=30), 4)
+
+
+class TestRestart:
     async def test_the_later_alerts_are_removed_and_the_open_episodes_end_at_the_restart(
         self,
     ) -> None:
-        session = FakeSession()
+        session = FakeSession(parameter())
 
-        await DatabaseReplayStore(session_factory(session)).reset_alerts(T0)
+        await DatabaseReplayStore(session_factory(session)).restart(restarted())
 
-        removed, ended = (sql(statement) for statement in session.executed)
+        removed, ended = (sql(statement) for statement in session.executed[:2])
         assert removed.startswith('UPDATE "ALERTE" SET')
         assert "deleted_at=now()" in removed
         assert '"DT_DECLENCHEMENT" >=' in removed
         assert "'REJEU'" in removed and "'REJEU'" in ended
         assert 'SET "DT_FIN_EPISODE"=' in ended
         assert '"DT_FIN_EPISODE" IS NULL' in ended
+
+    async def test_the_alerts_and_the_clock_are_written_in_one_transaction(self) -> None:
+        row = parameter()
+        session = FakeSession(row)
+
+        await DatabaseReplayStore(session_factory(session)).restart(restarted())
+
         assert session.commits == 1
+        assert (row.simulated_at, row.speed, row.is_paused, row.changed_by_id) == (T0, 10, False, 4)
 
     async def test_a_removed_alert_gets_an_end_that_is_not_before_its_trigger(self) -> None:
-        session = FakeSession()
+        session = FakeSession(parameter())
 
-        await DatabaseReplayStore(session_factory(session)).reset_alerts(T0)
+        await DatabaseReplayStore(session_factory(session)).restart(restarted())
 
         assert 'coalesce("ALERTE"."DT_FIN_EPISODE", "ALERTE"."DT_DECLENCHEMENT")' in sql(
             session.executed[0]
         )
+
+    async def test_a_restart_needs_an_instant(self) -> None:
+        session = FakeSession(parameter())
+
+        with pytest.raises(ValueError, match="instant"):
+            await DatabaseReplayStore(session_factory(session)).restart(ReplayState())
+
+        assert session.commits == 0
+
+
+class TestRowRead:
+    async def test_the_single_row_is_read_without_its_deleted_versions(self) -> None:
+        session = FakeSession(parameter())
+
+        await DatabaseReplayStore(session_factory(session)).state()
+
+        assert "deleted_at IS NULL" in sql(session.executed[0])
 
 
 def test_the_session_double_answers_a_one_row_result() -> None:

@@ -40,8 +40,11 @@ class MemoryReplayStore:
         self.bounds_reads += 1
         return self._bounds
 
-    async def reset_alerts(self, at: datetime) -> None:
-        self.resets.append(at)
+    async def restart(self, state: ReplayState) -> None:
+        # The real store cleans the alerts and writes the state in one transaction.
+        assert state.simulated_at is not None
+        self.resets.append(state.simulated_at)
+        await self.save(state)
 
     def mark_evaluated(self, until: datetime) -> None:
         self._state = replace(self._state, evaluated_until=until)

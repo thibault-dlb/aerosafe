@@ -1,15 +1,15 @@
 """Insert the single row of PARAMETRE_REJEU: no replay started, paused, speed 1.
 
-Revision ID: 0042
-Revises: 0041
+Revision ID: 0045
+Revises: 0044
 """
 
 from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0042"
-down_revision: str | None = "0041"
+revision: str = "0045"
+down_revision: str | None = "0044"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -176,7 +176,7 @@ uv run python -m services.historical.cli ..\..\data\prc2024 --area france-100km 
 
 ### Database loaded before the source existed
 
-A database imported before the migrations 0035 to 0042 holds only replayed aircraft, which the migrations mark as `DIRECT` like every existing aircraft. Once migrated, and only if the database holds nothing but the dataset, mark them as replayed:
+A database imported before the migrations 0035 to 0045 holds only replayed aircraft, which the migrations mark as `DIRECT` like every existing aircraft. Once migrated, and only if the database holds nothing but the dataset, mark them as replayed:
 
 ```powershell
 docker exec aerosafe_postgres psql -U aerosafe_admin -d aerosafe_db -c "UPDATE \"AERONEF\" SET \"ID_SOURCE_DONNEE\" = (SELECT \"ID\" FROM \"R_SOURCE_DONNEE\" WHERE \"CD_SOURCE_DONNEE\" = 'REJEU')"

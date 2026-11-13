@@ -140,7 +140,11 @@ class RulesEngine:
 
     @staticmethod
     def open_episodes_query(session: AsyncSession, mode: DataMode) -> Select:
-        """The open episodes of the aircraft of one source."""
+        """The open episodes of the aircraft of one source.
+
+        A soft-deleted aircraft is kept on purpose: it is no longer evaluated, so its open
+        episodes must be found to be ended, as they were before the sources existed.
+        """
         return (
             Repository(session, Alert)
             .select()

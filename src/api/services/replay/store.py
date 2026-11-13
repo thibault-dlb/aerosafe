@@ -17,9 +17,9 @@ class ReplayStore(Protocol):
 
     async def save(self, state: ReplayState) -> None: ...
 
-    async def bounds(self) -> ReplayBounds | None: ...
+    async def restart(self, state: ReplayState) -> None: ...
 
-    async def reset_alerts(self, at: datetime) -> None: ...
+    async def bounds(self) -> ReplayBounds | None: ...
 
 
 class DatabaseReplayStore:
@@ -42,39 +42,20 @@ class DatabaseReplayStore:
 
     async def save(self, state: ReplayState) -> None:
         async with self._session_factory() as session:
-            parameter = await self._parameter(session)
-            parameter.simulated_at = state.simulated_at
-            parameter.changed_at = state.changed_at
-            parameter.speed = state.speed
-            parameter.is_paused = state.paused
-            parameter.evaluated_until = state.evaluated_until
-            parameter.changed_by_id = state.changed_by_id
+            self._write(await self._parameter(session), state)
             await session.commit()
 
-    async def bounds(self) -> ReplayBounds | None:
-        """First and last instant of the replayed flights, or None when nothing was imported.
+    async def restart(self, state: ReplayState) -> None:
+        """Start again at `state.simulated_at`: the alerts of the earlier run and the new clock
+        are written in one transaction, so a failure never leaves one without the other.
 
-        It reads `VOL`, a table of a few hundred thousand rows, and not `OBSERVATION`, which
-        holds hundreds of millions.
+        The alerts dated at or after the restart come from an earlier run: they would be created
+        again as the clock goes by, so they are removed (logically). The episodes still open end
+        at the restart.
         """
-        statement = (
-            select(
-                func.min(Flight.started_at),
-                func.max(func.coalesce(Flight.ended_at, Flight.started_at)),
-            )
-            .join(Aircraft, Aircraft.id == Flight.aircraft_id)
-            .where(DataMode.REPLAY.matches(Aircraft.source_id), Flight.deleted_at.is_(None))
-        )
-        async with self._session_factory() as session:
-            start, end = (await session.execute(statement)).one()
-        return None if start is None or end is None else ReplayBounds(start, end)
-
-    async def reset_alerts(self, at: datetime) -> None:
-        """Make the alerts of the replay consistent with a restart at `at`.
-
-        The alerts dated `at` or later come from an earlier run: they would be created again as
-        the clock goes by, so they are removed (logically). The episodes still open end at `at`.
-        """
+        at = state.simulated_at
+        if at is None:
+            raise ValueError("A restart needs a simulated instant")
         replayed = select(Aircraft.id).where(DataMode.REPLAY.matches(Aircraft.source_id))
         removed = (
             update(Alert)
@@ -102,7 +83,26 @@ class DatabaseReplayStore:
         async with self._session_factory() as session:
             await session.execute(removed)
             await session.execute(ended)
+            self._write(await self._parameter(session), state)
             await session.commit()
+
+    async def bounds(self) -> ReplayBounds | None:
+        """First and last instant of the replayed flights, or None when nothing was imported.
+
+        It reads `VOL`, a table of a few hundred thousand rows, and not `OBSERVATION`, which
+        holds hundreds of millions.
+        """
+        statement = (
+            select(
+                func.min(Flight.started_at),
+                func.max(func.coalesce(Flight.ended_at, Flight.started_at)),
+            )
+            .join(Aircraft, Aircraft.id == Flight.aircraft_id)
+            .where(DataMode.REPLAY.matches(Aircraft.source_id), Flight.deleted_at.is_(None))
+        )
+        async with self._session_factory() as session:
+            start, end = (await session.execute(statement)).one()
+        return None if start is None or end is None else ReplayBounds(start, end)
 
     @staticmethod
     async def record_evaluation(session: AsyncSession, until: datetime) -> None:
@@ -111,9 +111,19 @@ class DatabaseReplayStore:
         parameter.evaluated_until = until
 
     @staticmethod
+    def _write(parameter: ReplayParameter, state: ReplayState) -> None:
+        parameter.simulated_at = state.simulated_at
+        parameter.changed_at = state.changed_at
+        parameter.speed = state.speed
+        parameter.is_paused = state.paused
+        parameter.evaluated_until = state.evaluated_until
+        parameter.changed_by_id = state.changed_by_id
+
+    @staticmethod
     async def _parameter(session: AsyncSession) -> ReplayParameter:
         # The migrations insert the single row; there is never a second one.
-        return (await session.scalars(select(ReplayParameter))).one()
+        statement = select(ReplayParameter).where(ReplayParameter.deleted_at.is_(None))
+        return (await session.scalars(statement)).one()
 
 
 state_store: ReplayStore = DatabaseReplayStore()
