@@ -64,6 +64,42 @@
   --map-rings: #a07a25;
 }
 
+/*
+ * Dark scope: a part of the page that stays in the dark theme whatever the theme in use (the
+ * landing page). Keep in step with the dark colours of `:root` above.
+ */
+.darkScope {
+  color-scheme: dark;
+  --color-bg: #1c110b;
+  --color-surface: #2a1b12;
+  --color-raised: #38251a;
+  --color-border: #4a3425;
+  --color-text: #f1e6cf;
+  --color-text-muted: #b0a08a;
+  --color-primary: #3dd6c4;
+  --color-on-primary: #0a1f1e;
+  --color-link: #e3b23c;
+  --color-selection: #e3b23c;
+  --color-data: #3dd6c4;
+  --color-danger: #e5604d;
+  --color-warning: #f28c28;
+  --color-brand: #e3b23c;
+
+  --map-bg: #130e04;
+  --map-land: #221808;
+  --map-grid: #4a3a12;
+  --map-text: #c2a560;
+  --map-selected: #3dd6c4;
+  --map-aircraft-low: #b07a1c;
+  --map-aircraft-mid: #e3b23c;
+  --map-aircraft-high: #f5d77e;
+  --map-beam: #3dd6c4;
+  --map-rings: #a07a25;
+
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
 /* Light theme (B, Papyrus) */
 :root[data-theme="light"] {
   color-scheme: light;

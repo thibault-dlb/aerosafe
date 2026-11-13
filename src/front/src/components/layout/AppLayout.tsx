@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import logoUrl from "@/assets/logo/aerosafe-logo.svg";
 import ReplayBar from "@/components/replay/ReplayBar";
 import { useDataMode } from "@/hooks/useDataMode";
+import { useScrolled } from "@/hooks/useScrolled";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { TranslationKey } from "@/i18n/fr";
@@ -30,14 +31,19 @@ export default function AppLayout() {
   const { theme, setTheme } = useTheme();
   const { mode, setMode } = useDataMode();
   const [menuOpen, setMenuOpen] = useState(false);
+  // The landing page is always dark, edge to edge, under a bar that is clear until it scrolls.
+  const landing = useLocation().pathname === "/";
+  const scrolled = useScrolled();
+  const frameClass = landing ? `${styles.frame} ${styles.landing} darkScope` : styles.frame;
+  const barClass = landing && (scrolled || menuOpen) ? `${styles.bar} ${styles.barSolid}` : styles.bar;
 
   return (
     <ReplayProvider>
-      <div className={styles.frame}>
+      <div className={frameClass}>
         <a className={styles.skip} href="#content">
           {t("layout.skipToContent")}
         </a>
-        <header className={styles.bar}>
+        <header className={barClass}>
           <Link to="/" className={styles.brand} onClick={() => setMenuOpen(false)}>
             <img className={styles.logo} src={logoUrl} alt="" width={40} height={40} />
             <span className={styles.name}>AeroSafe</span>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
@@ -20,7 +20,10 @@ function renderAt(path: string) {
     [
       {
         element: <AppLayout />,
-        children: [{ path: "/alerts", element: <h1>Page content</h1> }],
+        children: [
+          { path: "/", element: <h1>Landing</h1> },
+          { path: "/alerts", element: <h1>Page content</h1> },
+        ],
       },
     ],
     { initialEntries: [path] },
@@ -97,5 +100,29 @@ describe("AppLayout", () => {
 
     expect(screen.getByRole("link", { name: "Aller au contenu" })).toHaveAttribute("href", "#content");
     expect(within(screen.getByRole("contentinfo")).getByText(/projet pédagogique/)).toBeInTheDocument();
+  });
+
+  it("keeps the landing page in the dark theme, and only that page", () => {
+    renderAt("/");
+    expect(document.querySelector(".darkScope")).not.toBeNull();
+  });
+
+  it("leaves the other pages in the theme of the visitor", () => {
+    renderAt("/alerts");
+    expect(document.querySelector(".darkScope")).toBeNull();
+  });
+
+  it("makes the bar solid once the landing page has scrolled", () => {
+    renderAt("/");
+    const bar = screen.getByRole("banner");
+    expect(bar.className).not.toMatch(/barSolid/);
+
+    act(() => {
+      Object.defineProperty(window, "scrollY", { value: 300, configurable: true });
+      window.dispatchEvent(new Event("scroll"));
+    });
+
+    expect(bar.className).toMatch(/barSolid/);
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
   });
 });
