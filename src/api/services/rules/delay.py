@@ -15,6 +15,7 @@ class LastContactRule(BusinessRule):
     code = "R1"
     unit = "s"
     label = "delay since the last contact"
+    evaluated_in_replay = False
 
     def observe(self, snapshot: AircraftSnapshot, now: datetime) -> float | None:
         return delay_since(snapshot.latest.last_contact_at, now)
@@ -30,6 +31,7 @@ class StalePositionRule(BusinessRule):
     code = "R2"
     unit = "s"
     label = "age of the latest position"
+    evaluated_in_replay = False
 
     def observe(self, snapshot: AircraftSnapshot, now: datetime) -> float | None:
         sample = snapshot.latest_with_position
