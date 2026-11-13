@@ -24,21 +24,10 @@ export class ErrorMessages {
     409: "This alert was already processed.",
   });
 
-  /** Pages about aircraft and flights, open to every logged-in user. */
-  static readonly AIRCRAFT = new ErrorMessages({
-    401: "Log in to look up aircraft.",
-    422: "Check the search criteria.",
-  });
-
   private readonly texts: ErrorTexts;
 
   constructor(texts: ErrorTexts = {}) {
     this.texts = { ...ErrorMessages.GENERAL, ...texts };
-  }
-
-  /** The same messages, with `text` for a missing item (404). */
-  withNotFound(text: string): ErrorMessages {
-    return new ErrorMessages({ ...this.texts, 404: text });
   }
 
   /** The message for this failure; any failure without an HTTP status is a network one. */

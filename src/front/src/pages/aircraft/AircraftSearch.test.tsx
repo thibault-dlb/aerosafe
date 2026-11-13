@@ -1,13 +1,16 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Aircraft } from "@/models/Aircraft";
+import PreferencesProvider from "@/providers/PreferencesProvider";
 import { ApiError } from "@/services/ApiClient";
 import type { AircraftService } from "@/services/AircraftService";
+import { MapService } from "@/services/MapService";
 
 import AircraftSearch from "./AircraftSearch";
 import { parseArea } from "./area";
+import { memoryStore } from "./testStore";
 
 const LOCATED = new Aircraft(
   "01JC0000000000000000000001",
@@ -18,15 +21,18 @@ const LOCATED = new Aircraft(
   new Date("2026-11-09T10:00:00Z"),
   48.85,
   2.35,
+  10972.8,
 );
 const UNSEEN = new Aircraft("01JC0000000000000000000002", "4ca123", null, null, null, null, null, null);
 
-function renderWith(search: AircraftService["search"]) {
+function renderWith(search: AircraftService["search"], language: "en" | "fr" = "en") {
   const service = { search: vi.fn(search) } as unknown as AircraftService;
   render(
-    <MemoryRouter>
-      <AircraftSearch service={service} />
-    </MemoryRouter>,
+    <PreferencesProvider store={memoryStore(language)}>
+      <MemoryRouter>
+        <AircraftSearch service={service} />
+      </MemoryRouter>
+    </PreferencesProvider>,
   );
   return service.search as ReturnType<typeof vi.fn>;
 }
@@ -34,6 +40,10 @@ function renderWith(search: AircraftService["search"]) {
 function fill(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("parseArea", () => {
   it("is empty when no bound is filled", () => {
@@ -61,6 +71,14 @@ describe("AircraftSearch", () => {
     expect(screen.getByRole("heading", { name: "Aircraft search" })).toBeInTheDocument();
   });
 
+  it("is in French by default", async () => {
+    renderWith(async () => [], "fr");
+
+    expect(screen.getByRole("heading", { name: "Recherche d'aéronefs" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Rechercher" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Aucun aéronef");
+  });
+
   it("sends the criteria and lists the aircraft with a link to their record", async () => {
     const search = renderWith(async () => [LOCATED, UNSEEN]);
 
@@ -81,6 +99,18 @@ describe("AircraftSearch", () => {
     );
     expect(screen.getByText("Never")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Map of 1 aircraft" })).toBeInTheDocument();
+  });
+
+  it("puts the altitude on the map so the marker takes its shade", async () => {
+    const showAircraft = vi.spyOn(MapService.prototype, "showAircraft");
+    renderWith(async () => [LOCATED]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+    await screen.findByText("1 aircraft found");
+    expect(showAircraft).toHaveBeenLastCalledWith([
+      { latitude: 48.85, longitude: 2.35, altitude: 10972.8, label: "D-AIBD" },
+    ]);
   });
 
   it("sends the area when its four bounds are filled", async () => {

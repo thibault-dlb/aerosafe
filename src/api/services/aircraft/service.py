@@ -11,6 +11,7 @@ from core.data_mode import REPLAY_WINDOW, DataMode
 from core.repository import Repository
 from models import Aircraft, AircraftModel, Airline, Observation
 from schemas.aircraft import AircraftSummary
+from services.aircraft.observations import to_float
 
 WGS84 = 4326
 
@@ -79,6 +80,7 @@ class AircraftService:
                 Observation.position,
                 func.ST_Y(Observation.position).label("latitude"),
                 func.ST_X(Observation.position).label("longitude"),
+                Observation.altitude,
             )
             .where(*conditions)
             .order_by(Observation.last_contact_at.desc())
@@ -97,6 +99,7 @@ class AircraftService:
                 Observation.position,
                 func.ST_Y(Observation.position).label("latitude"),
                 func.ST_X(Observation.position).label("longitude"),
+                Observation.altitude,
             )
             .where(
                 Observation.deleted_at.is_(None),
@@ -134,7 +137,7 @@ class AircraftService:
             latest = self.latest_observation(at)
             statement = statement.outerjoin(latest, true())
         statement = statement.add_columns(
-            latest.c.last_contact_at, latest.c.latitude, latest.c.longitude
+            latest.c.last_contact_at, latest.c.latitude, latest.c.longitude, latest.c.altitude
         )
         return statement, latest
 
@@ -192,4 +195,5 @@ class AircraftService:
             last_contact_at=row.last_contact_at,
             latitude=row.latitude,
             longitude=row.longitude,
+            altitude=to_float(row.altitude),
         )

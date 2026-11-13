@@ -36,6 +36,8 @@ export class MapService {
   private readonly aircraftLayer = L.layerGroup();
   private readonly trajectoryLayer = L.layerGroup();
   private themeObserver: MutationObserver | null = null;
+  /** Without a choice of theme, the style sheet follows the system: watch it too. */
+  private systemTheme: MediaQueryList | null = null;
   private aircraft: MapPosition[] = [];
   private segments: MapPosition[][] = [];
 
@@ -56,6 +58,10 @@ export class MapService {
       attributes: true,
       attributeFilter: ["data-theme"],
     });
+    if (typeof window.matchMedia === "function") {
+      this.systemTheme = window.matchMedia("(prefers-color-scheme: light)");
+      this.systemTheme.addEventListener("change", this.redraw);
+    }
   }
 
   /** Replaces the aircraft markers. */
@@ -86,6 +92,8 @@ export class MapService {
   destroy(): void {
     this.themeObserver?.disconnect();
     this.themeObserver = null;
+    this.systemTheme?.removeEventListener("change", this.redraw);
+    this.systemTheme = null;
     this.map?.remove();
     this.map = null;
   }
@@ -139,10 +147,10 @@ export class MapService {
   }
 
   /** Draws again with the colours of the theme in use, without moving the view. */
-  private redraw(): void {
+  private readonly redraw = (): void => {
     this.drawAircraft();
     this.drawSegments();
-  }
+  };
 
   private fit(map: L.Map, positions: MapPosition[]): void {
     if (positions.length === 1) {

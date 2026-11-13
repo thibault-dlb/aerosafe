@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Observation } from "@/models/Aircraft";
 import { Flight, FlightDetail as Detail, FlightStatistics, TrajectoryGap } from "@/models/Flight";
+import { memoryStore } from "@/pages/aircraft/testStore";
+import PreferencesProvider from "@/providers/PreferencesProvider";
 import { ApiError } from "@/services/ApiClient";
 import type { AircraftService } from "@/services/AircraftService";
 import { MapService } from "@/services/MapService";
@@ -19,14 +21,16 @@ function at(seconds: number, altitude: number | null): Observation {
   return new Observation(new Date(T0 + seconds * 1000), null, 48 + seconds / 10000, 2, altitude, 230, 0, false, ID);
 }
 
-function renderFlight(flight: AircraftService["flight"]) {
+function renderFlight(flight: AircraftService["flight"], language: "en" | "fr" = "en") {
   const service = { flight: vi.fn(flight) } as unknown as AircraftService;
   render(
-    <MemoryRouter initialEntries={[`/flights/${ID}`]}>
-      <Routes>
-        <Route path="/flights/:flightId" element={<FlightDetail service={service} />} />
-      </Routes>
-    </MemoryRouter>,
+    <PreferencesProvider store={memoryStore(language)}>
+      <MemoryRouter initialEntries={[`/flights/${ID}`]}>
+        <Routes>
+          <Route path="/flights/:flightId" element={<FlightDetail service={service} />} />
+        </Routes>
+      </MemoryRouter>
+    </PreferencesProvider>,
   );
   return service.flight as ReturnType<typeof vi.fn>;
 }
@@ -55,7 +59,7 @@ describe("FlightDetail", () => {
     expect(screen.getByText("11000 m")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Altitude profile" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Speed profile" })).toBeInTheDocument();
-    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     // The map draws in an effect that can run after the title shows, so wait for it.
     await waitFor(() => expect(showSegments.mock.lastCall?.[0]).toHaveLength(1));
   });
@@ -65,7 +69,7 @@ describe("FlightDetail", () => {
     const gap = new TrajectoryGap(new Date(T0 + 30_000), new Date(T0 + 930_000), 900);
     renderFlight(async () => new Detail(SUMMARY, [at(0, 9000), at(30, 9000), at(930, 9000)], [gap], STATS));
 
-    expect(await screen.findByRole("note")).toHaveTextContent("1 missing segment,");
+    expect(await screen.findByRole("alert")).toHaveTextContent("1 missing segment,");
     expect(screen.getByText(/15 min 00 s/)).toBeInTheDocument();
     expect(showSegments.mock.lastCall?.[0]).toHaveLength(2);
   });
@@ -78,9 +82,26 @@ describe("FlightDetail", () => {
     expect(screen.getAllByText("Not enough values to draw a profile.")).toHaveLength(2);
   });
 
+  it("is in French by default", async () => {
+    const gap = new TrajectoryGap(new Date(T0 + 30_000), new Date(T0 + 930_000), 900);
+    renderFlight(async () => new Detail(SUMMARY, [at(0, 9000), at(30, 9000), at(930, 9000)], [gap], STATS), "fr");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("1 segment manquant");
+    expect(screen.getByRole("heading", { name: "Statistiques" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Profil : Altitude" })).toBeInTheDocument();
+  });
+
   it("says when the flight does not exist", async () => {
     renderFlight(async () => {
       throw new ApiError(404);
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This flight does not exist.");
+  });
+
+  it("says the flight does not exist when its identifier is not valid", async () => {
+    renderFlight(async () => {
+      throw new ApiError(422);
     });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("This flight does not exist.");

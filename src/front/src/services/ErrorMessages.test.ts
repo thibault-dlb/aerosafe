@@ -22,15 +22,6 @@ describe("ErrorMessages", () => {
     expect(messages.describe(new ApiError(401))).toContain("Log in");
   });
 
-  it("explains a missing aircraft or flight", () => {
-    const messages = ErrorMessages.AIRCRAFT.withNotFound("This flight does not exist.");
-
-    expect(messages.describe(new ApiError(404))).toBe("This flight does not exist.");
-    expect(messages.describe(new ApiError(401))).toBe("Log in to look up aircraft.");
-    expect(messages.describe(new ApiError(422))).toBe("Check the search criteria.");
-    expect(ErrorMessages.AIRCRAFT.describe(new ApiError(404))).toBe("Not found.");
-  });
-
   it("explains each failure on the Supervisor pages", () => {
     const messages = ErrorMessages.SUPERVISOR;
 

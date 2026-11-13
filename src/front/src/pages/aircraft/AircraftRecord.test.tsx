@@ -1,13 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { Aircraft, Observation } from "@/models/Aircraft";
 import { Flight } from "@/models/Flight";
+import PreferencesProvider from "@/providers/PreferencesProvider";
 import { ApiError } from "@/services/ApiClient";
 import type { AircraftService } from "@/services/AircraftService";
 
 import AircraftRecord, { HISTORY_SIZE } from "./AircraftRecord";
+import { memoryStore } from "./testStore";
 
 const ID = "01JC0000000000000000000001";
 const AIRCRAFT = new Aircraft(ID, "3c6444", "D-AIBD", "Airbus A319", "Lufthansa", new Date("2026-11-09T10:00:00Z"), 48.85, 2.35);
@@ -18,13 +20,15 @@ const OBSERVATIONS = [
 ];
 const FLIGHT = new Flight("01JC0000000000000000000F01", ID, "3c6444", "D-AIBD", "DLH4AB", new Date("2026-11-09T09:00:00Z"), null, "Frankfurt", null);
 
-function renderRecord(service: Partial<AircraftService>) {
+function renderRecord(service: Partial<AircraftService>, language: "en" | "fr" = "en") {
   render(
-    <MemoryRouter initialEntries={[`/aircraft/${ID}`]}>
-      <Routes>
-        <Route path="/aircraft/:aircraftId" element={<AircraftRecord service={service as AircraftService} />} />
-      </Routes>
-    </MemoryRouter>,
+    <PreferencesProvider store={memoryStore(language)}>
+      <MemoryRouter initialEntries={[`/aircraft/${ID}`]}>
+        <Routes>
+          <Route path="/aircraft/:aircraftId" element={<AircraftRecord service={service as AircraftService} />} />
+        </Routes>
+      </MemoryRouter>
+    </PreferencesProvider>,
   );
 }
 
@@ -53,14 +57,24 @@ describe("AircraftRecord", () => {
     expect(service.observations).toHaveBeenCalledWith(ID, { limit: HISTORY_SIZE });
     expect(screen.getByText("Airbus A319")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "DLH4AB" })).toHaveAttribute("href", "/flights/01JC0000000000000000000F01");
-    expect(screen.getByText(/in progress/)).toHaveTextContent("Frankfurt → ?");
+    const [flightRow] = within(screen.getAllByRole("table")[0]).getAllByRole("row").slice(1);
+    expect(flightRow).toHaveTextContent("in progress");
+    expect(flightRow).toHaveTextContent("Frankfurt → ?");
     expect(screen.getByRole("img", { name: "Map of 1 aircraft" })).toBeInTheDocument();
 
-    const rows = screen.getAllByRole("row");
+    const rows = within(screen.getAllByRole("table")[1]).getAllByRole("row");
     expect(rows[1]).toHaveTextContent("10000 m");
     expect(rows[1]).toHaveTextContent("Airborne");
     expect(rows[2]).toHaveTextContent("On ground");
     expect(rows[2]).toHaveTextContent("–");
+  });
+
+  it("is in French by default", async () => {
+    renderRecord(serviceWith(NOWHERE, [], []), "fr");
+
+    expect(await screen.findByText("Aucune position connue.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Fiche aéronef" })).toBeInTheDocument();
+    expect(screen.getByText("Jamais")).toBeInTheDocument();
   });
 
   it("says when nothing was recorded", async () => {
@@ -82,5 +96,15 @@ describe("AircraftRecord", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("does not exist");
     expect(screen.getByRole("link", { name: "Back to the search" })).toBeInTheDocument();
+  });
+
+  it("says the aircraft does not exist when its identifier is not valid", async () => {
+    renderRecord({
+      get: vi.fn().mockRejectedValue(new ApiError(422)),
+      observations: vi.fn().mockResolvedValue([]),
+      flights: vi.fn().mockResolvedValue([]),
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This aircraft does not exist.");
   });
 });

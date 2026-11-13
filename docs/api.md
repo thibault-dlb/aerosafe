@@ -89,11 +89,12 @@ Aircraft (search result and record):
   "airline": "Lufthansa",
   "last_contact_at": "2026-11-09T10:00:00Z",
   "latitude": 48.85,
-  "longitude": 2.35
+  "longitude": 2.35,
+  "altitude": 10972.8
 }
 ```
 
-`model`, `airline` and `registration` are `null` when unknown; the last contact and the position are `null` when the aircraft never sent any.
+`model`, `airline` and `registration` are `null` when unknown; the last contact and the position are `null` when the aircraft never sent any. `altitude` is the one of the latest observation, in metres, and is `null` when OpenSky did not send it.
 
 `GET /aircraft/{aircraft_id}/observations` takes `start` and `end` (ISO 8601, inclusive, both optional; `start` must not be after `end`) and `limit` (1 to 5 000, default 500). It returns the latest `limit` observations of the period, in chronological order:
 
