@@ -10,6 +10,7 @@ from middlewares.requests import RequestLoggingMiddleware
 from routes.router import api_router, health_router
 from services.auth.tokens import AccessTokenCodec
 from services.collection.scheduler import Scheduler
+from services.replay.scheduler import ReplayScheduler
 
 
 @asynccontextmanager
@@ -18,7 +19,10 @@ async def lifespan(_application: FastAPI) -> AsyncGenerator[None, None]:
     AccessTokenCodec.check_secret(auth_settings.AUTH_JWT_SECRET)
     scheduler = Scheduler()
     await scheduler.start()
+    replay_scheduler = ReplayScheduler()
+    await replay_scheduler.start()
     yield
+    await replay_scheduler.stop()
     await scheduler.stop()
     await database.close()
 

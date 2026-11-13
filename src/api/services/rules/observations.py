@@ -4,7 +4,7 @@ from sqlalchemy import Select, func, select, true
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.data_mode import DataMode
+from core.data_mode import REPLAY_WINDOW, DataMode
 from models import Aircraft, Observation
 from services.rules.base import AircraftSnapshot, StateSample
 from services.rules.rates import MIN_GAP_SECONDS
@@ -13,10 +13,9 @@ from services.rules.rates import MIN_GAP_SECONDS
 # so it does not raise R1 and R2 alerts forever.
 SILENCE_LIMIT = timedelta(minutes=30)
 
-# The replayed traffic has a point every second, so a window of 30 minutes would read millions
-# of rows. A minute is enough to find the latest point of an aircraft and, 10 s or more before
+# A minute is enough to find the latest point of a replayed aircraft and, 10 s or more before
 # it, the point that R3 to R5 compare it with.
-REPLAY_SILENCE_LIMIT = timedelta(minutes=1)
+REPLAY_SILENCE_LIMIT = REPLAY_WINDOW
 
 
 def to_float(value: object) -> float | None:

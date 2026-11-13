@@ -1,8 +1,14 @@
+from datetime import timedelta
 from enum import StrEnum
 
 from sqlalchemy import ColumnElement, ScalarSelect, select
 
 from models.reference import DataSource
+
+# A replayed aircraft counts as present at an instant when it sent a point in the minute before:
+# the dataset has a point every second, so a longer window would read millions of rows, and a
+# shorter one would lose the aircraft that miss a few seconds.
+REPLAY_WINDOW = timedelta(minutes=1)
 
 
 class DataMode(StrEnum):
