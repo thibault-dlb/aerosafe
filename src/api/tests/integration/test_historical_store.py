@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.aircraft import Aircraft
 from models.flight import Flight
 from models.observation import Observation
-from services.historical.prc2024 import DATASET_END, DATASET_START, ObservationBatch
+from models.reference import DataSource
+from services.historical.prc2024 import ObservationBatch
 from services.historical.store import HistoricalStore, NewFlight, to_microseconds
 
 pytestmark = pytest.mark.integration
@@ -153,14 +154,31 @@ async def test_the_observations_are_counted_per_aircraft(session: AsyncSession) 
     assert await store.count_observations([]) == 0
 
 
-async def test_an_observation_outside_the_year_of_the_dataset_is_detected(
+async def test_the_imported_aircraft_take_the_source_of_the_replay(session: AsyncSession) -> None:
+    code = icao24()
+    aircraft = (await HistoricalStore(session).ensure_aircraft([code]))[code]
+
+    source = await session.scalar(
+        select(DataSource.code)
+        .join(Aircraft, Aircraft.source_id == DataSource.id)
+        .where(Aircraft.id == aircraft)
+    )
+
+    assert source == "REJEU"
+
+
+async def test_a_synthetic_code_can_equal_the_address_of_a_live_aircraft(
     session: AsyncSession,
 ) -> None:
-    store = HistoricalStore(session)
-    aircraft, flight = await aircraft_and_flight(session)
-    live = to_microseconds(datetime(2026, 11, 9, 10, tzinfo=UTC))
-    await store.insert_observations(batch(aircraft, flight, size=1, start_us=live))
+    code = icao24()
+    live = Aircraft(icao24=code)  # the source of a new aircraft is DIRECT by default
+    session.add(live)
+    await session.flush()
 
-    assert await store.has_observations_outside(DATASET_START, DATASET_END) is True
-    everything = (datetime(1970, 1, 1, tzinfo=UTC), datetime(2100, 1, 1, tzinfo=UTC))
-    assert await store.has_observations_outside(*everything) is False
+    replayed = (await HistoricalStore(session).ensure_aircraft([code]))[code]
+
+    assert replayed != live.id
+    count = await session.scalar(
+        select(func.count()).select_from(Aircraft).where(Aircraft.icao24 == code)
+    )
+    assert count == 2

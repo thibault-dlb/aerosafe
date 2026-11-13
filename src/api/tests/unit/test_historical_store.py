@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.dialects import postgresql
 
 from core.models import ULID_PATTERN
-from services.historical.prc2024 import DATASET_END, DATASET_START, ObservationBatch
+from services.historical.prc2024 import ObservationBatch
 from services.historical.store import (
     _INSERT_OBSERVATIONS,
     HistoricalStore,
@@ -76,23 +76,37 @@ class TestEnsureAircraft:
     async def test_the_new_aircraft_are_inserted_with_a_public_identifier_then_read_back(
         self,
     ) -> None:
-        session = FakeSession([result(), result([("000001", 11), ("000002", 12)])])
+        session = FakeSession([result(), result([("000001", 11), ("000002", 12)])], scalar=7)
 
         aircraft = await HistoricalStore(session).ensure_aircraft(["000001", "000002"])  # type: ignore[arg-type]
 
-        statement, rows = session.executed[0]
-        assert 'ON CONFLICT ("CD_ICAO24") DO NOTHING' in sql(statement)
+        statement, rows = session.executed[1]
+        assert 'ON CONFLICT ("CD_ICAO24", "ID_SOURCE_DONNEE") DO NOTHING' in sql(statement)
         assert [row["icao24"] for row in rows] == ["000001", "000002"]
         assert all(re.match(ULID_PATTERN, row["public_id"]) for row in rows)
         assert aircraft == {"000001": 11, "000002": 12}
 
-    async def test_the_known_aircraft_are_read_with_one_array_parameter(self) -> None:
-        session = FakeSession([result(), result([("000001", 11)])])
+    async def test_the_aircraft_take_the_source_of_the_replay(self) -> None:
+        session = FakeSession([result(), result([("000001", 11)])], scalar=7)
 
         await HistoricalStore(session).ensure_aircraft(["000001"])  # type: ignore[arg-type]
 
-        query = sql(session.executed[1][0])
+        source_query, _ = session.executed[0]
+        assert "R_SOURCE_DONNEE" in sql(source_query)
+        assert "REJEU" in str(source_query.compile(compile_kwargs={"literal_binds": True}))  # type: ignore[attr-defined]
+        _, rows = session.executed[1]
+        assert [row["source_id"] for row in rows] == [7]
+
+    async def test_the_known_aircraft_are_read_with_one_array_parameter_and_their_source(
+        self,
+    ) -> None:
+        session = FakeSession([result(), result([("000001", 11)])], scalar=7)
+
+        await HistoricalStore(session).ensure_aircraft(["000001"])  # type: ignore[arg-type]
+
+        query = sql(session.executed[2][0])
         assert '"CD_ICAO24" = ANY (' in query
+        assert '"ID_SOURCE_DONNEE" =' in query
         assert "SELECT *" not in query
 
 
@@ -155,19 +169,6 @@ class TestCounts:
 
     async def test_a_missing_count_is_zero(self) -> None:
         assert await HistoricalStore(FakeSession(scalar=None)).count_observations([1]) == 0  # type: ignore[arg-type]
-
-    @pytest.mark.parametrize("found", [True, False])
-    async def test_other_data_is_detected_outside_the_year_of_the_dataset(
-        self, found: bool
-    ) -> None:
-        session = FakeSession(scalar=found)
-
-        outside = await HistoricalStore(session).has_observations_outside(  # type: ignore[arg-type]
-            DATASET_START, DATASET_END
-        )
-
-        assert outside is found
-        assert "EXISTS" in sql(session.executed[0][0])
 
 
 class TestInsertObservations:

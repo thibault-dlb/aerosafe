@@ -33,12 +33,7 @@ from services.historical.importer import (
     Progress,
     UnitOfWork,
 )
-from services.historical.prc2024 import (
-    DATASET_END,
-    DATASET_START,
-    Prc2024Archive,
-    Prc2024Reader,
-)
+from services.historical.prc2024 import Prc2024Archive, Prc2024Reader
 
 # Measured on 2022-07-01: 318 bytes a point in PostgreSQL (142 for the table, 162 for its six
 # indexes), 1.1 GB for the 3.7 million points of that day (docs/historical-data.md).
@@ -46,7 +41,6 @@ ESTIMATED_BYTES_PER_POINT = 320
 
 EXIT_OK = 0
 EXIT_NO_FILE = 1
-EXIT_FOREIGN_DATABASE = 2
 
 
 class DryRunCommand:
@@ -151,16 +145,6 @@ class ImportCommand:
         if not files:
             self._say("No daily file to import.")
             return EXIT_NO_FILE
-
-        self._say(f"Checking that {self._target} only holds the dataset...")
-        async with self._unit_of_work() as sink:
-            if await sink.has_observations_outside(DATASET_START, DATASET_END):
-                self._say(
-                    "This database holds observations dated outside 2022. The synthetic aircraft "
-                    "codes of the dataset could collide with real ones: import into a database "
-                    "of its own."
-                )
-                return EXIT_FOREIGN_DATABASE
 
         parallel = len(self._importers)
         together = f" for each of {parallel} files loaded at the same time" if parallel > 1 else ""

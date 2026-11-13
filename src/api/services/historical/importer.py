@@ -3,7 +3,6 @@ import time
 from collections.abc import Callable, Sequence
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Protocol
@@ -28,8 +27,6 @@ class HistoricalImportError(RuntimeError):
 
 class ObservationSink(Protocol):
     """What the importer needs from the database; `HistoricalStore` is the real one."""
-
-    async def has_observations_outside(self, start: datetime, end: datetime) -> bool: ...
 
     async def ensure_aircraft(self, icao24s: Sequence[str]) -> dict[str, int]: ...
 
