@@ -126,14 +126,18 @@ async def get_observations(
     service: Service,
     reader: Reader,
     _caller: Caller,
+    scope: Scope,
     start: Annotated[datetime | None, Query(description="Start of the period, inclusive")] = None,
     end: Annotated[datetime | None, Query(description="End of the period, inclusive")] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_OBSERVATIONS)] = 500,
 ) -> list[ObservationPoint]:
     """Flight parameters of the aircraft over time, oldest first (BF-05, BF-06).
 
-    Returns the latest `limit` observations of the period."""
+    Returns the latest `limit` observations of the period. With `source=replay`, the period
+    never goes past the simulated instant."""
     await find_aircraft(service, aircraft_id)
+    if scope.at is not None and (end is None or end > scope.at):
+        end = scope.at
     try:
         period = ObservationPeriod(start=start, end=end, limit=limit)
     except ValueError as error:
@@ -149,8 +153,12 @@ async def get_flights(
     service: Service,
     flights: FlightServiceDep,
     _caller: Caller,
+    scope: Scope,
     limit: Annotated[int, Query(ge=1, le=MAX_RESULTS)] = 50,
 ) -> list[FlightSummary]:
-    """Flights of the aircraft, the most recent first (BF-07)."""
+    """Flights of the aircraft, the most recent first (BF-07). With `source=replay`, the
+    flights that started before the simulated instant."""
     await find_aircraft(service, aircraft_id)
-    return await flights.list_for_aircraft(aircraft_id, limit)
+    if scope.at is None:
+        return await flights.list_for_aircraft(aircraft_id, limit)
+    return await flights.list_for_aircraft(aircraft_id, limit, scope.at)

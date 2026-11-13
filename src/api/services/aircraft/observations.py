@@ -74,18 +74,20 @@ class ObservationReader:
         result = await self._session.execute(self.history_query(aircraft_public_id, period))
         return [self.to_point(row) for row in reversed(result.all())]
 
-    def flight_query(self, flight_id: int, limit: int = MAX_FLIGHT_POINTS) -> Select:
-        """Observations of one flight, oldest first."""
-        return (
-            self.points_query()
-            .where(Observation.flight_id == flight_id)
-            .order_by(Observation.last_contact_at)
-            .limit(limit)
-        )
+    def flight_query(
+        self, flight_id: int, limit: int = MAX_FLIGHT_POINTS, at: datetime | None = None
+    ) -> Select:
+        """Observations of one flight, oldest first, up to the simulated instant `at` if given."""
+        statement = self.points_query().where(Observation.flight_id == flight_id)
+        if at is not None:
+            statement = statement.where(Observation.last_contact_at <= at)
+        return statement.order_by(Observation.last_contact_at).limit(limit)
 
-    async def flight(self, flight_id: int) -> list[ObservationPoint]:
-        """The trajectory of one flight, from its internal key, in chronological order."""
-        result = await self._session.execute(self.flight_query(flight_id))
+    async def flight(self, flight_id: int, at: datetime | None = None) -> list[ObservationPoint]:
+        """The trajectory of one flight, from its internal key, in chronological order.
+
+        In a replay, `at` is the simulated instant: the trajectory stops there."""
+        result = await self._session.execute(self.flight_query(flight_id, at=at))
         return [self.to_point(row) for row in result.all()]
 
     @staticmethod
