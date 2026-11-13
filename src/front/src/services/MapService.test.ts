@@ -112,6 +112,31 @@ describe("MapService", () => {
     document.documentElement.removeAttribute("data-theme");
   });
 
+  it("draws again when the system theme changes", () => {
+    let changed: (() => void) | undefined;
+    const media = {
+      addEventListener: (_: string, listener: () => void) => (changed = listener),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal("matchMedia", () => media);
+    const theme = new MapTheme();
+    const colors = { low: "#111111", mid: "#222222", high: "#333333", selected: "#444444" };
+    const read = vi.spyOn(theme, "colors").mockReturnValue(colors);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    service = new MapService(theme);
+    service.mount(container);
+    service.showAircraft([PARIS]);
+
+    read.mockReturnValue({ ...colors, mid: "#abcdef" });
+    changed?.();
+
+    expect(service.aircraftColors).toEqual(["#abcdef"]);
+    service.destroy();
+    expect(media.removeEventListener).toHaveBeenCalledWith("change", changed);
+    vi.unstubAllGlobals();
+  });
+
   it("stops watching the theme once destroyed", async () => {
     mounted();
     service.showAircraft([PARIS]);
