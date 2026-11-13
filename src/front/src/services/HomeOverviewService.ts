@@ -2,6 +2,7 @@ import type { Aircraft } from "@/models/Aircraft";
 import { ApiError } from "@/services/ApiClient";
 import { type Area, AircraftService } from "@/services/AircraftService";
 import { AlertService } from "@/services/AlertService";
+import { DataModeService } from "@/services/DataModeService";
 
 /** What one request gave: its data, or the reason there is none. */
 export type Loaded<T> =
@@ -20,20 +21,27 @@ export interface HomeOverview {
   dayAlerts: Loaded<number>;
 }
 
-/** Collects the live figures of the home page from the aircraft and alert endpoints. */
+/**
+ * Collects the figures of the home page from the aircraft and alert endpoints: the live ones,
+ * or those of the replay at the simulated instant (the services follow the data mode).
+ */
 export class HomeOverviewService {
   /** The Île-de-France collection area (docs/open-points.md): latitude 48.0 to 49.3, longitude 1.4 to 3.6. */
   static readonly AREA: Area = { south: 48.0, west: 1.4, north: 49.3, east: 3.6 };
+  /** Metropolitan France, the area of the `FRANCE` collection profile: the replayed data covers it. */
+  static readonly FRANCE_AREA: Area = { south: 41.3, west: -5.2, north: 51.1, east: 9.6 };
   static readonly MAX_AIRCRAFT = 200;
 
   constructor(
     private readonly aircraft: AircraftService = new AircraftService(),
     private readonly alerts: AlertService = new AlertService(),
+    private readonly modes: DataModeService = new DataModeService(),
   ) {}
 
   async load(): Promise<HomeOverview> {
+    const area = this.modes.isReplay() ? HomeOverviewService.FRANCE_AREA : HomeOverviewService.AREA;
     const [aircraft, active, day] = await Promise.allSettled([
-      this.aircraft.search({ area: HomeOverviewService.AREA, limit: HomeOverviewService.MAX_AIRCRAFT }),
+      this.aircraft.search({ area, limit: HomeOverviewService.MAX_AIRCRAFT }),
       this.alerts.search({ status: "active", limit: 1 }),
       this.alerts.statistics(),
     ]);

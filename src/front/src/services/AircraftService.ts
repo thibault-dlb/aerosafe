@@ -1,6 +1,7 @@
 import { Aircraft, type AircraftJson, Observation, type ObservationJson } from "@/models/Aircraft";
 import { Flight, FlightDetail, type FlightDetailJson, type FlightSummaryJson } from "@/models/Flight";
 import { ApiClient } from "@/services/ApiClient";
+import { DataModeService } from "@/services/DataModeService";
 
 /** Geographic search area, in degrees. */
 export interface Area {
@@ -25,9 +26,15 @@ export interface ObservationPeriod {
   limit?: number;
 }
 
-/** Calls the aircraft and flights endpoints of the API (BF-04 to BF-08). */
+/**
+ * Calls the aircraft and flights endpoints of the API (BF-04 to BF-08). In the replay mode,
+ * every request carries `source=replay`: the API answers for the shared simulated instant.
+ */
 export class AircraftService {
-  constructor(private readonly client: ApiClient = new ApiClient()) {}
+  constructor(
+    private readonly client: ApiClient = new ApiClient(),
+    private readonly modes: DataModeService = new DataModeService(),
+  ) {}
 
   static searchQuery(search: AircraftSearch): string {
     const params = new URLSearchParams();
@@ -51,13 +58,15 @@ export class AircraftService {
 
   async search(search: AircraftSearch): Promise<Aircraft[]> {
     const json = await this.client.get<AircraftJson[]>(
-      `/v1/aircraft${AircraftService.searchQuery(search)}`,
+      `/v1/aircraft${this.modes.withSource(AircraftService.searchQuery(search))}`,
     );
     return json.map((item) => Aircraft.fromJson(item));
   }
 
   async get(aircraftId: string): Promise<Aircraft> {
-    const json = await this.client.get<AircraftJson>(`/v1/aircraft/${encodeURIComponent(aircraftId)}`);
+    const json = await this.client.get<AircraftJson>(
+      `/v1/aircraft/${encodeURIComponent(aircraftId)}${this.modes.withSource("")}`,
+    );
     return Aircraft.fromJson(json);
   }
 
@@ -66,7 +75,7 @@ export class AircraftService {
     if (period.start) params.set("start", period.start.toISOString());
     if (period.end) params.set("end", period.end.toISOString());
     if (period.limit !== undefined) params.set("limit", String(period.limit));
-    const query = params.toString() ? `?${params.toString()}` : "";
+    const query = this.modes.withSource(params.toString() ? `?${params.toString()}` : "");
     const json = await this.client.get<ObservationJson[]>(
       `/v1/aircraft/${encodeURIComponent(aircraftId)}/observations${query}`,
     );
@@ -75,13 +84,15 @@ export class AircraftService {
 
   async flights(aircraftId: string): Promise<Flight[]> {
     const json = await this.client.get<FlightSummaryJson[]>(
-      `/v1/aircraft/${encodeURIComponent(aircraftId)}/flights`,
+      `/v1/aircraft/${encodeURIComponent(aircraftId)}/flights${this.modes.withSource("")}`,
     );
     return json.map((item) => Flight.fromJson(item));
   }
 
   async flight(flightId: string): Promise<FlightDetail> {
-    const json = await this.client.get<FlightDetailJson>(`/v1/flights/${encodeURIComponent(flightId)}`);
+    const json = await this.client.get<FlightDetailJson>(
+      `/v1/flights/${encodeURIComponent(flightId)}${this.modes.withSource("")}`,
+    );
     return FlightDetail.fromDetailJson(json);
   }
 }

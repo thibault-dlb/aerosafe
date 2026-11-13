@@ -25,6 +25,28 @@ export const en: Record<TranslationKey, string> = {
 
   "layout.skipToContent": "Skip to the content",
 
+  "mode.label": "Data source",
+  "mode.live": "Live",
+  "mode.replay": "Replay",
+
+  "replay.bar": "Historical traffic replay",
+  "replay.time": "Simulated time",
+  "replay.loading": "Loading the replay clock…",
+  "replay.unavailable": "No replay data is imported in the database.",
+  "replay.notStarted": "The replay has not started. A supervisor can start it at any time they choose.",
+  "replay.finished": "End of the data reached: the replay is stopped.",
+  "replay.period": "Available period: {start} → {end} (UTC)",
+  "replay.pause": "Pause",
+  "replay.resume": "Resume",
+  "replay.speed": "Speed",
+  "replay.speedOption": "×{speed}",
+  "replay.startAt": "Start at (UTC)",
+  "replay.start": "Start",
+  "replay.error.unauthenticated": "Log in to see the replay.",
+  "replay.error.forbidden": "Only a supervisor can drive the replay.",
+  "replay.error.invalid": "Time or speed refused: choose a time inside the available period.",
+  "replay.error.failed": "The replay clock cannot be reached. Trying again in a few seconds.",
+
   "home.tagline": "Live aeronautical data monitoring",
   "home.pitch":
     "AeroSafe tracks aircraft over France, spots abnormal situations with five business rules and raises alerts for supervisors.",
@@ -33,6 +55,9 @@ export const en: Record<TranslationKey, string> = {
   "home.disclaimer":
     "Educational project: AeroSafe is not a certified air traffic surveillance or management tool. It must never be used operationally.",
   "home.live.title": "Live · Île-de-France",
+  "home.replay.title": "Replay · {time} UTC · France",
+  "home.replay.waiting": "Replay not started",
+  "home.replay.login": "Log in to see the traffic replay.",
   "home.live.loading": "Loading the data…",
   "home.live.login": "Log in to see the live traffic.",
   "home.live.error": "Some data could not be loaded. Trying again in a few seconds.",

@@ -23,6 +23,28 @@ export const fr = {
 
   "layout.skipToContent": "Aller au contenu",
 
+  "mode.label": "Source des données",
+  "mode.live": "Direct",
+  "mode.replay": "Rejeu",
+
+  "replay.bar": "Rejeu du trafic historique",
+  "replay.time": "Instant simulé",
+  "replay.loading": "Chargement de l'horloge de rejeu…",
+  "replay.unavailable": "Aucune donnée de rejeu n'est importée dans la base.",
+  "replay.notStarted": "Le rejeu n'a pas démarré. Un superviseur peut le lancer à l'instant de son choix.",
+  "replay.finished": "Fin des données atteinte : le rejeu est arrêté.",
+  "replay.period": "Période disponible : {start} → {end} (UTC)",
+  "replay.pause": "Pause",
+  "replay.resume": "Reprendre",
+  "replay.speed": "Vitesse",
+  "replay.speedOption": "×{speed}",
+  "replay.startAt": "Démarrer à (UTC)",
+  "replay.start": "Démarrer",
+  "replay.error.unauthenticated": "Connectez-vous pour voir le rejeu.",
+  "replay.error.forbidden": "Seul un superviseur peut piloter le rejeu.",
+  "replay.error.invalid": "Instant ou vitesse refusés : choisissez un instant dans la période disponible.",
+  "replay.error.failed": "L'horloge de rejeu est injoignable. Nouvel essai dans quelques secondes.",
+
   "home.tagline": "Surveillance des données aéronautiques en direct",
   "home.pitch":
     "AeroSafe suit les aéronefs au-dessus de la France, repère les situations anormales avec cinq règles métier et lève des alertes pour les superviseurs.",
@@ -31,6 +53,9 @@ export const fr = {
   "home.disclaimer":
     "Projet pédagogique : AeroSafe n'est pas un outil certifié de surveillance ou de gestion du trafic aérien. Il ne doit jamais servir à un usage opérationnel.",
   "home.live.title": "En direct · Île-de-France",
+  "home.replay.title": "Rejeu · {time} UTC · France",
+  "home.replay.waiting": "Rejeu non démarré",
+  "home.replay.login": "Connectez-vous pour voir le rejeu du trafic.",
   "home.live.loading": "Chargement des données…",
   "home.live.login": "Connectez-vous pour voir le trafic en direct.",
   "home.live.error": "Certaines données n'ont pas pu être chargées. Nouvel essai dans quelques secondes.",

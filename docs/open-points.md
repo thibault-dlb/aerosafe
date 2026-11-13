@@ -1,6 +1,6 @@
 # Open points
 
-Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-10.
+Items the reference documents do not settle. The [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf) is the only source of truth. Nothing here has been decided on the team's behalf. Last updated: 2026-11-13.
 
 ## Pending decisions
 
@@ -36,6 +36,7 @@ Decisions that belong to the team and do not come from the sheet.
 | D-17 | Table for users | Decided on 2026-11-03: `UTILISATEUR`, a business table. Not `W_`, which the guide reserves for temporary or import tables |
 | D-18 | Storage of positions | Decided on 2026-11-03: PostGIS `geometry` column. Its exact name is set in the logical schema |
 | D-19 | Interface design | Decided on 2026-11-12: plain CSS with CSS modules, the two themes and fonts of the [brand guidelines](brand/brand-guidelines.md), French by default with an English switch, responsive. See [technology choices](technology-choices.md#interface-design) |
+| D-20 | Historical replay mode | Decided on 2026-11-13, reopening D-05: next to the live collection, the application can replay the historical traffic of the PRC Data Challenge 2024 dataset (the year 2022 over France and 100 km), imported into PostgreSQL. A shared simulated clock (start, pause, speed ×1, ×10 or ×60) drives what every user sees; the rules R3 to R5 run on the replayed traffic as the clock goes by (R1 and R2 need a contact time that the dataset does not have). A Live / Replay switch in the interface picks the source of the data. See [historical data](historical-data.md#replay-mode) |
 
 ## Team decisions pending confirmation
 
@@ -51,7 +52,7 @@ Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go bey
 | Flights | `Flight` is an explicit entity grouping observations. An observation joins the flight of the same `icao24` when at most N minutes separate it from the previous one; otherwise a new flight starts | D-06 |
 | Authentication | Built in the API: FastAPI, JWT of about 15 minutes, revocable refresh token in an `HttpOnly` cookie, argon2id. Keycloak dropped | A-06 |
 | Processing | Collection and evaluation run as scheduled tasks in the API; no worker container. Evaluation runs right after each collection | D-05 |
-| Collection | Live only. Two profiles switched by configuration: Île-de-France every 30 s (1 credit per request) or metropolitan France every 120 s (3 credits). No historical data (a replay of past traffic is explored in [historical data](historical-data.md) and not decided; keeping it would reopen D-05) | D-05 |
+| Collection | Live collection with two profiles switched by configuration: Île-de-France every 30 s (1 credit per request) or metropolitan France every 120 s (3 credits). The collection itself never reads historical data; a replay of past traffic is a separate mode, see D-20 (decided on 2026-11-13, which reopened D-05) | D-05, D-20 |
 | Mapping and CI | Leaflet (the `react-leaflet` wrapper depends on its licence, see D-01); GitHub Actions, scored in [technology choices](technology-choices.md) | D-01, D-02 |
 | Alerts | Aircraft, rule, date and time, message mandatory; observed value, threshold and criticality optional | A-03 |
 | Dashboard | Active alerts, tracked aircraft, alert statistics, collection state. Flight statistics: duration and distance, altitude and speed, number of observations | A-04 |

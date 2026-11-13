@@ -31,17 +31,22 @@ DETAIL = FlightDetail(
 class FakeFlightService:
     def __init__(self) -> None:
         self.limit: int | None = None
+        self.at: datetime | None = None
 
-    async def list_for_aircraft(self, _aircraft_id: str, limit: int = 50) -> list[FlightSummary]:
+    async def list_for_aircraft(
+        self, _aircraft_id: str, limit: int = 50, at: datetime | None = None
+    ) -> list[FlightSummary]:
         self.limit = limit
+        self.at = at
         return [SUMMARY]
 
-    async def get(self, public_id: str) -> FlightDetail | None:
+    async def get(self, public_id: str, at: datetime | None = None) -> FlightDetail | None:
+        self.at = at
         return DETAIL if public_id == DETAIL.id else None
 
 
 class FakeAircraftService:
-    async def get(self, public_id: str) -> AircraftSummary | None:
+    async def get(self, public_id: str, at: datetime | None = None) -> AircraftSummary | None:
         return AIRCRAFT if public_id == AIRCRAFT.id else None
 
 

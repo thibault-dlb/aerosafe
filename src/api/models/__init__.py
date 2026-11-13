@@ -11,9 +11,11 @@ from models.reference import (
     CollectionProfile,
     CollectionStatus,
     Criticality,
+    DataSource,
     Role,
     Unit,
 )
+from models.replay import ReplayParameter
 from models.rule import Rule
 from models.user import RefreshToken, User
 
@@ -30,9 +32,11 @@ __all__ = [
     "CollectionRun",
     "CollectionStatus",
     "Criticality",
+    "DataSource",
     "Flight",
     "Observation",
     "RefreshToken",
+    "ReplayParameter",
     "Role",
     "Rule",
     "Unit",

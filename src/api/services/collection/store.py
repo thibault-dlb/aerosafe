@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import TypeEngine
 
+from core.data_mode import DataMode
 from core.models import new_ulid
 from core.repository import Repository
 from models.aircraft import Aircraft
@@ -92,12 +93,16 @@ class ObservationStore:
         A soft-deleted aircraft keeps its row, so the insert skips it: it is read back with
         the others and its observations are still stored.
         """
+        # The source is the default of the column (DIRECT): the collector only knows live data.
         await self._session.execute(
-            insert(Aircraft).on_conflict_do_nothing(index_elements=["CD_ICAO24"]),
+            insert(Aircraft).on_conflict_do_nothing(
+                index_elements=["CD_ICAO24", "ID_SOURCE_DONNEE"]
+            ),
             [{"icao24": icao24, "public_id": new_ulid()} for icao24 in sorted(icao24s)],
         )
         statement = self._aircraft.select(include_deleted=True).where(
-            Aircraft.icao24 == _any_of(sorted(icao24s), Text())
+            Aircraft.icao24 == _any_of(sorted(icao24s), Text()),
+            DataMode.LIVE.matches(Aircraft.source_id),
         )
         return {aircraft.icao24: aircraft.id for aircraft in await self._session.scalars(statement)}
 

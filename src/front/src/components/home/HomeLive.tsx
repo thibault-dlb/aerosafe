@@ -5,14 +5,18 @@ import { ButtonLink } from "@/components/ui/Button";
 import Notice from "@/components/ui/Notice";
 import Panel from "@/components/ui/Panel";
 import StatTile from "@/components/ui/StatTile";
-import { useTranslation } from "@/hooks/useTranslation";
+import { usePreferences } from "@/hooks/usePreferences";
+import { useReplay } from "@/hooks/useReplay";
 import { type HomeOverview, HomeOverviewService } from "@/services/HomeOverviewService";
 import type { MapPosition } from "@/services/MapService";
+import { ReplayTime } from "@/services/ReplayTime";
 
 import styles from "./HomeLive.module.css";
 
 /** Time between two refreshes: the Île-de-France collection period. */
 export const REFRESH_MS = 30_000;
+/** In the replay the traffic moves with the simulated clock: the figures are read more often. */
+export const REPLAY_REFRESH_MS = 5_000;
 
 export interface HomeLiveProps {
   /** Where the figures come from. Tests give their own. */
@@ -24,9 +28,11 @@ export interface HomeLiveProps {
  * the page keeps working and invites the visitor to log in.
  */
 export default function HomeLive({ service }: HomeLiveProps) {
-  const { t } = useTranslation();
+  const { t, language, mode } = usePreferences();
+  const replay = useReplay();
   const [source] = useState(() => service ?? new HomeOverviewService());
   const [overview, setOverview] = useState<HomeOverview | null>(null);
+  const refreshMs = mode === "replay" ? REPLAY_REFRESH_MS : REFRESH_MS;
 
   useEffect(() => {
     let cancelled = false;
@@ -38,7 +44,7 @@ export default function HomeLive({ service }: HomeLiveProps) {
       setOverview(next);
       // Without a login there is nothing to refresh: stop asking until the page is opened again.
       if (next.aircraft.state !== "unauthenticated") {
-        timer = setTimeout(() => void refresh(), REFRESH_MS);
+        timer = setTimeout(() => void refresh(), refreshMs);
       }
     }
 
@@ -47,7 +53,7 @@ export default function HomeLive({ service }: HomeLiveProps) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [source]);
+  }, [source, refreshMs]);
 
   const positions = useMemo<MapPosition[]>(
     () =>
@@ -61,7 +67,14 @@ export default function HomeLive({ service }: HomeLiveProps) {
     [overview],
   );
 
-  const title = t("home.live.title");
+  const replaying = mode === "replay";
+  const instant = replay?.now ?? null;
+  let title = t("home.live.title");
+  if (replaying) {
+    title = instant
+      ? t("home.replay.title", { time: ReplayTime.short(instant, language) })
+      : t("home.replay.waiting");
+  }
 
   if (!overview) {
     return (
@@ -75,7 +88,7 @@ export default function HomeLive({ service }: HomeLiveProps) {
     return (
       <Panel title={title}>
         <div className={styles.login}>
-          <p>{t("home.live.login")}</p>
+          <p>{t(replaying ? "home.replay.login" : "home.live.login")}</p>
           <ButtonLink to="/login">{t("home.cta.login")}</ButtonLink>
         </div>
       </Panel>

@@ -55,6 +55,9 @@ class BusinessRule(ABC):
     code: str
     unit: str
     label: str
+    # Whether the rule means something on replayed traffic. The dataset has no contact time
+    # apart from the position time, so a delay since the last message is always zero there.
+    evaluated_in_replay: bool = True
 
     def check(
         self, snapshot: AircraftSnapshot, threshold: float, now: datetime

@@ -65,7 +65,7 @@ The application must eventually start from a single documented command, using co
 | [Requirements](docs/requirements.md) | Scope, requirements, user profiles, use cases |
 | [Business rules](docs/business-rules.md) | Rules R1 to R5 and alert format |
 | [OpenSky Network](docs/opensky.md) | Data source terms of use, access, fields and collection constraints |
-| [Historical data](docs/historical-data.md) | Sources explored to replay past traffic (exploration, nothing decided) |
+| [Historical data](docs/historical-data.md) | Sources explored to replay past traffic, the import of the PRC Data Challenge 2024 dataset and the replay mode (D-20) |
 | [Data model](docs/data-model.md) | Planned entities |
 | [Database conventions](docs/database-conventions.md) | Naming, keys, types, indexes, timestamps, migrations, security, checklist |
 | [Architecture](docs/architecture.md) | Components, constraints, planned UML diagrams |

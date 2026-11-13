@@ -10,7 +10,7 @@ This is the logical schema derived from the [class diagram](uml/class-diagram.md
 
 | Class | Table | Type | Summary |
 |---|---|---|---|
-| Aircraft | `AERONEF` | Business | ICAO24 address (business key), public ULID, registration, model, airline |
+| Aircraft | `AERONEF` | Business | ICAO24 address (business key, unique for each source), public ULID, registration, model, airline, source of the data (live or replay, D-20) |
 | Flight | `VOL` | Business | Observations of one aircraft with at most N minutes between them (D-06), public ULID, origin and destination airports |
 | Observation | `OBSERVATION` | Business | One OpenSky state vector: last contact, position time, PostGIS position, altitude, speed, heading, on ground |
 | Rule | `REGLE` | Business | Code, description, threshold, unit, default criticality; thresholds editable by the Supervisor (UC-05) |
@@ -19,6 +19,7 @@ This is the logical schema derived from the [class diagram](uml/class-diagram.md
 | RefreshToken | `JETON_RAFRAICHISSEMENT` | Business | Hash of a refresh token, expiry, revocation |
 | CollectionRun | `EXECUTION_COLLECTE` | Business | One OpenSky collection cycle: start (also the `now` given to the rules engine), end, status, profile, state vectors received, stored and rejected, credits left, collection error, evaluation error |
 | CollectionParameter | `PARAMETRE_COLLECTE` | Business | Single row: whether the Supervisor paused the collection, when, and who |
+| ReplayParameter | `PARAMETRE_REJEU` | Business | Single row: the replay clock shared by every user (simulated instant at the last change, real instant of that change, speed, pause, last instant evaluated by the rules engine, who) (D-20) |
 | Role | `R_ROLE` | Reference | `USER`, `SUPERVISOR` |
 | Criticality | `R_CRITICITE` | Reference | `LOW`, `MEDIUM`, `HIGH` |
 | Unit | `R_UNITE` | Reference | `s`, `m/s`, `m/s²`, `°/s` |
@@ -27,6 +28,7 @@ This is the logical schema derived from the [class diagram](uml/class-diagram.md
 | Airport | `R_AEROPORT` | Reference | Origin and destination airports of flights |
 | CollectionStatus | `R_STATUT_COLLECTE` | Reference | `SUCCESS`, `PARTIAL`, `FAILED`, `RATE_LIMITED`, `SKIPPED` |
 | CollectionProfile | `R_PROFIL_COLLECTE` | Reference | `ILE_DE_FRANCE`, `FRANCE` |
+| DataSource | `R_SOURCE_DONNEE` | Reference | `DIRECT` (live collection, key 1), `REJEU` (replayed historical traffic) (D-20) |
 | None | `audit_actions` | Technical | `create`, `update`, `delete` |
 | None | `audit_logs` | Technical | Append-only log of threshold changes and anonymisations |
 
@@ -56,6 +58,8 @@ erDiagram
     R_STATUT_COLLECTE ||--o{ EXECUTION_COLLECTE : "ends with"
     R_PROFIL_COLLECTE ||--o{ EXECUTION_COLLECTE : "configures"
     UTILISATEUR |o--o| PARAMETRE_COLLECTE : "pauses or resumes"
+    UTILISATEUR |o--o| PARAMETRE_REJEU : "drives"
+    R_SOURCE_DONNEE ||--o{ AERONEF : "comes from"
 
     AERONEF {
         bigint ID PK
@@ -64,6 +68,7 @@ erDiagram
         text LB_IMMATRICULATION
         bigint ID_MODELE FK
         bigint ID_COMPAGNIE FK
+        bigint ID_SOURCE_DONNEE FK
     }
     VOL {
         bigint ID PK
@@ -193,6 +198,21 @@ erDiagram
         text LB_PROFIL_COLLECTE
         boolean is_active
     }
+    PARAMETRE_REJEU {
+        bigint ID PK
+        timestamptz DT_INSTANT_SIMULE
+        timestamptz DT_CHANGEMENT
+        integer NB_VITESSE
+        boolean BL_EN_PAUSE
+        timestamptz DT_DERNIERE_EVALUATION
+        bigint ID_UTILISATEUR FK
+    }
+    R_SOURCE_DONNEE {
+        bigint ID PK
+        text CD_SOURCE_DONNEE UK
+        text LB_SOURCE_DONNEE
+        boolean is_active
+    }
 ```
 
 ## Cardinalities
@@ -204,6 +224,7 @@ erDiagram
 - An alert is processed by zero or one user. A user has exactly one role and owns zero or more refresh tokens.
 - An aircraft has zero or one model and zero or one airline. A flight has zero or one origin airport and zero or one destination airport.
 - A collection cycle has exactly one status and one profile. The single row of `PARAMETRE_COLLECTE` records zero or one Supervisor, the last one who paused or resumed the collection.
+- An aircraft has exactly one source of data. The single row of `PARAMETRE_REJEU` records zero or one Supervisor, the last one who started, paused or sped up the replay.
 
 ## Table lifecycle
 
@@ -211,7 +232,7 @@ Nothing is deleted physically while the project runs. At the end of the project,
 
 | Table | Created by | Modified by | Deleted by | Expected volume |
 |---|---|---|---|---|
-| `AERONEF` | Collector, at the first observation of an ICAO24 address | Import of the OpenSky aircraft metadata, for the registration, model and airline | Nobody | One row per aircraft seen |
+| `AERONEF` | Collector, at the first observation of an ICAO24 address (source `DIRECT`); the historical import, for each flight of the dataset (source `REJEU`, D-20) | Import of the OpenSky aircraft metadata, for the registration, model and airline | Nobody | One row per aircraft seen; for the replay of the year 2022 over France and 100 km, about 318 000 rows, one for each flight |
 | `VOL` | Collector, when a new flight starts (D-06) | Collector, which closes the flight | Nobody | One row per flight |
 | `OBSERVATION` | Collector, at each collection | Collector | Nobody: every observation is kept for the project, for the optional AI module | One row per aircraft and collection: 2 880 collections a day for Île-de-France every 30 s, 720 for metropolitan France every 120 s (D-05). As an assumption, 1 000 aircraft every 120 s give about 720 000 rows a day |
 | `REGLE` | Initial data, then an `INSERT` for each new rule (NF-06) | Supervisor, for the threshold (UC-05) | Supervisor, through `deleted_at` | 5 rows at the start |
@@ -221,6 +242,8 @@ Nothing is deleted physically while the project runs. At the end of the project,
 | `audit_logs` | The API, in the transaction of the audited change | Nobody: a trigger rejects any change | Nobody | One row per threshold change or anonymisation |
 | `EXECUTION_COLLECTE` | Collector, at the start of each cycle, also when the collection is paused (status `SKIPPED`) | Collector, during its own cycle only: counts, credits left, status, errors, then `DT_FIN`, written last, after the rules evaluation. Once `DT_FIN` is set, nobody modifies the row | Nobody | One row per cycle: 2 880 a day for Île-de-France every 30 s, 720 for metropolitan France every 120 s |
 | `PARAMETRE_COLLECTE` | A migration, which inserts the single row (not paused) | Supervisor, through the API, to pause or resume the collection; the collector only reads it | Nobody | Exactly one row, enforced by a unique index on a constant |
+| `PARAMETRE_REJEU` | A migration, which inserts the single row (paused, never started) | Supervisor, through the API, to start, pause, resume or speed up the replay; the replay scheduler writes the last instant evaluated | Nobody | Exactly one row, enforced by a unique index on a constant |
+| `R_SOURCE_DONNEE` | A migration, which inserts `DIRECT` first (key 1, the default source of an aircraft) then `REJEU` | Nobody | Nobody (`is_active`) | 2 rows |
 
 ## Deviation from the guide
 
@@ -239,7 +262,7 @@ The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, 
 | All | `ID` is `BIGINT GENERATED ALWAYS AS IDENTITY` |
 | All | Every foreign key is `ON DELETE RESTRICT`. Nothing is deleted physically: business tables use `deleted_at`, reference tables `is_active`, users are anonymised |
 | `AERONEF`, `VOL`, `ALERTE`, `UTILISATEUR` | `CD_ULID` is unique and has 26 Crockford base 32 characters; the application generates it |
-| `AERONEF` | `CD_ICAO24` is unique and has 6 lowercase hexadecimal characters |
+| `AERONEF` | `CD_ICAO24` has 6 lowercase hexadecimal characters and is unique for each source: the pair (`CD_ICAO24`, `ID_SOURCE_DONNEE`) is unique, since the synthetic code of a replayed flight can equal the address of a real aircraft (D-20) |
 | `VOL` | `DT_FIN` is on or after `DT_DEBUT` when known, since a flight can hold a single observation |
 | `OBSERVATION` | Unique pair (`ID_AERONEF`, `DT_DERNIER_CONTACT`), so the same state vector is never stored twice |
 | `OBSERVATION` | Foreign key (`ID_VOL`, `ID_AERONEF`) to `VOL` (`ID`, `ID_AERONEF`), so a flight always belongs to the aircraft of its observations |
@@ -252,6 +275,7 @@ The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, 
 | `JETON_RAFRAICHISSEMENT` | `CD_HASH_JETON` is unique; only the hash is stored |
 | `EXECUTION_COLLECTE` | `DT_FIN` is on or after `DT_DEBUT` when known; `NB_ETATS_RECUS`, `NB_ETATS_STOCKES` and `NB_ETATS_REJETES` default to 0 and are never negative |
 | `PARAMETRE_COLLECTE` | A single row: the unique index `uq_parametre_collecte_ligne_unique` on the constant `true` rejects any second row |
+| `PARAMETRE_REJEU` | A single row: the unique index `uq_parametre_rejeu_ligne_unique` on the constant `true`; `NB_VITESSE` is above 0 |
 
 `updated_at` is kept current by a `BEFORE UPDATE` trigger on every business table.
 
@@ -275,7 +299,9 @@ Every foreign key is indexed, except `OBSERVATION.ID_AERONEF`, which is the firs
 | `ALERTE` (`DT_DECLENCHEMENT`), and one per foreign key | Filter and sort alerts on the dashboard (BF-12) |
 | `EXECUTION_COLLECTE` (`DT_DEBUT`) | Latest cycle on the dashboard and history newest first, paged by `DT_DEBUT` (keyset); PostgreSQL reads the B-tree backwards for `ORDER BY "DT_DEBUT" DESC` |
 | `EXECUTION_COLLECTE` (`ID_STATUT_COLLECTE`, `DT_DEBUT`) | Latest successful cycle, without reading back through the skipped ones; also indexes the foreign key to `R_STATUT_COLLECTE` |
-| One per foreign key on `AERONEF`, `VOL`, `REGLE`, `UTILISATEUR`, `JETON_RAFRAICHISSEMENT`, `EXECUTION_COLLECTE`, `PARAMETRE_COLLECTE` | Conventions: foreign keys are never indexed automatically |
+| One per foreign key on `AERONEF`, `VOL`, `REGLE`, `UTILISATEUR`, `JETON_RAFRAICHISSEMENT`, `EXECUTION_COLLECTE`, `PARAMETRE_COLLECTE`, `PARAMETRE_REJEU` | Conventions: foreign keys are never indexed automatically |
+
+No migration of the replay touches `OBSERVATION` and none adds an index to it: on the whole year of 2022 over France and 100 km (856 million rows, about 272 GB), a rewrite would take hours and each index about 30 minutes and 27 GB or more. The replay reads it through the indexes above only: a range of (`DT_DERNIER_CONTACT`) for the aircraft present at an instant, and (`ID_AERONEF`, `DT_DERNIER_CONTACT`) for one aircraft.
 
 ## Initial data
 

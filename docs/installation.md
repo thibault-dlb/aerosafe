@@ -18,7 +18,8 @@ Source: project sheet step 8; specifications §VII.1, §VIII.2 and §IX.2 for th
 ## Installation
 
 1. Copy `.env.example` to `.env` and replace the passwords and `AUTH_JWT_SECRET`. The API refuses to start with the example JWT secret; generate one with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
-2. Once the stack runs, create the first Supervisor. Sign-up only creates User accounts. The command asks for the password, or promotes the account if the e-mail is already registered:
+2. Sign in with the default administrator account, a Supervisor created by the migrations: `admin@aerosafe.com`, password `admin`. This credential is public: change its password, or deactivate the account, before exposing an installation to anyone else.
+3. Other Supervisors: sign-up only creates User accounts, so promote one from the command line. The command asks for the password, or promotes the account if the e-mail is already registered:
 
    ```bash
    docker compose exec api python -m services.auth.cli chief@example.com

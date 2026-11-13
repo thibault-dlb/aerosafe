@@ -142,6 +142,32 @@ class Airport(Base):
     is_active: Mapped[bool] = _is_active("Indique si l'aéroport peut encore être utilisé.")
 
 
+class DataSource(Base):
+    __tablename__ = "R_SOURCE_DONNEE"
+    __table_args__ = table_args(
+        comment=(
+            "Référentiel des sources de données d'un aéronef : "
+            "collecte OpenSky en direct ou trafic historique rejoué."
+        )
+    )
+
+    id: Mapped[int] = primary_key("Identifiant technique de la source de données.")
+    code: Mapped[str] = mapped_column(
+        "CD_SOURCE_DONNEE",
+        Text,
+        nullable=False,
+        unique=True,
+        comment="Code stable de la source, utilisé par l'API (DIRECT ou REJEU).",
+    )
+    label: Mapped[str] = mapped_column(
+        "LB_SOURCE_DONNEE",
+        Text,
+        nullable=False,
+        comment="Libellé de la source affiché à l'écran.",
+    )
+    is_active: Mapped[bool] = _is_active("Indique si la source peut encore être utilisée.")
+
+
 class CollectionStatus(Base):
     __tablename__ = "R_STATUT_COLLECTE"
     __table_args__ = table_args(

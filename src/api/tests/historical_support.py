@@ -4,7 +4,6 @@ import asyncio
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 import duckdb
@@ -64,18 +63,13 @@ def write_day(path: Path, points: Sequence[Point]) -> Path:
 class FakeSink(ObservationSink):
     """A database in memory: it keeps what the importer writes and answers the counts."""
 
-    def __init__(self, foreign_data: bool = False) -> None:
-        self.foreign_data = foreign_data
+    def __init__(self) -> None:
         self.aircraft: dict[str, int] = {}
         self.flights: dict[tuple[int, int], int] = {}
         self.new_flights: list[NewFlight] = []
         self.batches: list[ObservationBatch] = []
         self.stored: set[tuple[int, int]] = set()
         self.calls: list[str] = []
-
-    async def has_observations_outside(self, start: datetime, end: datetime) -> bool:
-        self.calls.append("has_observations_outside")
-        return self.foreign_data
 
     async def ensure_aircraft(self, icao24s: Sequence[str]) -> dict[str, int]:
         self.calls.append("ensure_aircraft")

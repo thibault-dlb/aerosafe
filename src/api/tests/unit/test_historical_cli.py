@@ -7,7 +7,6 @@ import pytest
 
 from services.collection.profiles import BoundingBox
 from services.historical.cli import (
-    EXIT_FOREIGN_DATABASE,
     EXIT_NO_FILE,
     EXIT_OK,
     DryRunCommand,
@@ -144,8 +143,8 @@ class TestImport:
 
         assert code == EXIT_OK
         assert len(folder.sink.stored) == 4
-        # The check of the database, then for each file: aircraft and flights, one batch, count.
-        assert folder.transactions == ["begin", "commit"] * 7
+        # For each file: aircraft and flights, one batch, count.
+        assert folder.transactions == ["begin", "commit"] * 6
 
     async def test_the_progress_and_the_end_are_reported(self, folder: Folder) -> None:
         await folder.importing().run(None, None)
@@ -163,11 +162,10 @@ class TestImport:
     ) -> None:
         await folder.importing().run(None, None)
 
-        assert folder.messages[:2] == [
-            "Checking that the database only holds the dataset...",
+        assert folder.messages[0] == (
             "Importing 2 file(s), 2022-07-01.parquet to 2022-07-02.parquet, into the database, "
-            "with 6 insert worker(s).",
-        ]
+            "with 6 insert worker(s)."
+        )
 
     async def test_the_files_stay_where_they_are_by_default(self, folder: Folder) -> None:
         before = folder.files()
@@ -197,17 +195,12 @@ class TestImport:
         assert code == EXIT_NO_FILE
         assert folder.sink.calls == []
 
-    async def test_a_database_with_other_data_is_refused_before_anything_is_written(
-        self, folder: Folder
-    ) -> None:
-        folder.sink.foreign_data = True
+    async def test_a_database_that_holds_live_data_is_not_refused(self, folder: Folder) -> None:
+        # The replayed aircraft have their own source, so they cannot meet the real ones.
+        code = await folder.importing().run(None, None)
 
-        code = await folder.importing(delete_source=True).run(None, None)
-
-        assert code == EXIT_FOREIGN_DATABASE
-        assert folder.sink.calls == ["has_observations_outside"]
-        assert "2022-07-01.parquet" in folder.files()
-        assert any("import into a database of its own" in m for m in folder.messages)
+        assert code == EXIT_OK
+        assert "has_observations_outside" not in folder.sink.calls
 
 
 class TestDeleteSource:

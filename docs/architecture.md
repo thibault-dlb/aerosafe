@@ -80,7 +80,7 @@ Unit tests of the frontend sit next to the code they test (`*.test.ts`, `*.test.
   | High frequency | Île-de-France, about 12 square degrees | 30 s | 1 | 2 880 |
   | Low frequency | Metropolitan France, about 150 square degrees | 120 s | 3 | 2 160 |
 
-- Historical data is out of scope: collection is live only. A replay of past traffic was explored but is not decided (see [historical data](historical-data.md)).
+- The collection is live only: it never reads historical data. A replay of past traffic is a separate mode (D-20, decided on 2026-11-13): the historical dataset is imported into PostgreSQL, where its aircraft carry the source `REJEU` and the collected ones `DIRECT`, and a shared simulated clock in the API replays it, running the rules engine as the clock goes by. A switch in the interface picks the source of what is shown. See [historical data](historical-data.md#replay-mode).
 - Data can contain missing or inconsistent fields, so it must be cleaned and validated before use.
 - The application must stay accessible and stable during demonstrations, including when the source is temporarily unavailable (NF-04).
 

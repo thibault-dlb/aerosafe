@@ -78,7 +78,10 @@ def test_a_search_without_criteria_lists_active_aircraft_by_address() -> None:
     assert "deleted_at IS NULL" in sql
     assert 'ORDER BY "AERONEF"."CD_ICAO24"' in sql
     assert "LIMIT" in sql
-    assert "DISTINCT ON" in sql
+    # The latest observation is found for each aircraft through the index, never by sorting
+    # the whole table of observations.
+    assert "LEFT OUTER JOIN LATERAL" in sql
+    assert "DISTINCT ON" not in sql
 
 
 def test_the_address_is_a_lowercase_prefix() -> None:

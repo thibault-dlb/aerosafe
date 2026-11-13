@@ -34,12 +34,14 @@ POINT = ObservationPoint(
 class FakeAircraftService:
     def __init__(self) -> None:
         self.criteria: AircraftSearchCriteria | None = None
+        self.at: datetime | None = None
 
     async def search(self, criteria: AircraftSearchCriteria) -> list[AircraftSummary]:
         self.criteria = criteria
         return [AIRCRAFT]
 
-    async def get(self, public_id: str) -> AircraftSummary | None:
+    async def get(self, public_id: str, at: datetime | None = None) -> AircraftSummary | None:
+        self.at = at
         return AIRCRAFT if public_id == AIRCRAFT.id else None
 
 

@@ -1,6 +1,6 @@
 # Roadmap
 
-Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-12.
+Source: [project sheet](Fiche_projet_AeroSafe_IPSA.pdf) §9 and §10, the only source of truth. Last updated: 2026-11-13.
 
 Anything flagged `Not in the project sheet` comes from the specifications and is not binding. See [open points](docs/open-points.md).
 
@@ -46,6 +46,7 @@ From the project sheet:
 - [x] Make the `backend`, `frontend`, `stack` and `dependency-review` CI jobs required to merge into `develop` and `main` (2026-11-09)
 - [x] Confirm with the supervising teacher the team's answers to the ambiguities of the sheet (A-01 to A-04 in [open points](docs/open-points.md)) (2026-11-12)
 - [x] Decide the interface design (D-19): logo, colour themes and fonts in [brand guidelines](docs/brand/brand-guidelines.md), and the other choices of [technology choices](docs/technology-choices.md#interface-design)
+- [ ] Replay the historical traffic (D-20): the replay clock, the rules on replayed traffic, the source of the data in the API and the Live / Replay switch in the interface (Thibault). Left to do: the pages of the other work packages still show their own texts in English only
 - [ ] Finish the interface: the styles and the home page (Thibault), log in, sign up and accounts (Louis-Amaury), the dashboard (Jules), then the design applied to every page (see [team work split](docs/team-split.md#interface))
 - [x] Read the OpenSky terms of use (see [OpenSky Network](docs/opensky.md))
 - [ ] Register one OpenSky account for the group and create its OAuth2 API client (quotas are documented in [architecture](docs/architecture.md))

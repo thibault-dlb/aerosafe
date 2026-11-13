@@ -2,11 +2,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
+from sqlalchemy import Select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.data_mode import DataMode
 from core.logger import get_logger
 from core.repository import Repository
-from models import Alert, Rule
+from models import Aircraft, Alert, Rule
 from services.rules.base import AircraftSnapshot, BusinessRule
 from services.rules.observations import SnapshotReader
 from services.rules.registry import RuleRegistry
@@ -44,15 +46,19 @@ class RulesEngine:
         self._registry = registry or RuleRegistry()
         self._reader = reader or SnapshotReader(session)
 
-    async def evaluate(self, now: datetime) -> EvaluationReport:
+    async def evaluate(self, now: datetime, mode: DataMode = DataMode.LIVE) -> EvaluationReport:
         """Evaluate the rules for the collection that ran at `now`.
 
         `now` is the collection time, not the time the engine runs, so a delay in the
         evaluation never makes the data look older than it is. The caller commits.
+
+        `mode` picks the source: the live collection or the replayed history. A mode only sees
+        the aircraft and the episodes of its own source, so a replay never ends a live episode,
+        and the other way round. In a replay, `now` is an instant of the dataset.
         """
-        rules = await self._active_rules()
-        snapshots = await self._reader.read(now) if rules else []
-        episodes = await self._open_episodes()
+        rules = await self._active_rules(mode)
+        snapshots = await self._reader.read(now, mode) if rules else []
+        episodes = await self._open_episodes(mode)
         closed = self._end_finished_episodes(episodes, rules, snapshots, now)
         if not rules or not snapshots:
             if closed:
@@ -114,8 +120,12 @@ class RulesEngine:
         )
         return report
 
-    async def _active_rules(self) -> list[tuple[Rule, BusinessRule]]:
-        """Active rules read from the database, so a threshold change applies at once (UC-05)."""
+    async def _active_rules(self, mode: DataMode) -> list[tuple[Rule, BusinessRule]]:
+        """Active rules read from the database, so a threshold change applies at once (UC-05).
+
+        A replay leaves out the rules that mean nothing on replayed traffic: their open
+        episodes then end like those of a disabled rule.
+        """
         statement = Repository(self._session, Rule).select().where(Rule.is_active.is_(True))
         rules = []
         for model in (await self._session.scalars(statement.order_by(Rule.code))).all():
@@ -123,16 +133,29 @@ class RulesEngine:
             if rule is None:
                 logger.warning("Rule {} has no implementation, skipped", model.code)
                 continue
+            if mode is DataMode.REPLAY and not rule.evaluated_in_replay:
+                continue
             rules.append((model, rule))
         return rules
 
-    async def _open_episodes(self) -> dict[tuple[int, int], Alert]:
-        """Every open episode. Episodes end when their aircraft stops being evaluated, so this
-        set stays bounded by the aircraft in flight."""
-        statement = (
-            Repository(self._session, Alert).select().where(Alert.episode_ended_at.is_(None))
+    @staticmethod
+    def open_episodes_query(session: AsyncSession, mode: DataMode) -> Select:
+        """The open episodes of the aircraft of one source.
+
+        A soft-deleted aircraft is kept on purpose: it is no longer evaluated, so its open
+        episodes must be found to be ended, as they were before the sources existed.
+        """
+        return (
+            Repository(session, Alert)
+            .select()
+            .join(Aircraft, Aircraft.id == Alert.aircraft_id)
+            .where(Alert.episode_ended_at.is_(None), mode.matches(Aircraft.source_id))
         )
-        alerts = (await self._session.scalars(statement)).all()
+
+    async def _open_episodes(self, mode: DataMode) -> dict[tuple[int, int], Alert]:
+        """Every open episode of the source. Episodes end when their aircraft stops being
+        evaluated, so this set stays bounded by the aircraft in flight."""
+        alerts = (await self._session.scalars(self.open_episodes_query(self._session, mode))).all()
         return {(alert.aircraft_id, alert.rule_id): alert for alert in alerts}
 
     @classmethod

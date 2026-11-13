@@ -9,10 +9,8 @@ from sqlalchemy import (
     ColumnElement,
     Text,
     any_,
-    exists,
     func,
     literal,
-    or_,
     select,
     text,
 )
@@ -20,10 +18,12 @@ from sqlalchemy.dialects.postgresql import ARRAY, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import TypeEngine
 
+from core.data_mode import DataMode
 from core.models import new_ulid
 from models.aircraft import Aircraft
 from models.flight import Flight
 from models.observation import Observation
+from models.reference import DataSource
 from services.historical.prc2024 import ObservationBatch
 
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
@@ -95,35 +95,42 @@ class HistoricalStore:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def has_observations_outside(self, start: datetime, end: datetime) -> bool:
-        """Whether the database holds observations dated outside `start` to `end`.
-
-        The synthetic aircraft codes could collide with real ones, so the import only goes
-        into a database that holds nothing but the dataset.
-        """
-        statement = select(
-            exists().where(
-                or_(Observation.last_contact_at < start, Observation.last_contact_at >= end)
-            )
-        )
-        return bool(await self._session.scalar(statement))
-
     async def ensure_aircraft(self, icao24s: Sequence[str]) -> dict[str, int]:
-        """Create the aircraft not known yet, then map every ICAO24 code to its key.
+        """Create the replay aircraft not known yet, then map every ICAO24 code to its key.
 
-        A soft-deleted aircraft keeps its row, so the insert skips it and it is read back
-        like the others.
+        The aircraft take the source REJEU, so a synthetic code never meets the address of a
+        real aircraft collected live: the address is unique for each source. A soft-deleted
+        aircraft keeps its row, so the insert skips it and it is read back like the others.
         """
         if not icao24s:
             return {}
+        source_id = await self._replay_source_id()
         await self._session.execute(
-            insert(Aircraft).on_conflict_do_nothing(index_elements=["CD_ICAO24"]),
-            [{"icao24": icao24, "public_id": new_ulid()} for icao24 in icao24s],
+            insert(Aircraft).on_conflict_do_nothing(
+                index_elements=["CD_ICAO24", "ID_SOURCE_DONNEE"]
+            ),
+            [
+                {"icao24": icao24, "public_id": new_ulid(), "source_id": source_id}
+                for icao24 in icao24s
+            ],
         )
+        # Only the aircraft of the replay: a real aircraft collected live can have the same code.
         rows = await self._session.execute(
-            select(Aircraft.icao24, Aircraft.id).where(Aircraft.icao24 == _any_of(icao24s, Text()))
+            select(Aircraft.icao24, Aircraft.id).where(
+                Aircraft.icao24 == _any_of(icao24s, Text()),
+                Aircraft.source_id == source_id,
+            )
         )
         return {icao24: aircraft_id for icao24, aircraft_id in rows.all()}
+
+    async def _replay_source_id(self) -> int:
+        """The key of the source REJEU, read once for each call."""
+        return int(
+            await self._session.scalar(
+                select(DataSource.id).where(DataSource.code == DataMode.REPLAY.code)
+            )
+            or 0
+        )
 
     async def ensure_flights(self, flights: Sequence[NewFlight]) -> dict[tuple[int, int], int]:
         """Create the flights not known yet; map (aircraft key, start in µs) to the flight key.
