@@ -1,6 +1,6 @@
 # Historical data
 
-Exploration of the sources that could let AeroSafe run on past air traffic instead of the live OpenSky REST API. Checked on 2026-11-09. Nothing here is decided: collection stays live only (D-05 in [open points](open-points.md)), and a historical mode would need D-05 to be reopened.
+Exploration of the sources that could let AeroSafe run on past air traffic instead of the live OpenSky REST API, checked on 2026-11-09, then the import of one of them and the replay mode built on it. The replay mode was decided on 2026-11-13 (D-20 in [open points](open-points.md), which reopened D-05): see [Replay mode](#replay-mode). The exploration of the other sources is not a decision.
 
 ## Why
 
@@ -148,7 +148,7 @@ The import has no `--step` option yet: it keeps the resolution of the dataset. R
 
 ## Import into PostgreSQL
 
-`src/api/services/historical` loads the daily files into `AERONEF`, `VOL` and `OBSERVATION`. **Proposal, to confirm with the team** (it needs D-05 to be reopened, see below): the area of metropolitan France, every trajectory (listed or not), clipped to the area, at the resolution of the dataset (one point per second, no downsampling), aircraft anonymous.
+`src/api/services/historical` loads the daily files into `AERONEF`, `VOL` and `OBSERVATION`. Rules chosen for the replay (D-20, 2026-11-13; to confirm with the supervising teacher like the other team decisions): the area of metropolitan France, every trajectory (listed or not), clipped to the area, at the resolution of the dataset (one point per second, no downsampling), aircraft anonymous.
 
 | Topic | Rule |
 | --- | --- |
@@ -173,6 +173,16 @@ uv run python -m services.historical.cli ..\..\data\prc2024 --area france-100km 
 ```
 
 `--delete-source` deletes each daily file once its points are verified in the database, to free the disk as the import goes (only the `.parquet` files, never `flight_list.csv` or the README). Keep a copy elsewhere first. Run `ANALYZE "OBSERVATION"` as the table owner after a large import.
+
+### Database loaded before the source existed
+
+A database imported before the migrations 0035 to 0042 holds only replayed aircraft, which the migrations mark as `DIRECT` like every existing aircraft. Once migrated, and only if the database holds nothing but the dataset, mark them as replayed:
+
+```powershell
+docker exec aerosafe_postgres psql -U aerosafe_admin -d aerosafe_db -c "UPDATE \"AERONEF\" SET \"ID_SOURCE_DONNEE\" = (SELECT \"ID\" FROM \"R_SOURCE_DONNEE\" WHERE \"CD_SOURCE_DONNEE\" = 'REJEU')"
+```
+
+It touches `AERONEF` only (about 318 000 rows for the year), never `OBSERVATION`.
 
 ### Load a large selection
 
@@ -315,9 +325,31 @@ The counts add up: the final line reports 760 665 668 points, which counts the 3
 
 **Total time**: about 7 h 45 of inserts over the two runs, 15 min of recovery and 31 min of index.
 
+## Replay mode
+
+Decided on 2026-11-13 (D-20). The imported traffic can be replayed like a live collection: a simulated clock moves through the dataset, the pages show the traffic and the alerts at that instant, and the rules engine runs as the clock goes by. The target is the whole year 2022 over France and 100 km (856 million observations, about 272 GB, about 318 000 aircraft and flights). The tests are made on one month, August 2022.
+
+| Topic | Rule |
+| --- | --- |
+| Source of the data | Every aircraft has a source, `DIRECT` for the live collection and `REJEU` for the import (`R_SOURCE_DONNEE`, `AERONEF.ID_SOURCE_DONNEE`). An ICAO24 address is unique for each source. The import and the replay only touch the aircraft of their source, so one database can hold live data and the replay together |
+| Clock | One shared clock, in `PARAMETRE_REJEU`: a Supervisor starts it at an instant of the period, pauses and resumes it, and picks the speed (×1, ×10, ×60). The simulated time is the instant stored at the last change plus the real time gone by times the speed, so nothing is written while it runs. It stops at the end of the data. See [API](api.md#replay-apireplay) |
+| Rules | A scheduler reads the clock every 10 s and runs the engine for each 30 s step of simulated time that went by, in the same transaction as the note of the last step evaluated. R3 to R5 run on the replayed traffic. **R1 and R2 are left out**: the dataset has no contact time apart from the position time, so a delay since the last message is always zero. At one point a second, R3 to R5 compare a point with the nearest one at least 10 s back, because they ignore closer pairs. An aircraft counts as present when it sent a point in the minute before the instant |
+| Starting again | Starting at another instant removes (logically) the alerts of the earlier run that are dated at or after it, so the clock does not create them a second time, and ends the open episodes |
+| Interface | A Live / Replay switch in the top bar, kept in the browser. The replay bar shows the simulated time in UTC and the controls; only a Supervisor can use them. The page loads again when the mode changes. The home page shows metropolitan France and refreshes every 5 s |
+| What is shown | At the simulated instant: the aircraft heard in the minute before it with their position then, the observations, flights and trajectories up to it, the alerts triggered up to it, and the statistics of the 24 hours before it |
+
+### Sizing for the whole year
+
+The design avoids anything that grows with the table of observations:
+
+- no migration rewrites `OBSERVATION` and none adds an index to it (an index takes about 30 minutes and 27 GB or more on the year);
+- the aircraft present at an instant are read from a range of the index on `DT_DERNIER_CONTACT`: about a minute of data, a few thousand rows, whatever the size of the table;
+- the latest position of an aircraft is read through the unique index (`ID_AERONEF`, `DT_DERNIER_CONTACT`), one LATERAL subquery for each aircraft, so the search no longer sorts the whole table (the DISTINCT ON it replaced would have read every observation);
+- the period of the data is read from `VOL` (about 318 000 rows), not from `OBSERVATION`, and kept for a few minutes.
+
 ## Next steps
 
 1. ~~Test d10 on one day~~ Done on 2022-07-01, see above. Remaining: check the `BL_AU_SOL` rule and the outlier limits on the first imported day, with R3 to R5.
 2. Ask OpenSky where the d1 and d11 files went, together with V-01.
-3. If the team keeps a historical mode, reopen D-05 in [open points](open-points.md), and record the source of each collection run (live or import) in a reference table, following the [database conventions](database-conventions.md). The import does not touch `EXECUTION_COLLECTE`.
+3. ~~Reopen D-05 and record the source~~ Done on 2026-11-13 (D-20): the source is recorded for each aircraft, in `R_SOURCE_DONNEE`. The import does not touch `EXECUTION_COLLECTE`.
 4. Decide whether the command line should drop and rebuild the position index itself for a large import (an option, run as a role that owns the table), and whether the bulk-load settings belong in `docker-compose.yaml` rather than in one container.

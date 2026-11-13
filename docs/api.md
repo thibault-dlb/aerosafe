@@ -231,6 +231,26 @@ An alert:
 
 `GET /alerts/statistics?start=&end=` returns `{"start", "end", "total", "per_rule": {"R1": 4, "R3": 1}}`. Both bounds are optional and need a time zone: `end` defaults to now and `start` to 24 hours before `end`. Rules without alerts in the period are absent from `per_rule`. The dashboard reads the same counts through `AlertService.statistics()`.
 
+### Replay (`/api/v1/replay`)
+
+The replay of the historical traffic (D-20, see [historical data](historical-data.md#replay-mode)). The clock is shared: what a Supervisor starts, pauses or speeds up, every user sees. Instants are UTC and need a time zone.
+
+| Method and path | Role | Purpose | Answer |
+| --- | --- | --- | --- |
+| `GET /replay` | any authenticated user | The period of the replayed data and the clock: `available`, `start`, `end`, `simulated_at` (null before the first start), `speed`, `paused`, `finished`, `server_time` (the real instant of the reading, so a client can move `simulated_at` itself between two readings) and `allowed_speeds` | `200` |
+| `POST /replay/start` `{"at", "speed"}` | Supervisor | Starts at `at`, inside the period, even when a replay is running: the alerts of the earlier run dated `at` or later are removed (logically) and the open episodes end at `at` | `200` with the clock, `409` when no replayed data is imported, `422` for an instant outside the period, a date without time zone or a speed that is not allowed |
+| `POST /replay/pause`, `POST /replay/resume` | Supervisor | Freezes or resumes the simulated time | `200`, `409` before the first start |
+| `POST /replay/speed` `{"speed"}` | Supervisor | Changes the speed from the time reached; the speeds are 1, 10 and 60 | `200`, `409` before the first start, `422` for another speed |
+
+The clock stops at the end of the data. It is stored in `PARAMETRE_REJEU` (a start moves nothing while it runs: the simulated time is the instant at the last change plus the real time gone by times the speed), so it survives a restart of the API. A scheduler reads it every 10 s and runs the rules engine for each 30 s step of simulated time that went by, at most 120 steps a tick.
+
+`source=replay` (default `live`) on `GET /aircraft`, `/aircraft/{id}`, `/aircraft/{id}/observations`, `/aircraft/{id}/flights`, `/flights/{id}`, `/alerts` and `/alerts/statistics` reads the replayed traffic at the simulated instant:
+
+- the aircraft search lists the aircraft heard in the minute before it, with their position then; the record gives the latest position up to it;
+- the observation history, the flights and the trajectory stop at it (a flight that ends after it is still in progress, one that starts after it does not exist yet);
+- the alerts are those of the replayed aircraft triggered up to it, and the statistics default to the 24 hours before it;
+- a replay that was never started has no instant, so the search and the alerts are empty.
+
 ### Dashboard (`/api/v1/dashboard`)
 
 `TBD`.
