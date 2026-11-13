@@ -50,7 +50,7 @@ export const fr = {
     "AeroSafe suit les aéronefs au-dessus de la France, repère les situations anormales avec cinq règles métier et lève des alertes pour les superviseurs.",
   "home.cta.login": "Se connecter",
   "home.cta.search": "Rechercher un aéronef",
-  "home.disclaimer":
+  "layout.disclaimer":
     "Projet pédagogique : AeroSafe n'est pas un outil certifié de surveillance ou de gestion du trafic aérien. Il ne doit jamais servir à un usage opérationnel.",
   "overview.live.title": "En direct · Île-de-France",
   "overview.replay.title": "Rejeu · {time} UTC · France",

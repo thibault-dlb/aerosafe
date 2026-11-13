@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import logoUrl from "@/assets/logo/aerosafe-logo.svg";
 import ReplayBar from "@/components/replay/ReplayBar";
+import Notice from "@/components/ui/Notice";
 import { useDataMode } from "@/hooks/useDataMode";
 import { useScrolled } from "@/hooks/useScrolled";
 import { useTheme } from "@/hooks/useTheme";
@@ -25,6 +26,9 @@ const LINKS: { to: string; label: TranslationKey }[] = [
 
 const NAV_ID = "main-links";
 
+/** Pages where the visitor is about to use the data: they carry the educational notice. */
+const NOTICE_PATHS = ["/login", "/signup"];
+
 /** Shared page frame: the top bar with the navigation, the current page, then the footer. */
 export default function AppLayout() {
   const { t, language, setLanguage } = useTranslation();
@@ -32,7 +36,8 @@ export default function AppLayout() {
   const { mode, setMode } = useDataMode();
   const [menuOpen, setMenuOpen] = useState(false);
   // The landing page is always dark, edge to edge, under a bar that is clear until it scrolls.
-  const landing = useLocation().pathname === "/";
+  const { pathname } = useLocation();
+  const landing = pathname === "/";
   const scrolled = useScrolled();
   const frameClass = landing ? `${styles.frame} ${styles.landing} darkScope` : styles.frame;
   const barClass = landing && (scrolled || menuOpen) ? `${styles.bar} ${styles.barSolid}` : styles.bar;
@@ -117,6 +122,7 @@ export default function AppLayout() {
 
         {/* The key remounts the page when the mode changes, so it loads the data of the new mode. */}
         <div id="content" key={mode} className={styles.content}>
+          {NOTICE_PATHS.includes(pathname) && <Notice className={styles.notice}>{t("layout.disclaimer")}</Notice>}
           <Outlet />
         </div>
 

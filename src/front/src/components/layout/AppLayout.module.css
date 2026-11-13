@@ -144,6 +144,10 @@
   padding: var(--space-5) var(--gutter);
 }
 
+.notice {
+  margin-bottom: var(--space-4);
+}
+
 .footer {
   padding: var(--space-4) var(--gutter);
   background: var(--color-surface);

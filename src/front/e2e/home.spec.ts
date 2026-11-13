@@ -6,10 +6,15 @@ test("the home page shows the application name", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "AeroSafe" })).toBeVisible();
 });
 
-test("the home page shows the educational disclaimer", async ({ page }) => {
+test("the educational disclaimer is in the footer, and on the log in and sign up pages", async ({ page }) => {
   await page.goto("/");
+  await expect(page.getByRole("contentinfo")).toContainText("projet pédagogique");
+  await expect(page.getByRole("status").filter({ hasText: "Projet pédagogique" })).toHaveCount(0);
 
-  await expect(page.getByRole("status").filter({ hasText: "Projet pédagogique" })).toBeVisible();
+  for (const path of ["/login", "/signup"]) {
+    await page.goto(path);
+    await expect(page.getByRole("status").filter({ hasText: "Projet pédagogique" })).toBeVisible();
+  }
 });
 
 test("the home page is in French and switches to English, and the choice is kept", async ({ page }) => {

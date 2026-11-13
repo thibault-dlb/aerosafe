@@ -40,10 +40,11 @@ describe("Home", () => {
     expect(screen.getByRole("heading", { level: 1, name: "AeroSafe" })).toBeInTheDocument();
   });
 
-  it("shows the educational disclaimer", async () => {
+  it("does not carry the educational notice: the footer and the log in pages do", async () => {
     await renderHome();
 
-    expect(screen.getByRole("status", { name: "" })).toHaveTextContent("Projet pédagogique");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText(/pédagogique/)).not.toBeInTheDocument();
   });
 
   it("leads to the main screens", async () => {

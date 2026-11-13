@@ -23,6 +23,8 @@ function renderAt(path: string) {
         children: [
           { path: "/", element: <h1>Landing</h1> },
           { path: "/alerts", element: <h1>Page content</h1> },
+          { path: "/login", element: <h1>Log in</h1> },
+          { path: "/signup", element: <h1>Sign up</h1> },
         ],
       },
     ],
@@ -100,6 +102,18 @@ describe("AppLayout", () => {
 
     expect(screen.getByRole("link", { name: "Aller au contenu" })).toHaveAttribute("href", "#content");
     expect(within(screen.getByRole("contentinfo")).getByText(/projet pédagogique/)).toBeInTheDocument();
+  });
+
+  it.each(["/login", "/signup"])("shows the educational notice on %s", (path) => {
+    renderAt(path);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Projet pédagogique");
+  });
+
+  it.each(["/", "/alerts"])("does not show the educational notice on %s", (path) => {
+    renderAt(path);
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("keeps the landing page in the dark theme, and only that page", () => {

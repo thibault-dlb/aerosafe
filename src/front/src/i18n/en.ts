@@ -52,7 +52,7 @@ export const en: Record<TranslationKey, string> = {
     "AeroSafe tracks aircraft over France, spots abnormal situations with five business rules and raises alerts for supervisors.",
   "home.cta.login": "Log in",
   "home.cta.search": "Search for an aircraft",
-  "home.disclaimer":
+  "layout.disclaimer":
     "Educational project: AeroSafe is not a certified air traffic surveillance or management tool. It must never be used operationally.",
   "overview.live.title": "Live · Île-de-France",
   "overview.replay.title": "Replay · {time} UTC · France",
