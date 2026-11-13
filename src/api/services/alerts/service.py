@@ -6,6 +6,7 @@ from sqlalchemy import Select, case, func, select
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.data_mode import DataMode
 from core.repository import Repository
 from models import Aircraft, Alert, Criticality, Rule, Unit
 from schemas.alert import AlertOut, AlertPage
@@ -47,6 +48,10 @@ class AlertFilters:
     descending: bool = True
     limit: int = 50
     offset: int = 0
+    # The source of the aircraft. In a replay, `at` is the simulated instant: an alert
+    # triggered after it has not happened yet.
+    mode: DataMode = DataMode.LIVE
+    at: datetime | None = None
 
     def __post_init__(self) -> None:
         if self.start and self.end and self.start > self.end:
@@ -93,6 +98,9 @@ class AlertService:
 
     @staticmethod
     def filter(statement: Select, filters: AlertFilters) -> Select:
+        statement = statement.where(filters.mode.matches(Aircraft.source_id))
+        if filters.at is not None:
+            statement = statement.where(Alert.triggered_at <= filters.at)
         if filters.rule_code:
             statement = statement.where(Rule.code == filters.rule_code)
         if filters.criticality:
@@ -161,16 +169,22 @@ class AlertService:
         assert processed is not None
         return processed
 
-    async def statistics(self, start: datetime, end: datetime) -> AlertStatistics:
-        """Count the alerts triggered between `start` and `end`, for the dashboard."""
+    async def statistics(
+        self, start: datetime, end: datetime, mode: DataMode = DataMode.LIVE
+    ) -> AlertStatistics:
+        """Count the alerts triggered between `start` and `end`, for the dashboard.
+
+        Only the alerts of the aircraft of the source `mode` are counted."""
         statement = (
             select(Rule.code, func.count(Alert.id))
             .select_from(Alert)
             .join(Rule, Alert.rule_id == Rule.id)
+            .join(Aircraft, Alert.aircraft_id == Aircraft.id)
             .where(
                 Alert.deleted_at.is_(None),
                 Alert.triggered_at >= start,
                 Alert.triggered_at <= end,
+                mode.matches(Aircraft.source_id),
             )
             .group_by(Rule.code)
             .order_by(Rule.code)

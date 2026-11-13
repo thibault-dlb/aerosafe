@@ -19,4 +19,5 @@ def test_every_work_package_has_a_router() -> None:
         "/alerts",
         "/dashboard",
         "/collection",
+        "/replay",
     }

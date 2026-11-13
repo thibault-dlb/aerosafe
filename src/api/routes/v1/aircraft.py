@@ -16,6 +16,7 @@ from services.aircraft import (
     ObservationPeriod,
     ObservationReader,
 )
+from services.replay.dependencies import Scope
 
 router = APIRouter(prefix="/aircraft", tags=["aircraft"])
 
@@ -63,6 +64,7 @@ def build_area(
 async def search_aircraft(
     service: Service,
     _caller: Caller,
+    scope: Scope,
     icao24: Annotated[
         str | None,
         Query(pattern="^[0-9a-fA-F]{1,6}$", description="Start of the ICAO24 address"),
@@ -81,28 +83,41 @@ async def search_aircraft(
     limit: Annotated[int, Query(ge=1, le=MAX_RESULTS)] = 50,
 ) -> list[AircraftSummary]:
     """Aircraft matching every given criterion (BF-04). The area applies to the latest
-    known position. An empty list means no match (UC-01, alternative flow 2a)."""
+    known position. An empty list means no match (UC-01, alternative flow 2a).
+
+    With `source=replay`, the aircraft heard in the minute before the simulated instant."""
+    area = build_area(south, west, north, east)
+    if scope.nothing_to_show:
+        return []
     criteria = AircraftSearchCriteria(
         icao24=icao24,
         registration=registration,
         airline=airline,
-        area=build_area(south, west, north, east),
+        area=area,
         limit=limit,
+        mode=scope.mode,
+        at=scope.at,
     )
     return await service.search(criteria)
 
 
-async def find_aircraft(service: AircraftService, aircraft_id: str) -> AircraftSummary:
-    aircraft = await service.get(aircraft_id)
+async def find_aircraft(
+    service: AircraftService, aircraft_id: str, at: datetime | None = None
+) -> AircraftSummary:
+    aircraft = await (service.get(aircraft_id) if at is None else service.get(aircraft_id, at))
     if aircraft is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aircraft not found")
     return aircraft
 
 
 @router.get("/{aircraft_id}", summary="Get an aircraft record")
-async def get_aircraft(aircraft_id: str, service: Service, _caller: Caller) -> AircraftSummary:
-    """General information about one aircraft and its latest known position (BF-05)."""
-    return await find_aircraft(service, aircraft_id)
+async def get_aircraft(
+    aircraft_id: str, service: Service, _caller: Caller, scope: Scope
+) -> AircraftSummary:
+    """General information about one aircraft and its latest known position (BF-05).
+
+    With `source=replay`, the position is the one at the simulated instant."""
+    return await find_aircraft(service, aircraft_id, scope.at)
 
 
 @router.get("/{aircraft_id}/observations", summary="Get the observation history of an aircraft")

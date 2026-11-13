@@ -16,6 +16,7 @@ from services.alerts.service import (
     AlertSort,
     AlertStatus,
 )
+from services.replay.dependencies import Scope
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
@@ -43,6 +44,7 @@ def invalid(error: ValueError) -> HTTPException:
 async def list_alerts(
     service: Service,
     _supervisor: Supervisor,
+    scope: Scope,
     rule: Annotated[
         str | None, Query(min_length=1, max_length=20, description="Code of the rule, e.g. R1")
     ] = None,
@@ -71,7 +73,10 @@ async def list_alerts(
     limit: Annotated[int, Query(ge=1, le=MAX_RESULTS)] = 50,
     offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
 ) -> AlertPage:
-    """Alerts matching every given criterion, sorted, one page at a time (BF-12, UC-04)."""
+    """Alerts matching every given criterion, sorted, one page at a time (BF-12, UC-04).
+
+    With `source=replay`, the alerts of the replayed traffic triggered up to the simulated
+    instant."""
     try:
         filters = AlertFilters(
             rule_code=rule,
@@ -84,9 +89,13 @@ async def list_alerts(
             descending=order == "desc",
             limit=limit,
             offset=offset,
+            mode=scope.mode,
+            at=scope.at,
         )
     except ValueError as error:
         raise invalid(error) from error
+    if scope.nothing_to_show:
+        return AlertPage(items=[], total=0)
     return await service.search(filters)
 
 
@@ -94,20 +103,25 @@ async def list_alerts(
 async def alert_statistics(
     service: Service,
     _supervisor: Supervisor,
+    scope: Scope,
     start: Annotated[
         AwareDatetime | None,
         Query(description="With a time zone. Default: 24 hours before end"),
     ] = None,
     end: Annotated[
-        AwareDatetime | None, Query(description="With a time zone. Default: now")
+        AwareDatetime | None,
+        Query(description="With a time zone. Default: now, or the simulated instant of a replay"),
     ] = None,
 ) -> AlertStatisticsOut:
     """Number of alerts triggered in the period, in total and per rule (team decision A-04)."""
-    end = end or datetime.now(UTC)
+    # A replay that never started has no instant: its period is empty, whatever the clock.
+    end = end or scope.at or datetime.now(UTC)
     start = start or end - DEFAULT_STATISTICS_PERIOD
     if start > end:
         raise invalid(ValueError("The start of the period must not be after its end"))
-    statistics = await service.statistics(start, end)
+    if scope.nothing_to_show:
+        return AlertStatisticsOut(start=start, end=end, total=0, per_rule={})
+    statistics = await service.statistics(start, end, scope.mode)
     return AlertStatisticsOut(
         start=start, end=end, total=statistics.total, per_rule=statistics.per_rule
     )

@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import pytest
 
+from core.data_mode import DataMode
 from core.security import CurrentUser, RoleCode, get_current_user
 from main import app
 from routes.v1.alerts import get_alert_service
@@ -39,6 +40,7 @@ class FakeAlertService:
     def __init__(self) -> None:
         self.filters: AlertFilters | None = None
         self.period: tuple[datetime, datetime] | None = None
+        self.mode: DataMode | None = None
         self.processed_by: int | None = None
 
     async def search(self, filters: AlertFilters) -> AlertPage:
@@ -56,8 +58,11 @@ class FakeAlertService:
         self.processed_by = user_id
         return PROCESSED
 
-    async def statistics(self, start: datetime, end: datetime) -> AlertStatistics:
+    async def statistics(
+        self, start: datetime, end: datetime, mode: DataMode = DataMode.LIVE
+    ) -> AlertStatistics:
         self.period = (start, end)
+        self.mode = mode
         return AlertStatistics(total=3, per_rule={"R1": 2, "R3": 1})
 
 
