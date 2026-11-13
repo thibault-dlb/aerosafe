@@ -8,6 +8,8 @@ export interface AircraftJson {
   last_contact_at: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Altitude of the latest observation, in metres. */
+  altitude: number | null;
 }
 
 /** JSON of one observation: the flight parameters at one time. */
@@ -67,6 +69,7 @@ export class Aircraft {
     readonly lastContactAt: Date | null,
     readonly latitude: number | null,
     readonly longitude: number | null,
+    readonly altitude: number | null = null,
   ) {}
 
   static fromJson(json: AircraftJson): Aircraft {
@@ -79,6 +82,7 @@ export class Aircraft {
       json.last_contact_at ? new Date(json.last_contact_at) : null,
       json.latitude,
       json.longitude,
+      json.altitude,
     );
   }
 

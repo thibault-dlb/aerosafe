@@ -15,6 +15,7 @@ const AIRCRAFT: AircraftJson = {
   last_contact_at: "2026-11-09T10:00:00Z",
   latitude: 48.85,
   longitude: 2.35,
+  altitude: 10972.8,
 };
 
 const OBSERVATION: ObservationJson = {
