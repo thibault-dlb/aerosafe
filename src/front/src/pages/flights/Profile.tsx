@@ -1,3 +1,7 @@
+import { useTranslation } from "@/hooks/useTranslation";
+
+import styles from "../aircraft/Aircraft.module.css";
+
 export interface ProfilePoint {
   time: number;
   value: number;
@@ -14,11 +18,12 @@ const HEIGHT = 120;
 
 /** A small line chart of one flight parameter over time (UC-02, step 3). */
 export default function Profile({ title, unit, points }: ProfileProps) {
+  const { t } = useTranslation();
   if (points.length < 2) {
     return (
-      <figure>
+      <figure className={styles.profile}>
         <figcaption>{title}</figcaption>
-        <p>Not enough values to draw a profile.</p>
+        <p className={styles.muted}>{t("flight.profile.notEnough")}</p>
       </figure>
     );
   }
@@ -31,19 +36,30 @@ export default function Profile({ title, unit, points }: ProfileProps) {
   const line = points.map((point) => `${x(point.time).toFixed(1)},${y(point.value).toFixed(1)}`);
 
   return (
-    <figure>
+    <figure className={styles.profile}>
       <figcaption>
-        {title}: {minValue.toFixed(0)} to {maxValue.toFixed(0)} {unit}
+        {t("flight.profile.range", {
+          title,
+          min: minValue.toFixed(0),
+          max: maxValue.toFixed(0),
+          unit,
+        })}
       </figcaption>
       <svg
         role="img"
-        aria-label={`${title} profile`}
+        aria-label={t("flight.profile.label", { title })}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         width="100%"
         height={HEIGHT}
         preserveAspectRatio="none"
       >
-        <polyline points={line.join(" ")} fill="none" stroke="currentColor" strokeWidth={2} />
+        <polyline
+          points={line.join(" ")}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          vectorEffect="non-scaling-stroke"
+        />
       </svg>
     </figure>
   );
