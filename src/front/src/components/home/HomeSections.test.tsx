@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { useTranslation } from "@/hooks/useTranslation";
 import PreferencesProvider from "@/providers/PreferencesProvider";
+import { DataModeService } from "@/services/DataModeService";
 import { PreferenceStore } from "@/services/PreferenceStore";
 
 import HomeCta from "./HomeCta";
@@ -27,16 +28,23 @@ function EnglishButton() {
   return <button onClick={() => setLanguage("en")}>en</button>;
 }
 
-function renderSection(section: ReactNode) {
+function Where() {
+  return <p data-testid="where">{useLocation().pathname}</p>;
+}
+
+function renderSection(section: ReactNode, store = memoryStore()) {
   return render(
-    <PreferencesProvider store={memoryStore()}>
+    <PreferencesProvider store={store}>
       <MemoryRouter>
         <EnglishButton />
+        <Where />
         {section}
       </MemoryRouter>
     </PreferencesProvider>,
   );
 }
+
+afterEach(() => DataModeService.reset());
 
 describe("HomeFeatures", () => {
   it("presents the four features, each leading to its page", () => {
@@ -58,6 +66,29 @@ describe("HomeFeatures", () => {
       expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
     }
   });
+
+  it("switches to the replay when the replay link is followed, and opens the dashboard", () => {
+    const store = memoryStore();
+    renderSection(<HomeFeatures />, store);
+    expect(store.get(DataModeService.KEY)).toBeNull();
+
+    fireEvent.click(screen.getByRole("link", { name: "Ouvrir le tableau de bord" }));
+
+    expect(store.get(DataModeService.KEY)).toBe("replay");
+    expect(screen.getByTestId("where")).toHaveTextContent("/dashboard");
+  });
+
+  it.each(["Rechercher un aéronef", "Voir les alertes", "Régler les règles"])(
+    "leaves the data mode alone when %s is followed",
+    (name) => {
+      const store = memoryStore();
+      renderSection(<HomeFeatures />, store);
+
+      fireEvent.click(screen.getByRole("link", { name }));
+
+      expect(store.get(DataModeService.KEY)).toBeNull();
+    },
+  );
 
   it("is a section with a title", () => {
     renderSection(<HomeFeatures />);

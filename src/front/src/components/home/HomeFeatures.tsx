@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+import { useDataMode } from "@/hooks/useDataMode";
 import { useReveal } from "@/hooks/useReveal";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { TranslationKey } from "@/i18n/fr";
@@ -13,17 +14,20 @@ interface Feature {
   title: TranslationKey;
   text: TranslationKey;
   link: TranslationKey;
+  /** The link switches the application to the replay before it opens the page. */
+  replay?: boolean;
 }
 
 const FEATURES: Feature[] = [
   { kind: "aircraft", to: "/aircraft", title: "home.features.aircraft.title", text: "home.features.aircraft.text", link: "home.features.aircraft.link" },
   { kind: "alerts", to: "/alerts", title: "home.features.alerts.title", text: "home.features.alerts.text", link: "home.features.alerts.link" },
   { kind: "rules", to: "/rules", title: "home.features.rules.title", text: "home.features.rules.text", link: "home.features.rules.link" },
-  { kind: "replay", to: "/dashboard", title: "home.features.replay.title", text: "home.features.replay.text", link: "home.features.replay.link" },
+  { kind: "replay", to: "/dashboard", title: "home.features.replay.title", text: "home.features.replay.text", link: "home.features.replay.link", replay: true },
 ];
 
 function FeatureRow({ feature, flipped }: { feature: Feature; flipped: boolean }) {
   const { t } = useTranslation();
+  const { setMode } = useDataMode();
   const [ref, seen] = useReveal<HTMLLIElement>(0.25);
   const classes = [styles.row, flipped && styles.flipped, seen && styles.seen].filter(Boolean).join(" ");
   return (
@@ -34,7 +38,11 @@ function FeatureRow({ feature, flipped }: { feature: Feature; flipped: boolean }
       <div className={styles.copy}>
         <h3>{t(feature.title)}</h3>
         <p>{t(feature.text)}</p>
-        <Link to={feature.to} className={styles.link}>
+        <Link
+          to={feature.to}
+          className={styles.link}
+          onClick={feature.replay ? () => setMode("replay") : undefined}
+        >
           {t(feature.link)} <span aria-hidden="true">→</span>
         </Link>
       </div>

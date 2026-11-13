@@ -134,3 +134,14 @@ test("the dashboard opens on the live overview and the map", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByText("Connectez-vous pour voir le trafic en direct.")).toBeVisible();
 });
+
+test("the replay link of the features opens the dashboard in the replay mode", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("heading", { level: 3, name: "Rejouez une année de trafic" }).scrollIntoViewIfNeeded();
+
+  await page.locator("li", { hasText: "Rejouez une année de trafic" }).getByRole("link").click();
+
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole("button", { name: "Rejeu" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("region", { name: "Rejeu du trafic historique" })).toBeVisible();
+});
