@@ -39,7 +39,7 @@ Technical and organisational choices are judged against these weighted criteria.
 | Cache | Redis | Deferred | Adopted only if a need appears, see below |
 | Mapping library | Leaflet (BSD-2-Clause) | Decided on 2026-11-03, scored grid added | See below. Used directly, without the react-leaflet wrapper (licence) |
 | CI/CD tool | GitHub Actions | Decided on 2026-11-03, scored grid added | See below |
-| Interface design | `TBD` | To decide (Thibault), D-19 | See below. The front has no stylesheet yet |
+| Interface design | Plain CSS with CSS modules, tokens in CSS variables, two themes, French by default with an English switch | Decided on 2026-11-12 (D-19) | See below |
 | AI library (bonus) | `TBD` | Postponed | To be decided when the module starts |
 
 ## Frontend: React with TypeScript
@@ -144,7 +144,7 @@ Same scale and weights as above.
 
 ## Interface design
 
-Not decided yet. Thibault owns the design (see [team work split](team-split.md#interface)) and records each choice here, with its date, as it is made. Until then the front has no stylesheet, and every page shows plain HTML.
+Decided on 2026-11-12 (D-19). Thibault owns the design (see [team work split](team-split.md#interface)) and records each choice here, with its date. The identity (logo, colour themes, fonts) is in [brand guidelines](brand/brand-guidelines.md).
 
 **What already constrains the choice:**
 
@@ -153,18 +153,19 @@ Not decided yet. Thibault owns the design (see [team work split](team-split.md#i
 - A new dependency goes in its own small pull request, with its licence in [dependencies](dependencies.md). The licence matters: the `react-leaflet` case (D-01) showed that a wrapper can be non-open-source.
 - Other members build their pages with the shared elements and do not edit them.
 
-**Choices to make:**
+**Choices:**
 
-| Topic | Question | Decision |
-| --- | --- | --- |
-| Styling approach | Plain CSS, CSS modules, a utility framework or a component library | `TBD` |
-| Design tokens | Colours, spacing, typography, shared by every page | `TBD` |
-| Logo | Designed by Louis-Amaury (see [team work split](team-split.md#design)): format, colours and variants (full, icon, light and dark background) | `TBD` |
-| Shared elements | Which base elements go in `components/ui/` (buttons, form fields, tables, badges, messages) | `TBD` |
-| Alert criticality | How a level is shown at first glance, in a way that does not rely on colour alone | `TBD` |
-| Map | Size, controls and legend of the Leaflet map, shared by the aircraft pages and the dashboard | `TBD` |
-| Navigation | What the navigation shows before login, as a User and as a Supervisor | `TBD` |
-| Home page | What the home page presents, including the educational disclaimer the specifications ask to show in the application (§VII.3) | `TBD` |
-| Accessibility | Contrast, keyboard use, labels | `TBD` |
-| Screen sizes | Desktop only, or also tablet and phone | `TBD` |
-| Language of the interface | The texts are in English today; whether they stay so | `TBD` |
+| Topic | Decision |
+| --- | --- |
+| Styling approach | Plain CSS. The tokens are CSS variables in a global file, and each component has its own `.module.css`. Vite handles CSS modules natively, so there is no dependency, and each member owns the style files of their own components |
+| Design tokens | The two themes of [brand guidelines](brand/brand-guidelines.md#3-the-two-retained-themes): dark (Golden radar) by default and light (Papyrus), plus a spacing scale, radii and a type scale. No component uses a literal colour. The theme follows the system setting and a switch in the top bar overrides it |
+| Fonts | Cinzel, Inter and JetBrains Mono, installed locally with `@fontsource-variable/*` (own pull request, licence in [dependencies](dependencies.md)) |
+| Logo | Eye of Horus with a radar pupil, in [brand guidelines](brand/brand-guidelines.md#1-logo). It is placed in the navigation frame, on the home page and as the page icon |
+| Shared elements | `Button`, `Panel`, `StatTile`, `StatusBadge`, `Notice`, `Field` and `Table` in `components/ui/` |
+| Alert criticality | A badge with a shape, a colour and a label, never colour alone: round dot for low, triangle for medium (warning orange), diamond for high (danger) |
+| Map | Colours come from the `--map-*` tokens: altitude as shades of gold, selected aircraft and trajectory in the primary colour. Dark tiles are still an open point |
+| Navigation | One top bar with the logo, the links of the work packages, a language switch and a theme switch. On a phone it becomes a menu button |
+| Home page | Showcase with the educational disclaimer (§VII.3), links to the main screens, and live figures and a map once logged in. Before login, an invitation to log in |
+| Accessibility | Text contrast of 4.5:1 at least (values in the brand guidelines), visible keyboard focus, labelled fields, `prefers-reduced-motion` respected |
+| Screen sizes | Responsive: desktop first, phone second, tablet least important |
+| Language of the interface | French by default with an English switch, through a home-made `TranslationService` and two typed dictionaries, without a library. The choice is kept in the browser |

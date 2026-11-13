@@ -1,0 +1,41 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* The shape tells the level without colour: dot, triangle, diamond. */
+.badge::before {
+  content: "";
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  background: currentcolor;
+}
+
+.normal {
+  color: var(--color-data);
+}
+
+.normal::before {
+  border-radius: 50%;
+}
+
+.warning {
+  color: var(--color-warning);
+}
+
+.warning::before {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.danger {
+  color: var(--color-danger);
+}
+
+.danger::before {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}

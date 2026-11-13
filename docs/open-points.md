@@ -35,7 +35,7 @@ Decisions that belong to the team and do not come from the sheet.
 | D-16 | French names versus the English rule | The guide requires French names and French `COMMENT ON` text; the project rule is English. `CLAUDE.md` records French database objects as the only exception |
 | D-17 | Table for users | Decided on 2026-11-03: `UTILISATEUR`, a business table. Not `W_`, which the guide reserves for temporary or import tables |
 | D-18 | Storage of positions | Decided on 2026-11-03: PostGIS `geometry` column. Its exact name is set in the logical schema |
-| D-19 | Interface design | Pending, owned by Thibault. The front has no stylesheet yet. The choices to make (styling approach, tokens, shared elements, alert criticality, map, accessibility, language) are listed in [technology choices](technology-choices.md#interface-design) |
+| D-19 | Interface design | Decided on 2026-11-12: plain CSS with CSS modules, the two themes and fonts of the [brand guidelines](brand/brand-guidelines.md), French by default with an English switch, responsive. See [technology choices](technology-choices.md#interface-design) |
 
 ## Team decisions pending confirmation
 

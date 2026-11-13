@@ -1,0 +1,60 @@
+.hero {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+}
+
+.text {
+  min-width: 0;
+}
+
+.title {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-2xl);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.tagline {
+  margin-bottom: var(--space-3);
+  color: var(--color-brand);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  letter-spacing: 0.06em;
+}
+
+.pitch {
+  max-width: 60ch;
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 720px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .logo {
+    width: 7rem;
+  }
+
+  .title {
+    font-size: var(--text-xl);
+  }
+}

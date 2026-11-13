@@ -54,7 +54,7 @@ The split above already gives each member the pages of their work package. This 
 | Alerts, rules | `/alerts`, `/rules` | Sacha | Built, with their tests, without any styling |
 | Aircraft search, aircraft record, flight | `/aircraft`, `/aircraft/:id`, `/flights/:id` | Yassine | Built, with their tests, without any styling |
 
-The front has no stylesheet yet: every page shows plain HTML.
+The front has no stylesheet yet: every page shows plain HTML. The design is decided (D-19, 2026-11-12) and is being built on `feat/interface-design`; it lands before the other pages are styled.
 
 ### Who does what
 
