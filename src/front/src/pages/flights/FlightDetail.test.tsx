@@ -98,4 +98,12 @@ describe("FlightDetail", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("This flight does not exist.");
   });
+
+  it("says the flight does not exist when its identifier is not valid", async () => {
+    renderFlight(async () => {
+      throw new ApiError(422);
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This flight does not exist.");
+  });
 });

@@ -97,4 +97,14 @@ describe("AircraftRecord", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("does not exist");
     expect(screen.getByRole("link", { name: "Back to the search" })).toBeInTheDocument();
   });
+
+  it("says the aircraft does not exist when its identifier is not valid", async () => {
+    renderRecord({
+      get: vi.fn().mockRejectedValue(new ApiError(422)),
+      observations: vi.fn().mockResolvedValue([]),
+      flights: vi.fn().mockResolvedValue([]),
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This aircraft does not exist.");
+  });
 });
