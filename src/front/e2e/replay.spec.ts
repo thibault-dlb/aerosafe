@@ -104,7 +104,8 @@ test("the replay requests carry the source, and the live ones do not", async ({ 
     if (url.pathname.endsWith("/api/v1/aircraft")) sources.push(url.searchParams.get("source"));
   });
 
-  await page.goto("/");
+  // The overview that reads the aircraft is the top of the dashboard.
+  await page.goto("/dashboard");
   await expect.poll(() => sources.length).toBeGreaterThan(0);
   await page.getByRole("button", { name: "Rejeu" }).click();
   await expect.poll(() => sources.includes("replay")).toBe(true);

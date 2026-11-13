@@ -11,8 +11,8 @@ export type Loaded<T> =
   | { state: "forbidden" }
   | { state: "failed" };
 
-/** What the home page shows once the user is logged in. Each part loads on its own. */
-export interface HomeOverview {
+/** What the overview shows once the user is logged in. Each part loads on its own. */
+export interface LiveOverviewData {
   /** Aircraft with a known position in the Île-de-France area. */
   aircraft: Loaded<Aircraft[]>;
   /** Alerts whose situation lasts (Supervisor only). */
@@ -22,10 +22,10 @@ export interface HomeOverview {
 }
 
 /**
- * Collects the figures of the home page from the aircraft and alert endpoints: the live ones,
+ * Collects the figures of the overview from the aircraft and alert endpoints: the live ones,
  * or those of the replay at the simulated instant (the services follow the data mode).
  */
-export class HomeOverviewService {
+export class LiveOverviewService {
   /** The Île-de-France collection area (docs/open-points.md): latitude 48.0 to 49.3, longitude 1.4 to 3.6. */
   static readonly AREA: Area = { south: 48.0, west: 1.4, north: 49.3, east: 3.6 };
   /** Metropolitan France, the area of the `FRANCE` collection profile: the replayed data covers it. */
@@ -38,17 +38,17 @@ export class HomeOverviewService {
     private readonly modes: DataModeService = new DataModeService(),
   ) {}
 
-  async load(): Promise<HomeOverview> {
-    const area = this.modes.isReplay() ? HomeOverviewService.FRANCE_AREA : HomeOverviewService.AREA;
+  async load(): Promise<LiveOverviewData> {
+    const area = this.modes.isReplay() ? LiveOverviewService.FRANCE_AREA : LiveOverviewService.AREA;
     const [aircraft, active, day] = await Promise.allSettled([
-      this.aircraft.search({ area, limit: HomeOverviewService.MAX_AIRCRAFT }),
+      this.aircraft.search({ area, limit: LiveOverviewService.MAX_AIRCRAFT }),
       this.alerts.search({ status: "active", limit: 1 }),
       this.alerts.statistics(),
     ]);
     return {
-      aircraft: HomeOverviewService.settle(aircraft, (list) => list.filter((item) => item.hasPosition)),
-      activeAlerts: HomeOverviewService.settle(active, (page) => page.total),
-      dayAlerts: HomeOverviewService.settle(day, (statistics) => statistics.total),
+      aircraft: LiveOverviewService.settle(aircraft, (list) => list.filter((item) => item.hasPosition)),
+      activeAlerts: LiveOverviewService.settle(active, (page) => page.total),
+      dayAlerts: LiveOverviewService.settle(day, (statistics) => statistics.total),
     };
   }
 

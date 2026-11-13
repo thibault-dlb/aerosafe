@@ -1,6 +1,6 @@
 # User guide
 
-The application is partly built. Searching for an aircraft, the aircraft record, the flight trajectory, the alerts and the rules work and are described below. Logging in, signing up, the accounts, the dashboard and the home page are not built yet, and their instructions stay `TBD` (see [team work split](team-split.md#interface)). This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions are added as each part is developed.
+The application is partly built. Searching for an aircraft, the aircraft record, the flight trajectory, the alerts and the rules work and are described below. Logging in, signing up, the accounts and the dashboard (apart from its live overview, the figures and the map) are not built yet, and their instructions stay `TBD` (see [team work split](team-split.md#interface)). This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions are added as each part is developed.
 
 > **Disclaimer:** AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally. This limitation is also shown in the application (§VII.3).
 

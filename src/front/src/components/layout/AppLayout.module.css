@@ -144,6 +144,10 @@
   padding: var(--space-5) var(--gutter);
 }
 
+.notice {
+  margin-bottom: var(--space-4);
+}
+
 .footer {
   padding: var(--space-4) var(--gutter);
   background: var(--color-surface);
@@ -155,6 +159,29 @@
 .footer p {
   max-width: var(--page-width);
   margin: 0 auto var(--space-1);
+}
+
+/* Landing page: the bar floats over the scene and the page runs edge to edge. */
+.overlay {
+  position: fixed;
+  right: 0;
+  left: 0;
+  background: transparent;
+  border-bottom-color: transparent;
+  transition:
+    background 0.3s,
+    border-color 0.3s;
+}
+
+.barSolid {
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  border-bottom-color: var(--color-border);
+  backdrop-filter: blur(14px);
+}
+
+.landing .content {
+  max-width: none;
+  padding: 0;
 }
 
 /* Phone: the links fold into a menu, opened by the button. */

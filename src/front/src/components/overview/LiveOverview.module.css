@@ -20,3 +20,14 @@
 .notice {
   margin-bottom: var(--space-3);
 }
+
+/* Large map: most of the window, under the figures. Beats the fixed height of the map. */
+.large :global(.leaflet-container) {
+  height: max(420px, 62vh);
+}
+
+@media (max-width: 720px) {
+  .large :global(.leaflet-container) {
+    height: 60vh;
+  }
+}

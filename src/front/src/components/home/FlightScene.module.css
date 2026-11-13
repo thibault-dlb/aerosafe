@@ -1,0 +1,170 @@
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.scene path,
+.scene circle,
+.scene line {
+  vector-effect: non-scaling-stroke;
+}
+
+.graticule {
+  fill: none;
+  stroke: var(--map-grid);
+  stroke-width: 1;
+  opacity: 0.28;
+}
+
+.ring {
+  fill: none;
+  stroke: var(--map-rings);
+  stroke-width: 1;
+  stroke-dasharray: 2 7;
+  opacity: 0.45;
+}
+
+.beam {
+  fill: var(--map-beam);
+  transform-origin: 0 0;
+  animation: sweep 9s linear infinite;
+}
+
+.beamEdge {
+  fill: none;
+  stroke: var(--map-beam);
+  stroke-width: 1.5;
+  opacity: 0.55;
+}
+
+@keyframes sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.land {
+  fill: var(--map-land);
+  opacity: 0.92;
+}
+
+.coast {
+  fill: none;
+  stroke: var(--map-rings);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  opacity: 0.5;
+}
+
+.coastLit {
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-brand) 70%, transparent));
+}
+
+.city {
+  fill: var(--map-text);
+}
+
+.cityName {
+  fill: var(--map-text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.traffic line {
+  stroke: var(--map-aircraft-mid);
+  stroke-width: 1;
+  opacity: 0.28;
+}
+
+.traffic circle {
+  fill: var(--map-aircraft-mid);
+  opacity: 0.75;
+}
+
+.planned {
+  fill: none;
+  stroke: var(--map-aircraft-high);
+  stroke-width: 1;
+  stroke-dasharray: 3 6;
+  opacity: 0.5;
+}
+
+.track,
+.alertTrack {
+  fill: none;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.track {
+  stroke: var(--color-data);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--color-data) 80%, transparent));
+}
+
+.alertTrack {
+  stroke: var(--color-danger);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-danger) 85%, transparent));
+}
+
+.plane {
+  --plane: var(--map-aircraft-high);
+}
+
+.planeAlert {
+  --plane: var(--color-danger);
+}
+
+.glyph {
+  fill: var(--plane);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--plane) 80%, transparent));
+}
+
+.halo {
+  fill: none;
+  stroke: var(--plane);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+
+.tag {
+  fill: var(--plane);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.pulse {
+  fill: none;
+  stroke: var(--color-danger);
+  stroke-width: 1.5;
+  transform-origin: 0 0;
+  animation: pulse 1.8s ease-out infinite;
+}
+
+.pulseLate {
+  animation-delay: 0.9s;
+}
+
+@keyframes pulse {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+
+  to {
+    transform: scale(4.2);
+    opacity: 0;
+  }
+}

@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import logoUrl from "@/assets/logo/aerosafe-logo.svg";
 import ReplayBar from "@/components/replay/ReplayBar";
+import Notice from "@/components/ui/Notice";
 import { useDataMode } from "@/hooks/useDataMode";
+import { useScrolled } from "@/hooks/useScrolled";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { TranslationKey } from "@/i18n/fr";
@@ -24,20 +26,32 @@ const LINKS: { to: string; label: TranslationKey }[] = [
 
 const NAV_ID = "main-links";
 
+/** Pages where the visitor is about to use the data: they carry the educational notice. */
+const NOTICE_PATHS = ["/login", "/signup"];
+
 /** Shared page frame: the top bar with the navigation, the current page, then the footer. */
 export default function AppLayout() {
   const { t, language, setLanguage } = useTranslation();
   const { theme, setTheme } = useTheme();
   const { mode, setMode } = useDataMode();
   const [menuOpen, setMenuOpen] = useState(false);
+  // The landing page is always dark, edge to edge, under a bar that is clear until it scrolls.
+  const { pathname } = useLocation();
+  const landing = pathname === "/";
+  const scrolled = useScrolled();
+  const frameClass = landing ? `${styles.frame} ${styles.landing} darkScope` : styles.frame;
+  // In the replay the bar stays in the flow, so the replay bar under it is not covered.
+  const overlay = landing && mode !== "replay";
+  const barClasses = [styles.bar, overlay && styles.overlay, overlay && (scrolled || menuOpen) && styles.barSolid];
+  const barClass = barClasses.filter(Boolean).join(" ");
 
   return (
     <ReplayProvider>
-      <div className={styles.frame}>
+      <div className={frameClass}>
         <a className={styles.skip} href="#content">
           {t("layout.skipToContent")}
         </a>
-        <header className={styles.bar}>
+        <header className={barClass}>
           <Link to="/" className={styles.brand} onClick={() => setMenuOpen(false)}>
             <img className={styles.logo} src={logoUrl} alt="" width={40} height={40} />
             <span className={styles.name}>AeroSafe</span>
@@ -111,6 +125,7 @@ export default function AppLayout() {
 
         {/* The key remounts the page when the mode changes, so it loads the data of the new mode. */}
         <div id="content" key={mode} className={styles.content}>
+          {NOTICE_PATHS.includes(pathname) && <Notice className={styles.notice}>{t("layout.disclaimer")}</Notice>}
           <Outlet />
         </div>
 

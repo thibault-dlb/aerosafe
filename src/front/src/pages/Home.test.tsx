@@ -4,8 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { useTranslation } from "@/hooks/useTranslation";
 import PreferencesProvider from "@/providers/PreferencesProvider";
-import type { HomeOverviewService } from "@/services/HomeOverviewService";
 import { PreferenceStore } from "@/services/PreferenceStore";
+
+vi.mock("@/hooks/useScrollProgress", () => ({ useScrollProgress: () => 0 }));
 
 import Home from "./Home";
 
@@ -17,14 +18,6 @@ function memoryStore(): PreferenceStore {
   });
 }
 
-const SERVICE = {
-  load: vi.fn().mockResolvedValue({
-    aircraft: { state: "unauthenticated" },
-    activeAlerts: { state: "unauthenticated" },
-    dayAlerts: { state: "unauthenticated" },
-  }),
-} as unknown as HomeOverviewService;
-
 function EnglishButton() {
   const { setLanguage } = useTranslation();
   return <button onClick={() => setLanguage("en")}>en</button>;
@@ -35,7 +28,7 @@ async function renderHome() {
     <PreferencesProvider store={memoryStore()}>
       <MemoryRouter>
         <EnglishButton />
-        <Home overview={SERVICE} />
+        <Home />
       </MemoryRouter>
     </PreferencesProvider>,
   );
@@ -49,32 +42,48 @@ describe("Home", () => {
     expect(screen.getByRole("heading", { level: 1, name: "AeroSafe" })).toBeInTheDocument();
   });
 
-  it("shows the educational disclaimer", async () => {
+  it("does not carry the educational notice: the footer and the log in pages do", async () => {
     await renderHome();
 
-    expect(screen.getByRole("status", { name: "" })).toHaveTextContent("Projet pédagogique");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText(/pédagogique/)).not.toBeInTheDocument();
   });
 
-  it("leads to the main screens", async () => {
+  it("leads to the main screens, from the hero, the features and the closing band", async () => {
     await renderHome();
 
-    for (const [name, href] of [
-      ["Rechercher un aéronef", "/aircraft"],
-      ["Aéronefs", "/aircraft"],
-      ["Tableau de bord", "/dashboard"],
-      ["Alertes", "/alerts"],
-      ["Règles", "/rules"],
+    for (const [name, href, count] of [
+      ["Ouvrir le tableau de bord", "/dashboard", 3],
+      ["Se connecter", "/login", 2],
+      ["Rechercher un aéronef", "/aircraft", 1],
+      ["Voir les alertes", "/alerts", 1],
+      ["Régler les règles", "/rules", 1],
     ] as const) {
-      expect(screen.getByRole("link", { name: new RegExp(`^${name}`) })).toHaveAttribute("href", href);
+      const links = screen.getAllByRole("link", { name, hidden: true });
+      expect(links).toHaveLength(count);
+      links.forEach((link) => expect(link).toHaveAttribute("href", href));
     }
+  });
+
+  it("runs from the scene to the closing band", async () => {
+    await renderHome();
+
+    const headings = screen.getAllByRole("heading", { level: 2, hidden: true }).map((item) => item.textContent);
+    expect(headings).toEqual([
+      "Suivre.",
+      "Détecter.",
+      "Tout pour garder le contrôle du ciel.",
+      "Comment ça marche",
+      "Prêt à surveiller le ciel ?",
+    ]);
   });
 
   it("is in French by default and follows the language", async () => {
     await renderHome();
-    expect(screen.getByText("Surveillance des données aéronautiques en direct")).toBeInTheDocument();
+    expect(screen.getByText("Chaque vol, surveillé. Chaque écart, détecté.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("en"));
 
-    expect(screen.getByText("Live aeronautical data monitoring")).toBeInTheDocument();
+    expect(screen.getByText("Every flight, watched. Every deviation, caught.")).toBeInTheDocument();
   });
 });

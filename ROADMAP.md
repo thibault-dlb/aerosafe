@@ -22,7 +22,7 @@ The work is shared between the five group members in [team work split](docs/team
 | --- | --- | --- | --- |
 | 1 | Analysis and specification | Analyse requirements, identify actors and use cases, define features and business rules | Done; the ambiguities of the sheet are settled and confirmed by the supervising teacher |
 | 2 | Design | UML modelling, software architecture, database design, module organisation, technology choices | Done: technology choices, repository layout, UML diagrams, data model and rule thresholds validated with the supervising teacher; migrations written; interface design decided (D-19) |
-| 3 | Development | Web application, interface, authentication and role management, alert system | Foundation, aircraft lookup, collection, authentication API, rules and alerts merged; accounts, dashboard, log in and home screens and the application of the design still to do, see [team work split](docs/team-split.md#interface) |
+| 3 | Development | Web application, interface, authentication and role management, alert system | Foundation, aircraft lookup, collection, authentication API, rules and alerts merged; accounts, dashboard, log in screens and the application of the design still to do; the home page is built on `feat/landing-page`, see [team work split](docs/team-split.md#interface) |
 | 4 | Testing and quality | Unit tests, integration tests, component checks, fixes and code improvements | Tooling in place (pytest, Vitest, Playwright); each work package brings its own tests |
 | 5 | Documentation and evolution | Technical and functional documentation, maintenance, evolution, new features including AI | In progress: documentation skeleton |
 | 6 | Code and version management | Git, branch management, version management | In place: Git, branching strategy, pull requests |
@@ -47,7 +47,7 @@ From the project sheet:
 - [x] Confirm with the supervising teacher the team's answers to the ambiguities of the sheet (A-01 to A-04 in [open points](docs/open-points.md)) (2026-11-12)
 - [x] Decide the interface design (D-19): logo, colour themes and fonts in [brand guidelines](docs/brand/brand-guidelines.md), and the other choices of [technology choices](docs/technology-choices.md#interface-design)
 - [ ] Replay the historical traffic (D-20): the replay clock, the rules on replayed traffic, the source of the data in the API and the Live / Replay switch in the interface (Thibault). Left to do: the pages of the other work packages still show their own texts in English only
-- [ ] Finish the interface: the styles and the home page (Thibault), log in, sign up and accounts (Louis-Amaury), the dashboard (Jules), then the design applied to every page (see [team work split](docs/team-split.md#interface))
+- [ ] Finish the interface: the styles (Thibault; the home page is on `feat/landing-page`), log in, sign up and accounts (Louis-Amaury), the dashboard (Jules), then the design applied to every page (see [team work split](docs/team-split.md#interface))
 - [x] Read the OpenSky terms of use (see [OpenSky Network](docs/opensky.md))
 - [ ] Register one OpenSky account for the group and create its OAuth2 API client (quotas are documented in [architecture](docs/architecture.md))
 

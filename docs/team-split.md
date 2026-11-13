@@ -47,10 +47,10 @@ The split above already gives each member the pages of their work package. This 
 
 | Screen | Route | Owner | State |
 | --- | --- | --- | --- |
-| Home | `/` | Thibault | Empty page: a title and the navigation |
+| Home | `/` | Thibault | Built on `feat/landing-page`: a dark landing page with a scroll-driven scene, the features, figures, steps and a call to action. The live figures and the map moved to the top of the dashboard |
 | Log in, sign up | `/login`, `/signup` | Louis-Amaury | Empty pages. `AuthProvider`, `useAuth` and `AuthService` are not written, so nobody can log in from the interface. The API route `auth.py` is merged |
 | Accounts | `/admin/accounts` | Louis-Amaury | Empty page. The API route `users.py` is empty too (`/users` is `TBD` in [API](api.md)) |
-| Dashboard | `/dashboard` | Jules | Empty page. The API route `dashboard.py` is empty too (`/dashboard` is `TBD` in [API](api.md)) |
+| Dashboard | `/dashboard` | Jules | Page title and, since `feat/landing-page`, the live overview (`components/overview/LiveOverview`: figures and a large map, live or replay) at the top; the rest is still to do. The API route `dashboard.py` is empty (`/dashboard` is `TBD` in [API](api.md)) |
 | Alerts, rules | `/alerts`, `/rules` | Sacha | Built, with their tests, without any styling |
 | Aircraft search, aircraft record, flight | `/aircraft`, `/aircraft/:id`, `/flights/:id` | Yassine | Built, with their tests, without any styling |
 

@@ -38,10 +38,18 @@ function Page() {
   return <h1>Page content</h1>;
 }
 
-function renderLayout(store = memoryStore()) {
+function renderLayout(store = memoryStore(), path = "/alerts") {
   const router = createMemoryRouter(
-    [{ element: <AppLayout />, children: [{ path: "/alerts", element: <Page /> }] }],
-    { initialEntries: ["/alerts"] },
+    [
+      {
+        element: <AppLayout />,
+        children: [
+          { path: "/", element: <Page /> },
+          { path: "/alerts", element: <Page /> },
+        ],
+      },
+    ],
+    { initialEntries: [path] },
   );
   render(
     <PreferencesProvider store={store}>
@@ -133,5 +141,15 @@ describe("AppLayout data mode", () => {
     fireEvent.click(screen.getByRole("button", { name: "Rejeu" }));
 
     expect(store.get(DataModeService.KEY)).toBe("replay");
+  });
+
+  it("floats the top bar over the landing page, but keeps it in the flow in the replay so the replay bar is not covered", async () => {
+    renderLayout(memoryStore(), "/");
+    expect(screen.getByRole("banner").className).toMatch(/overlay/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Rejeu" }));
+    await screen.findByRole("region", { name: "Rejeu du trafic historique" });
+
+    expect(screen.getByRole("banner").className).not.toMatch(/overlay/);
   });
 });

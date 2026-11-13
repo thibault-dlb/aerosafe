@@ -159,13 +159,14 @@ Decided on 2026-11-12 (D-19). Thibault owns the design (see [team work split](te
 | --- | --- |
 | Styling approach | Plain CSS. The tokens are CSS variables in a global file, and each component has its own `.module.css`. Vite handles CSS modules natively, so there is no dependency, and each member owns the style files of their own components |
 | Design tokens | The two themes of [brand guidelines](brand/brand-guidelines.md#3-the-two-retained-themes): dark (Golden radar) by default and light (Papyrus), plus a spacing scale, radii and a type scale. No component uses a literal colour. The theme follows the system setting and a switch in the top bar overrides it |
+| Animation library | `gsap` (ScrollTrigger plugin) for the scene of the home page only. Simple fades use `IntersectionObserver` and CSS transitions, and the counters a `requestAnimationFrame` loop |
 | Fonts | Cinzel, Inter and JetBrains Mono, installed locally with `@fontsource-variable/*` (own pull request, licence in [dependencies](dependencies.md)) |
 | Logo | Eye of Horus with a radar pupil, in [brand guidelines](brand/brand-guidelines.md#1-logo). It is placed in the navigation frame, on the home page and as the page icon |
 | Shared elements | `Button`, `Panel`, `StatTile`, `StatusBadge`, `Notice`, `Field` and `Table` in `components/ui/` |
 | Alert criticality | A badge with a shape, a colour and a label, never colour alone: round dot for low, triangle for medium (warning orange), diamond for high (danger) |
 | Map | Colours come from the `--map-*` tokens: altitude as shades of gold, selected aircraft and trajectory in the primary colour. Dark tiles are still an open point |
-| Navigation | One top bar with the logo, the links of the work packages, a language switch and a theme switch. On a phone it becomes a menu button |
-| Home page | Showcase with the educational disclaimer (§VII.3), links to the main screens, and live figures and a map once logged in. Before login, an invitation to log in |
+| Navigation | One top bar with the logo, the links of the work packages, a language switch and a theme switch. On a phone it becomes a menu button. On the home page it floats over the scene and turns solid once the page scrolls; in the replay it stays in the flow, so it does not cover the replay bar |
+| Home page | A landing page, always dark (a `darkScope` class redefines the dark tokens whatever the theme), that does not mention the educational project apart from the footer line. A scene plays as the page scrolls (an aircraft crosses France and rule R3 raises an alert; drawn in SVG, driven by GSAP ScrollTrigger and the pure `FlightTimeline` class, still with `prefers-reduced-motion`). Under it: the features, four figures taken from the documentation, how it works, and a call to action. The educational disclaimer (§VII.3) is in the footer of every page and, as a notice, on the log in and sign up pages |
 | Accessibility | Text contrast of 4.5:1 at least (values in the brand guidelines), visible keyboard focus, labelled fields, `prefers-reduced-motion` respected |
 | Screen sizes | Responsive: desktop first, phone second, tablet least important |
 | Language of the interface | French by default with an English switch, through a home-made `TranslationService` and two typed dictionaries, without a library. The choice is kept in the browser |

@@ -1,26 +1,20 @@
+import HomeCta from "@/components/home/HomeCta";
 import HomeFeatures from "@/components/home/HomeFeatures";
+import HomeFigures from "@/components/home/HomeFigures";
 import HomeHero from "@/components/home/HomeHero";
-import HomeLive from "@/components/home/HomeLive";
-import Notice from "@/components/ui/Notice";
-import { useTranslation } from "@/hooks/useTranslation";
-import type { HomeOverviewService } from "@/services/HomeOverviewService";
+import HomeSteps from "@/components/home/HomeSteps";
 
 import styles from "./Home.module.css";
 
-export interface HomeProps {
-  /** Where the live figures come from. Tests give their own. */
-  overview?: HomeOverviewService;
-}
-
-/** Home page: presentation, educational disclaimer (§VII.3), live figures and the main screens. */
-export default function Home({ overview }: HomeProps) {
-  const { t } = useTranslation();
+/** Home page: the scroll-driven scene, what the application does, its figures, how it works, then the way in. */
+export default function Home() {
   return (
     <main className={styles.page}>
       <HomeHero />
-      <Notice>{t("home.disclaimer")}</Notice>
-      <HomeLive service={overview} />
       <HomeFeatures />
+      <HomeFigures />
+      <HomeSteps />
+      <HomeCta />
     </main>
   );
 }
