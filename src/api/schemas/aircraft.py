@@ -22,6 +22,9 @@ class AircraftSummary(BaseModel):
     )
     latitude: float | None = Field(default=None, description="Latest known latitude, in degrees")
     longitude: float | None = Field(default=None, description="Latest known longitude, in degrees")
+    altitude: float | None = Field(
+        default=None, description="Altitude of the latest observation, in metres"
+    )
 
 
 class ObservationPoint(BaseModel):

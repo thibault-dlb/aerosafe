@@ -9,6 +9,7 @@ from sqlalchemy.sql import Subquery
 from core.repository import Repository
 from models import Aircraft, AircraftModel, Airline, Observation
 from schemas.aircraft import AircraftSummary
+from services.aircraft.observations import to_float
 
 WGS84 = 4326
 
@@ -62,6 +63,7 @@ class AircraftService:
                 Observation.position,
                 func.ST_Y(Observation.position).label("latitude"),
                 func.ST_X(Observation.position).label("longitude"),
+                Observation.altitude,
             )
             .where(Observation.deleted_at.is_(None))
             .ext(distinct_on(Observation.aircraft_id))
@@ -80,6 +82,7 @@ class AircraftService:
                 latest.c.last_contact_at,
                 latest.c.latitude,
                 latest.c.longitude,
+                latest.c.altitude,
             )
             .outerjoin(AircraftModel, Aircraft.model_id == AircraftModel.id)
             .outerjoin(Airline, Aircraft.airline_id == Airline.id)
@@ -135,4 +138,5 @@ class AircraftService:
             last_contact_at=row.last_contact_at,
             latitude=row.latitude,
             longitude=row.longitude,
+            altitude=to_float(row.altitude),
         )

@@ -83,6 +83,7 @@ def aircraft_row() -> FakeRow:
         last_contact_at=T0,
         latitude=48.1,
         longitude=2.3,
+        altitude=10000.0,
     )
 
 
