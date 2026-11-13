@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { useTranslation } from "@/hooks/useTranslation";
 import PreferencesProvider from "@/providers/PreferencesProvider";
 import { PreferenceStore } from "@/services/PreferenceStore";
+
+vi.mock("@/hooks/useScrollProgress", () => ({ useScrollProgress: () => 0 }));
 
 import Home from "./Home";
 
@@ -51,7 +53,6 @@ describe("Home", () => {
     await renderHome();
 
     for (const [name, href] of [
-      ["Rechercher un aéronef", "/aircraft"],
       ["Aéronefs", "/aircraft"],
       ["Tableau de bord", "/dashboard"],
       ["Alertes", "/alerts"],
@@ -63,10 +64,10 @@ describe("Home", () => {
 
   it("is in French by default and follows the language", async () => {
     await renderHome();
-    expect(screen.getByText("Surveillance des données aéronautiques en direct")).toBeInTheDocument();
+    expect(screen.getByText("Chaque vol, surveillé. Chaque écart, détecté.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("en"));
 
-    expect(screen.getByText("Live aeronautical data monitoring")).toBeInTheDocument();
+    expect(screen.getByText("Every flight, watched. Every deviation, caught.")).toBeInTheDocument();
   });
 });

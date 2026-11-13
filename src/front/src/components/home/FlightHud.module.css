@@ -1,0 +1,167 @@
+.hud {
+  --accent: var(--color-data);
+
+  position: absolute;
+  right: clamp(1rem, 5vw, 5rem);
+  top: 50%;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: var(--space-4);
+  transform: translateY(-50%);
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--color-border));
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 45%);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  transition:
+    border-color 0.4s,
+    box-shadow 0.4s;
+}
+
+.alerting {
+  --accent: var(--color-danger);
+
+  box-shadow:
+    0 24px 60px rgb(0 0 0 / 45%),
+    0 0 40px color-mix(in srgb, var(--color-danger) 28%, transparent);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.callsign {
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.route {
+  flex: 1;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+}
+
+.status {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition:
+    color 0.4s,
+    border-color 0.4s;
+}
+
+.readings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+}
+
+.readings dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.readings dd {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-lg);
+}
+
+.readings small {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.alerting .watched dd {
+  color: var(--color-danger);
+}
+
+.profile {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: var(--space-4);
+}
+
+.baseline {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.curve {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  transition: stroke 0.4s;
+}
+
+.alert {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
+  border-left: 3px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+
+.alert span {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* Phone: the readings sit at the bottom, the map stays visible above. */
+@media (max-width: 720px) {
+  .hud {
+    top: auto;
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    width: auto;
+    padding: var(--space-3);
+    transform: none;
+  }
+
+  .head {
+    margin-bottom: var(--space-2);
+  }
+
+  .readings {
+    grid-template-columns: repeat(4, auto);
+    gap: var(--space-2);
+  }
+
+  .readings dd {
+    font-size: var(--text-sm);
+  }
+
+  .readings dt {
+    font-size: 0.625rem;
+    letter-spacing: 0.04em;
+  }
+
+  .profile {
+    display: none;
+  }
+}
