@@ -22,13 +22,23 @@ const GRATICULE = (() => {
 const RADAR_RINGS = [90, 180, 270, 360, 450, 540, 630];
 const RADAR_REACH = 720;
 
-/** A slice of the radar disc, from the north, `degrees` wide. */
+/**
+ * A slice of the radar disc that ends at the north, on the bright line, and trails `degrees`
+ * behind it. The beam turns clockwise, so the line leads and the slice fades away behind it.
+ */
 function wedge(degrees: number): string {
   const angle = (degrees * Math.PI) / 180;
-  const x = Math.sin(angle) * RADAR_REACH;
+  const x = -Math.sin(angle) * RADAR_REACH;
   const y = -Math.cos(angle) * RADAR_REACH;
-  return `M0 0L0 ${-RADAR_REACH}A${RADAR_REACH} ${RADAR_REACH} 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}Z`;
+  return `M0 0L${x.toFixed(1)} ${y.toFixed(1)}A${RADAR_REACH} ${RADAR_REACH} 0 0 1 0 ${-RADAR_REACH}Z`;
 }
+
+/**
+ * How far the line ahead of another aircraft reaches, as a share of the way it flies during
+ * the scene. They all fly for the same scroll, so a longer way means a faster aircraft and a
+ * longer line, like the speed vector of a radar.
+ */
+const TRAFFIC_LEAD = 0.14;
 
 /** Aircraft seen from above, nose to the north, centred on its position. */
 const PLANE_PATH =
@@ -115,10 +125,13 @@ export default function FlightScene({ frame, routePath, callsign, label }: Fligh
 
         {TRAFFIC.map((other, index) => {
           const head = between(other.from, other.to, frame.progress);
-          const tail = between(other.from, other.to, Math.max(frame.progress - 0.12, 0));
+          const lead = {
+            x: head.x + (other.to.x - other.from.x) * TRAFFIC_LEAD,
+            y: head.y + (other.to.y - other.from.y) * TRAFFIC_LEAD,
+          };
           return (
             <g key={index} className={styles.traffic}>
-              <line x1={tail.x} y1={tail.y} x2={head.x} y2={head.y} />
+              <line x1={head.x} y1={head.y} x2={lead.x} y2={lead.y} />
               <circle cx={head.x} cy={head.y} r={2.2 * unit} />
             </g>
           );
