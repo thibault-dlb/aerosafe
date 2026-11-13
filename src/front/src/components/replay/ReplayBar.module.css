@@ -1,0 +1,88 @@
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--gutter);
+  background: color-mix(in srgb, var(--color-selection) 8%, var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.bar p {
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  color: var(--color-text-muted);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.field input {
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+}
+
+.button,
+.speeds button {
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.button:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.speeds {
+  display: inline-flex;
+}
+
+.speeds button {
+  border-radius: 0;
+  margin-left: -1px;
+}
+
+.speeds button:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  margin-left: 0;
+}
+
+.speeds button:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.speeds button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--color-selection) 18%, transparent);
+}
+
+.period {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}

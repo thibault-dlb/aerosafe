@@ -1,6 +1,7 @@
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 
 import { PreferencesContext, type Preferences } from "@/providers/PreferencesContext";
+import { type DataMode, DataModeService } from "@/services/DataModeService";
 import { PreferenceStore } from "@/services/PreferenceStore";
 import { ThemeService, type Theme } from "@/services/ThemeService";
 import { type Language, TranslationService } from "@/services/TranslationService";
@@ -11,16 +12,21 @@ export interface PreferencesProviderProps {
   store?: PreferenceStore;
 }
 
-/** Gives the language, the theme and the translation function to the whole application. */
+/** Gives the language, the theme, the data mode and the translation function to the whole application. */
 export default function PreferencesProvider({ children, store }: PreferencesProviderProps) {
   const [services] = useState(() => {
     const preferenceStore = store ?? new PreferenceStore();
     const theme = new ThemeService(preferenceStore);
     theme.apply();
-    return { theme, translation: new TranslationService(preferenceStore) };
+    return {
+      theme,
+      translation: new TranslationService(preferenceStore),
+      mode: new DataModeService(preferenceStore),
+    };
   });
   const [language, setLanguageState] = useState<Language>(() => services.translation.current());
   const [theme, setThemeState] = useState<Theme>(() => services.theme.current());
+  const [mode, setModeState] = useState<DataMode>(() => services.mode.current());
 
   const setLanguage = useCallback(
     (next: Language) => {
@@ -38,15 +44,25 @@ export default function PreferencesProvider({ children, store }: PreferencesProv
     [services],
   );
 
+  const setMode = useCallback(
+    (next: DataMode) => {
+      services.mode.set(next);
+      setModeState(next);
+    },
+    [services],
+  );
+
   const value = useMemo<Preferences>(
     () => ({
       language,
       setLanguage,
       theme,
       setTheme,
+      mode,
+      setMode,
       t: (key, params) => services.translation.t(key, params),
     }),
-    [language, setLanguage, theme, setTheme, services],
+    [language, setLanguage, theme, setTheme, mode, setMode, services],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
