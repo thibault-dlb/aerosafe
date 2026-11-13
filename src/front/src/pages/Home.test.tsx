@@ -1,10 +1,9 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { useTranslation } from "@/hooks/useTranslation";
 import PreferencesProvider from "@/providers/PreferencesProvider";
-import type { HomeOverviewService } from "@/services/HomeOverviewService";
 import { PreferenceStore } from "@/services/PreferenceStore";
 
 import Home from "./Home";
@@ -17,14 +16,6 @@ function memoryStore(): PreferenceStore {
   });
 }
 
-const SERVICE = {
-  load: vi.fn().mockResolvedValue({
-    aircraft: { state: "unauthenticated" },
-    activeAlerts: { state: "unauthenticated" },
-    dayAlerts: { state: "unauthenticated" },
-  }),
-} as unknown as HomeOverviewService;
-
 function EnglishButton() {
   const { setLanguage } = useTranslation();
   return <button onClick={() => setLanguage("en")}>en</button>;
@@ -35,7 +26,7 @@ async function renderHome() {
     <PreferencesProvider store={memoryStore()}>
       <MemoryRouter>
         <EnglishButton />
-        <Home overview={SERVICE} />
+        <Home />
       </MemoryRouter>
     </PreferencesProvider>,
   );

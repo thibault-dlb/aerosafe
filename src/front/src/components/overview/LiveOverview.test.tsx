@@ -5,17 +5,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Aircraft } from "@/models/Aircraft";
 import PreferencesProvider from "@/providers/PreferencesProvider";
-import { type HomeOverview, type HomeOverviewService } from "@/services/HomeOverviewService";
+import { type LiveOverviewData, type LiveOverviewService } from "@/services/LiveOverviewService";
 import { PreferenceStore } from "@/services/PreferenceStore";
 
-import HomeLive, { REFRESH_MS } from "./HomeLive";
+import LiveOverview, { REFRESH_MS } from "./LiveOverview";
 
 const PLANES = [
   new Aircraft("1", "3944ee", "F-HBAB", null, null, null, 48.8, 2.3),
   new Aircraft("2", "3944ef", null, null, null, null, 48.9, 2.4),
 ];
 
-const READY: HomeOverview = {
+const READY: LiveOverviewData = {
   aircraft: { state: "ready", data: PLANES },
   activeAlerts: { state: "ready", data: 3 },
   dayAlerts: { state: "ready", data: 12 },
@@ -29,13 +29,13 @@ function memoryStore(): PreferenceStore {
   });
 }
 
-function fakeService(...overviews: HomeOverview[]) {
-  const load = vi.fn<() => Promise<HomeOverview>>();
+function fakeService(...overviews: LiveOverviewData[]) {
+  const load = vi.fn<() => Promise<LiveOverviewData>>();
   overviews.forEach((overview, index) => {
     if (index === overviews.length - 1) load.mockResolvedValue(overview);
     else load.mockResolvedValueOnce(overview);
   });
-  return { service: { load } as unknown as HomeOverviewService, load };
+  return { service: { load } as unknown as LiveOverviewService, load };
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -56,12 +56,12 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("HomeLive", () => {
+describe("LiveOverview", () => {
   it("shows a loading message first", () => {
     vi.useFakeTimers();
     const { service } = fakeService(READY);
 
-    render(<HomeLive service={service} />, { wrapper: Wrapper });
+    render(<LiveOverview service={service} />, { wrapper: Wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent("Chargement des données…");
   });
@@ -70,7 +70,7 @@ describe("HomeLive", () => {
     vi.useFakeTimers();
     const { service } = fakeService(READY);
 
-    render(<HomeLive service={service} />, { wrapper: Wrapper });
+    render(<LiveOverview service={service} />, { wrapper: Wrapper });
     await settle();
 
     expect(screen.getByText("Aéronefs suivis").nextSibling).toHaveTextContent("2");
@@ -83,7 +83,7 @@ describe("HomeLive", () => {
     vi.useFakeTimers();
     const { service, load } = fakeService({ ...READY, aircraft: { state: "unauthenticated" } });
 
-    render(<HomeLive service={service} />, { wrapper: Wrapper });
+    render(<LiveOverview service={service} />, { wrapper: Wrapper });
     await settle();
     await settle(REFRESH_MS * 2);
 
@@ -101,7 +101,7 @@ describe("HomeLive", () => {
       dayAlerts: { state: "forbidden" },
     });
 
-    render(<HomeLive service={service} />, { wrapper: Wrapper });
+    render(<LiveOverview service={service} />, { wrapper: Wrapper });
     await settle();
 
     expect(screen.getByText("Aéronefs suivis")).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe("HomeLive", () => {
     vi.useFakeTimers();
     const { service } = fakeService({ ...READY, dayAlerts: { state: "failed" } });
 
-    render(<HomeLive service={service} />, { wrapper: Wrapper });
+    render(<LiveOverview service={service} />, { wrapper: Wrapper });
     await settle();
 
     expect(screen.getByRole("alert")).toHaveTextContent("Certaines données n'ont pas pu être chargées");
@@ -129,7 +129,7 @@ describe("HomeLive", () => {
       activeAlerts: { state: "ready", data: 9 },
     });
 
-    render(<HomeLive service={service} />, { wrapper: Wrapper });
+    render(<LiveOverview service={service} />, { wrapper: Wrapper });
     await settle();
     await settle(REFRESH_MS);
 
@@ -141,7 +141,7 @@ describe("HomeLive", () => {
     vi.useFakeTimers();
     const { service, load } = fakeService(READY);
 
-    const { unmount } = render(<HomeLive service={service} />, { wrapper: Wrapper });
+    const { unmount } = render(<LiveOverview service={service} />, { wrapper: Wrapper });
     await settle();
     unmount();
     await settle(REFRESH_MS * 3);

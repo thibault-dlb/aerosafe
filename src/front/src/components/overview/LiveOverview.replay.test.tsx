@@ -7,12 +7,12 @@ import { Aircraft } from "@/models/Aircraft";
 import PreferencesProvider from "@/providers/PreferencesProvider";
 import { ReplayContext, type ReplayContextValue } from "@/providers/ReplayContext";
 import { DataModeService } from "@/services/DataModeService";
-import { type HomeOverview, type HomeOverviewService } from "@/services/HomeOverviewService";
+import { type LiveOverviewData, type LiveOverviewService } from "@/services/LiveOverviewService";
 import { PreferenceStore } from "@/services/PreferenceStore";
 
-import HomeLive, { REFRESH_MS, REPLAY_REFRESH_MS } from "./HomeLive";
+import LiveOverview, { REFRESH_MS, REPLAY_REFRESH_MS } from "./LiveOverview";
 
-const READY: HomeOverview = {
+const READY: LiveOverviewData = {
   aircraft: { state: "ready", data: [new Aircraft("1", "000001", null, null, null, null, 46.5, 2.5)] },
   activeAlerts: { state: "ready", data: 4 },
   dayAlerts: { state: "ready", data: 9 },
@@ -41,9 +41,9 @@ function clock(now: Date | null): ReplayContextValue {
   };
 }
 
-function renderHome(now: Date | null, overview: HomeOverview = READY) {
-  const load = vi.fn<() => Promise<HomeOverview>>().mockResolvedValue(overview);
-  const service = { load } as unknown as HomeOverviewService;
+function renderHome(now: Date | null, overview: LiveOverviewData = READY) {
+  const load = vi.fn<() => Promise<LiveOverviewData>>().mockResolvedValue(overview);
+  const service = { load } as unknown as LiveOverviewService;
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <PreferencesProvider store={replayStore()}>
@@ -53,7 +53,7 @@ function renderHome(now: Date | null, overview: HomeOverview = READY) {
       </PreferencesProvider>
     );
   }
-  render(<HomeLive service={service} />, { wrapper: Wrapper });
+  render(<LiveOverview service={service} />, { wrapper: Wrapper });
   return load;
 }
 
@@ -68,7 +68,7 @@ afterEach(() => {
   DataModeService.reset();
 });
 
-describe("HomeLive in the replay", () => {
+describe("LiveOverview in the replay", () => {
   it("shows the simulated time and the replayed figures", async () => {
     vi.useFakeTimers();
 

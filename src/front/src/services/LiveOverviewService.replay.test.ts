@@ -5,7 +5,7 @@ import { AlertPage, AlertStatistics } from "@/models/Alert";
 import type { AircraftService } from "./AircraftService";
 import type { AlertService } from "./AlertService";
 import { DataModeService } from "./DataModeService";
-import { HomeOverviewService } from "./HomeOverviewService";
+import { LiveOverviewService } from "./LiveOverviewService";
 import { PreferenceStore } from "./PreferenceStore";
 
 function modes(mode: "live" | "replay"): DataModeService {
@@ -26,7 +26,7 @@ function build(mode: "live" | "replay") {
     search: vi.fn().mockResolvedValue(new AlertPage([], 0)),
     statistics: vi.fn().mockResolvedValue(new AlertStatistics(new Date(0), new Date(1), 0, {})),
   };
-  const service = new HomeOverviewService(
+  const service = new LiveOverviewService(
     aircraft as unknown as AircraftService,
     alerts as unknown as AlertService,
     modes(mode),
@@ -36,17 +36,17 @@ function build(mode: "live" | "replay") {
 
 afterEach(() => DataModeService.reset());
 
-describe("HomeOverviewService in the replay", () => {
+describe("LiveOverviewService in the replay", () => {
   it("looks at the whole of metropolitan France, which the replayed data covers", async () => {
     const { service, aircraft } = build("replay");
 
     await service.load();
 
     expect(aircraft.search).toHaveBeenCalledWith({
-      area: HomeOverviewService.FRANCE_AREA,
+      area: LiveOverviewService.FRANCE_AREA,
       limit: 200,
     });
-    expect(HomeOverviewService.FRANCE_AREA).toEqual({ south: 41.3, west: -5.2, north: 51.1, east: 9.6 });
+    expect(LiveOverviewService.FRANCE_AREA).toEqual({ south: 41.3, west: -5.2, north: 51.1, east: 9.6 });
   });
 
   it("keeps the Île-de-France area for the live data", async () => {
@@ -54,6 +54,6 @@ describe("HomeOverviewService in the replay", () => {
 
     await service.load();
 
-    expect(aircraft.search).toHaveBeenCalledWith({ area: HomeOverviewService.AREA, limit: 200 });
+    expect(aircraft.search).toHaveBeenCalledWith({ area: LiveOverviewService.AREA, limit: 200 });
   });
 });
