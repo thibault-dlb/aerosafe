@@ -78,6 +78,10 @@ button.process {
   font-size: var(--text-xs);
 }
 
+.compact {
+  display: none;
+}
+
 /* Where the page is narrow (the page is a container), the least useful columns give way. */
 @container (max-width: 760px) {
   .narrowHidden {

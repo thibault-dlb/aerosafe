@@ -275,6 +275,7 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
               selectedId={selected?.id ?? null}
               sorting={{ key: applied.sort, order: applied.order }}
               onSort={onSort}
+              compact={selected !== null}
             />
             <Pagination offset={pageOffset} pageSize={PAGE_SIZE} total={total} busy={loading} onChange={setOffset} />
           </div>

@@ -71,23 +71,20 @@ The Supervisor can also search for and view aircraft (UC-01). Only the dashboard
 
 After each data collection, the rules engine checks rules R1 to R5 on every airborne aircraft heard in the last 30 minutes. When a value exceeds its threshold, an alert is raised. An aircraft raises one alert per rule and per situation: no new alert comes while the situation lasts. The rules are described in [business rules](business-rules.md).
 
-1. Open **Alerts** in the navigation bar. The page first lists the alerts not yet processed, the latest first.
-2. To narrow the list, choose a rule, a status, a criticality, the start of an ICAO24 address or a period, then select **Apply**. The status can be:
-   - **Not processed**: no Supervisor has handled the alert yet;
-   - **Situation still active**: the value is still above the threshold;
-   - **Processed**: a Supervisor marked the alert as processed.
-3. **Sort by** date, criticality or rule, in descending or ascending order. Use **Previous** and **Next** to move between pages of 25 alerts.
-4. Select **Details** to see the aircraft, the rule, the trigger time, the observed value, the threshold in force at that time, the criticality and the message. The aircraft name opens its record.
-5. Select **Mark as processed** once the alert has been handled. An alert is processed only once: the page says so if another Supervisor already did it.
+1. Open **Alertes** (or **Alerts**) in the side bar. The page first lists the alerts not yet processed, the latest first, and says how many there are.
+2. The chips above the list filter at once. The first group is the status: **Non traitées** (no Supervisor has handled the alert yet), **En cours** (the situation lasts: the value is still above the threshold), **Traitées** (a Supervisor marked the alert as processed) or **Toutes**. The second group is the criticality; select a level to keep only its alerts, and select it again to remove the filter. **Plus de filtres** opens the others: the rule, the start of an ICAO24 address and a period; select **Appliquer** to use them, or **Effacer les filtres** to start again.
+3. Each row starts with the criticality as a shape: a filled diamond for high, a filled triangle for medium, a hollow circle for low. The shape is the same in every page, so an alert is read at first glance, with or without colour. Select the title of a column (criticality, rule, date) to sort by it, and again to reverse the order. Use the page numbers under the list to move between pages of 25 alerts.
+4. Select a row to open its details beside the list (under it on a narrow screen): the rule with a small animated drawing of what it measures, the value observed against the threshold in force at that time, the aircraft (its name opens its record), whether the situation lasts, the processing and the message.
+5. Select **Traiter** on a row, or **Marquer comme traitée** in the details, once the alert has been handled. A notification confirms it. An alert is processed only once: the page says so if another Supervisor already did it.
 
 If an alert is not relevant, the details offer a link to adjust the threshold of its rule.
 
 ### Rules
 
-1. Open **Rules** in the navigation bar. Each rule shows what it detects, its threshold with its unit, its criticality, whether it is evaluated and its last change.
-2. Change the threshold, the criticality or the **evaluated** box of a rule, then select **Save** on its row. The button stays disabled until a setting changes, and for a negative or empty threshold.
+1. Open **Règles** (or **Rules**) in the side bar. Each rule is a card: its pictogram, what it detects, a small animated drawing of its threshold, the threshold with its unit, the criticality of its alerts, a switch that says whether it is evaluated, and the date of its last change.
+2. Change the threshold, the criticality or the switch of a rule. The card gets a gold border and a **Enregistrer** button appears; select it to save. A negative or empty threshold is refused under its field. A notification confirms the save.
 
-The change applies at the next evaluation, within one collection period. Alerts already raised keep the threshold in force when they were triggered. Every change is recorded with its author in the audit log.
+The change applies at the next evaluation, within one collection period. Alerts already raised keep the threshold in force when they were triggered. Every change is recorded with its author in the audit log. Thresholds are always entered in metric units, whatever the units chosen for the display.
 
 ## Dashboard content
 

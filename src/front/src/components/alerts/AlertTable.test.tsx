@@ -59,6 +59,14 @@ describe("AlertTable", () => {
     expect(screen.getByRole("cell", { name: "7874 ft/min / 5905.5 ft/min" })).toBeInTheDocument();
   });
 
+  it("hides the value and the situation when it has to leave room for the details", () => {
+    renderWithPreferences(<AlertTable alerts={[alert()]} compact />);
+
+    expect(screen.getByRole("columnheader", { name: "Valeur / seuil" }).className).toMatch(/compact/);
+    expect(screen.getByRole("columnheader", { name: "Situation" }).className).toMatch(/compact/);
+    expect(screen.getByRole("columnheader", { name: "Traitement" }).className).not.toMatch(/compact/);
+  });
+
   it("says whether the situation lasts or ended", () => {
     renderWithPreferences(<AlertTable alerts={[alert({ episodeEndedAt: TRIGGERED })]} />);
 

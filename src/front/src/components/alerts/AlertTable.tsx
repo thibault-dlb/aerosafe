@@ -31,6 +31,8 @@ export interface AlertTableProps {
   /** How the list is sorted. With `onSort`, the headers of the sortable columns are buttons. */
   sorting?: AlertSorting;
   onSort?: (key: AlertSort) => void;
+  /** Hides the columns the details show again (the value and the situation), to leave room beside them. */
+  compact?: boolean;
 }
 
 interface SortHeaderProps {
@@ -81,8 +83,11 @@ export default function AlertTable({
   selectedId = null,
   sorting,
   onSort,
+  compact = false,
 }: AlertTableProps) {
   const { t, units } = usePreferences();
+  // Where the page is narrow the same columns give way (see the stylesheet).
+  const optional = [styles.narrowHidden, compact && styles.compact].filter(Boolean).join(" ");
   return (
     <Table>
       {caption && <caption>{caption}</caption>}
@@ -92,10 +97,10 @@ export default function AlertTable({
           <SortHeader column="rule" label={t("alerts.column.rule")} sorting={sorting} onSort={onSort} />
           <th scope="col">{t("alerts.column.aircraft")}</th>
           <SortHeader column="triggered_at" label={t("alerts.column.triggered")} sorting={sorting} onSort={onSort} />
-          <th scope="col" className={styles.narrowHidden}>
+          <th scope="col" className={optional}>
             {t("alerts.column.value")}
           </th>
-          <th scope="col" className={styles.narrowHidden}>
+          <th scope="col" className={optional}>
             {t("alerts.column.situation")}
           </th>
           <th scope="col">{t("alerts.column.processing")}</th>
@@ -139,11 +144,11 @@ export default function AlertTable({
               </td>
               <td className={styles.mono}>{aircraft}</td>
               <td className={styles.mono}>{Formatter.date(alert.triggeredAt)}</td>
-              <td className={`${styles.mono} ${styles.narrowHidden}`}>
+              <td className={`${styles.mono} ${optional}`}>
                 {Formatter.ruleValue(alert.observedValue, alert.unit, units)}{" "}
                 <span className={styles.muted}>/ {Formatter.ruleValue(alert.threshold, alert.unit, units)}</span>
               </td>
-              <td className={styles.narrowHidden}>
+              <td className={optional}>
                 {status === "processed" ? (
                   <Pill>{t(SITUATION[alert.active ? "active" : "ended"])}</Pill>
                 ) : (
