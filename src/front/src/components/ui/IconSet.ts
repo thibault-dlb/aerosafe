@@ -1,8 +1,8 @@
 /** One drawn element of an icon, on a 24 by 24 grid. `solid` shapes are filled instead of outlined. */
 export type IconShape =
-  | { tag: "path"; d: string; transform?: string }
+  | { tag: "path"; d: string; transform?: string; dash?: string }
   | { tag: "circle"; cx: number; cy: number; r: number; solid?: boolean }
-  | { tag: "rect"; x: number; y: number; width: number; height: number; rx: number };
+  | { tag: "rect"; x: number; y: number; width: number; height: number; rx: number; dash?: string };
 
 export type IconName =
   | "dashboard"
@@ -29,17 +29,37 @@ export type IconName =
   | "moon"
   | "live"
   | "replay"
-  | "radar";
+  | "radar"
+  | "ruleR1"
+  | "ruleR2"
+  | "ruleR3"
+  | "ruleR4"
+  | "ruleR5"
+  | "filter"
+  | "plus"
+  | "copy"
+  | "trash"
+  | "pause"
+  | "play"
+  | "bolt"
+  | "area"
+  | "key"
+  | "ruler"
+  | "clock"
+  | "shield"
+  | "anonymous"
+  | "table";
 
-const path = (d: string, transform?: string): IconShape => ({ tag: "path", d, transform });
+const path = (d: string, transform?: string, dash?: string): IconShape => ({ tag: "path", d, transform, dash });
 const circle = (cx: number, cy: number, r: number, solid = false): IconShape => ({ tag: "circle", cx, cy, r, solid });
-const rect = (x: number, y: number, width: number, height: number, rx: number): IconShape => ({
+const rect = (x: number, y: number, width: number, height: number, rx: number, dash?: string): IconShape => ({
   tag: "rect",
   x,
   y,
   width,
   height,
   rx,
+  dash,
 });
 
 /** The silhouette of the aircraft of the landing page scene, nose to the north. */
@@ -101,6 +121,36 @@ export class IconSet {
     ],
     replay: [path("M4.2 13.5a8 8 0 1 0 1.9-6.7"), path("M4 3.8v4.7h4.7"), path("M12 8.3v4.2l2.9 1.7")],
     radar: [circle(12, 12, 8.7), circle(12, 12, 4.3), path("M12 12 18.1 5.9"), circle(16.3, 14.8, 1, true)],
+    // R1, contact lost: the signal of the transmitter, struck through.
+    ruleR1: [
+      circle(12, 12, 1.8, true),
+      path("M8.3 8.3a5.2 5.2 0 0 0 0 7.4M15.7 8.3a5.2 5.2 0 0 1 0 7.4M5.3 5.3a9.5 9.5 0 0 0 0 13.4M18.7 5.3a9.5 9.5 0 0 1 0 13.4"),
+      path("M3.5 20.5l17-17"),
+    ],
+    // R2, position too old: a map pin with a clock.
+    ruleR2: [path("M12 21.2s-6.8-6.2-6.8-11.4a6.8 6.8 0 0 1 13.6 0c0 5.2-6.8 11.4-6.8 11.4Z"), path("M12 6.6v3.6l2.3 1.4")],
+    // R3, altitude change: a vertical arrow both ways.
+    ruleR3: [path("M12 3.5v17M8.5 7 12 3.5 15.5 7M8.5 17l3.5 3.5 3.5-3.5"), path("M3.5 12H8M16 12h4.5")],
+    // R4, speed change: a gauge.
+    ruleR4: [path("M4.2 17.5a8.6 8.6 0 1 1 15.6 0"), path("M12 14.5l4.2-6"), circle(12, 14.8, 1.4, true), path("M7 20.5h10")],
+    // R5, heading change: a turning arrow.
+    ruleR5: [path("M5.5 20.5v-8a6 6 0 0 1 6-6h8"), path("M16 3l3.5 3.5L16 10"), path("M5.5 8V3.2", undefined, "1.6 2.6")],
+    filter: [path("M3.5 5h17l-6.5 8v5.5l-4 2V13Z")],
+    plus: [path("M12 5v14M5 12h14")],
+    copy: [rect(8.5, 8.5, 12, 12, 2), path("M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3")],
+    trash: [
+      path("M4 6.5h16M9.5 6.5V4h5v2.5M6.5 6.5l.8 13a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-13M10 10.5V17M14 10.5V17"),
+    ],
+    pause: [path("M8.5 5v14M15.5 5v14")],
+    play: [path("M7.5 4.8v14.4L19 12Z")],
+    bolt: [path("M13 2.8 5 13.5h6l-1 7.7 8-10.7h-6Z")],
+    area: [rect(4, 5.5, 16, 13, 1, "3 3"), circle(4, 5.5, 1.4, true), circle(20, 18.5, 1.4, true)],
+    key: [circle(8, 15, 4.2), path("M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2")],
+    ruler: [rect(2.5, 8, 19, 8, 1.5), path("M6.5 8v3M10.2 8v4.5M13.9 8v3M17.6 8v4.5")],
+    clock: [circle(12, 12, 8.7), path("M12 7v5.2l3.4 2")],
+    shield: [path("M12 3 4.5 6v5.5c0 4.6 3.1 8 7.5 9.5 4.4-1.5 7.5-4.9 7.5-9.5V6Z")],
+    anonymous: [circle(12, 8, 3.6), path("M4.8 20c0-3.9 3.1-6.6 7.2-6.6 1.2 0 2.3.2 3.3.6M4 4l16 16")],
+    table: [rect(3.5, 4.5, 17, 15, 1.5), path("M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15")],
   };
 
   static names(): IconName[] {

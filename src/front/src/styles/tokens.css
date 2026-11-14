@@ -62,6 +62,13 @@
   --map-aircraft-high: #f5d77e;
   --map-beam: #3dd6c4;
   --map-rings: #a07a25;
+
+  /* One colour for each rule R1 to R5 (charts), checked for colour blindness in both themes. */
+  --rule-1: #22a596;
+  --rule-2: #b98a1f;
+  --rule-3: #9d6ee0;
+  --rule-4: #d9684a;
+  --rule-5: #4f8fe8;
 }
 
 /*
@@ -95,6 +102,11 @@
   --map-aircraft-high: #f5d77e;
   --map-beam: #3dd6c4;
   --map-rings: #a07a25;
+  --rule-1: #22a596;
+  --rule-2: #b98a1f;
+  --rule-3: #9d6ee0;
+  --rule-4: #d9684a;
+  --rule-5: #4f8fe8;
 
   background: var(--color-bg);
   color: var(--color-text);
@@ -128,6 +140,11 @@
   --map-aircraft-high: #4f3a00;
   --map-beam: #1f6f63;
   --map-rings: #9a7420;
+  --rule-1: #008c7d;
+  --rule-2: #a87400;
+  --rule-3: #7a4bd0;
+  --rule-4: #c04f2e;
+  --rule-5: #2f6fd0;
 }
 
 /* Without a choice from the user, follow the system setting. Keep in step with the block above. */
@@ -159,5 +176,10 @@
     --map-aircraft-high: #4f3a00;
     --map-beam: #1f6f63;
     --map-rings: #9a7420;
+    --rule-1: #008c7d;
+    --rule-2: #a87400;
+    --rule-3: #7a4bd0;
+    --rule-4: #c04f2e;
+    --rule-5: #2f6fd0;
   }
 }
