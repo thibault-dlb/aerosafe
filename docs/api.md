@@ -90,11 +90,13 @@ Aircraft (search result and record):
   "last_contact_at": "2026-11-09T10:00:00Z",
   "latitude": 48.85,
   "longitude": 2.35,
-  "altitude": 10972.8
+  "altitude": 10972.8,
+  "heading": 284.0,
+  "on_ground": false
 }
 ```
 
-`model`, `airline` and `registration` are `null` when unknown; the last contact and the position are `null` when the aircraft never sent any. `altitude` is the one of the latest observation, in metres, and is `null` when OpenSky did not send it.
+`model`, `airline` and `registration` are `null` when unknown; the last contact and the position are `null` when the aircraft never sent any. `altitude` (in metres), `heading` (degrees clockwise from north) and `on_ground` are those of the latest observation, and are `null` when OpenSky did not send them or the aircraft was never observed. The map uses `heading` to turn the marker and `on_ground` to draw a grounded aircraft as a diamond.
 
 `GET /aircraft/{aircraft_id}/observations` takes `start` and `end` (ISO 8601, inclusive, both optional; `start` must not be after `end`) and `limit` (1 to 5 000, default 500). It returns the latest `limit` observations of the period, in chronological order:
 

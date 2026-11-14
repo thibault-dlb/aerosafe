@@ -81,6 +81,8 @@ class AircraftService:
                 func.ST_Y(Observation.position).label("latitude"),
                 func.ST_X(Observation.position).label("longitude"),
                 Observation.altitude,
+                Observation.heading,
+                Observation.on_ground,
             )
             .where(*conditions)
             .order_by(Observation.last_contact_at.desc())
@@ -100,6 +102,8 @@ class AircraftService:
                 func.ST_Y(Observation.position).label("latitude"),
                 func.ST_X(Observation.position).label("longitude"),
                 Observation.altitude,
+                Observation.heading,
+                Observation.on_ground,
             )
             .where(
                 Observation.deleted_at.is_(None),
@@ -137,7 +141,12 @@ class AircraftService:
             latest = self.latest_observation(at)
             statement = statement.outerjoin(latest, true())
         statement = statement.add_columns(
-            latest.c.last_contact_at, latest.c.latitude, latest.c.longitude, latest.c.altitude
+            latest.c.last_contact_at,
+            latest.c.latitude,
+            latest.c.longitude,
+            latest.c.altitude,
+            latest.c.heading,
+            latest.c.on_ground,
         )
         return statement, latest
 
@@ -196,4 +205,6 @@ class AircraftService:
             latitude=row.latitude,
             longitude=row.longitude,
             altitude=to_float(row.altitude),
+            heading=to_float(row.heading),
+            on_ground=row.on_ground,
         )
