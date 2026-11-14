@@ -196,6 +196,13 @@ export const fr = {
   "auth.forbidden.text": "Cette page est réservée aux Superviseurs.",
   "auth.forbidden.back": "Retour au tableau de bord",
 
+  "auth.password.show": "Afficher le mot de passe",
+  "auth.password.hide": "Masquer le mot de passe",
+  "auth.password.caps": "Verrouillage majuscule activé",
+  "auth.password.minimum": "12 caractères au minimum",
+  "auth.password.enough": "Longueur suffisante",
+  "auth.password.gauge": "Longueur du mot de passe",
+
   "footer.disclaimer":
     "AeroSafe est un projet pédagogique. Ce n'est pas un système certifié de surveillance ou de gestion du trafic aérien et il ne doit pas servir à un usage opérationnel.",
   "footer.data": "Données : The OpenSky Network. Fond de carte : © contributeurs OpenStreetMap.",

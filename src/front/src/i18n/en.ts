@@ -198,6 +198,13 @@ export const en: Record<TranslationKey, string> = {
   "auth.forbidden.text": "This page is reserved for Supervisors.",
   "auth.forbidden.back": "Back to the dashboard",
 
+  "auth.password.show": "Show the password",
+  "auth.password.hide": "Hide the password",
+  "auth.password.caps": "Caps Lock is on",
+  "auth.password.minimum": "12 characters at least",
+  "auth.password.enough": "Long enough",
+  "auth.password.gauge": "Password length",
+
   "footer.disclaimer":
     "AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally.",
   "footer.data": "Data: The OpenSky Network. Map: © OpenStreetMap contributors.",

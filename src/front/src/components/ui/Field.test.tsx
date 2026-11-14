@@ -41,4 +41,20 @@ describe("Field", () => {
     expect(input).toBeValid();
     expect(input).not.toHaveAttribute("aria-describedby");
   });
+
+  it("draws an icon and a control at the two ends of the input", () => {
+    const { container } = render(<Field label="Password" icon="lock" trailing={<button>Show</button>} />);
+
+    expect(container.querySelector("svg")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Show" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Password").className).toMatch(/withIcon/);
+    expect(screen.getByLabelText("Password").className).toMatch(/withTrailing/);
+  });
+
+  it("has no icon and no control unless given", () => {
+    const { container } = render(<Field label="Plain" />);
+
+    expect(container.querySelector("svg")).toBeNull();
+    expect(screen.getByLabelText("Plain").className).not.toMatch(/withIcon/);
+  });
 });

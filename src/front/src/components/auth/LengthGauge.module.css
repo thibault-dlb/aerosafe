@@ -1,0 +1,43 @@
+.gauge {
+  padding-top: var(--space-2);
+}
+
+.track {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 3px;
+}
+
+.track i {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background 0.2s;
+}
+
+.track i.on {
+  background: var(--color-warning);
+}
+
+.enough .track i.on {
+  background: var(--color-data);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.375rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.legend span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.enough .legend span:first-child {
+  color: var(--color-data);
+}
