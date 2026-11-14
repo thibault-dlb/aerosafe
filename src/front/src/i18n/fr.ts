@@ -186,6 +186,16 @@ export const fr = {
   "flight.profile.range": "{title} : de {min} à {max} {unit}",
   "flight.profile.label": "Profil : {title}",
 
+  "auth.loading": "Ouverture de la session…",
+  "auth.error.invalid": "E-mail ou mot de passe incorrect.",
+  "auth.error.locked": "Trop d'échecs de connexion. Réessayez dans quelques minutes.",
+  "auth.error.taken": "Cet e-mail a déjà un compte.",
+  "auth.error.invalidInput": "Vérifiez l'adresse e-mail et la longueur du mot de passe (12 caractères au minimum).",
+  "auth.error.network": "Le serveur est injoignable. Réessayez plus tard.",
+  "auth.forbidden.title": "Accès réservé",
+  "auth.forbidden.text": "Cette page est réservée aux Superviseurs.",
+  "auth.forbidden.back": "Retour au tableau de bord",
+
   "footer.disclaimer":
     "AeroSafe est un projet pédagogique. Ce n'est pas un système certifié de surveillance ou de gestion du trafic aérien et il ne doit pas servir à un usage opérationnel.",
   "footer.data": "Données : The OpenSky Network. Fond de carte : © contributeurs OpenStreetMap.",
