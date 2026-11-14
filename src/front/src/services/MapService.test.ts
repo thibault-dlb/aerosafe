@@ -1,3 +1,4 @@
+import * as L from "leaflet";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ATTRIBUTION, MapService } from "./MapService";
@@ -156,5 +157,55 @@ describe("MapService", () => {
     service.destroy();
 
     expect(service.mounted).toBe(false);
+  });
+
+  describe("when the room it has changes", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    function stubObserver() {
+      const observer = { observe: vi.fn(), disconnect: vi.fn() };
+      let notify: () => void = () => undefined;
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          constructor(callback: () => void) {
+            notify = callback;
+          }
+          observe = observer.observe;
+          disconnect = observer.disconnect;
+        },
+      );
+      return { observer, notify: () => notify() };
+    }
+
+    it("measures itself again, so the side bar folding leaves no blank strip", () => {
+      const resize = stubObserver();
+      const invalidate = vi.spyOn(L.Map.prototype, "invalidateSize");
+
+      const { container } = mounted();
+      expect(resize.observer.observe).toHaveBeenCalledWith(container);
+      invalidate.mockClear();
+      resize.notify();
+
+      expect(invalidate).toHaveBeenCalledOnce();
+    });
+
+    it("stops watching once destroyed", () => {
+      const resize = stubObserver();
+      mounted();
+
+      service.destroy();
+
+      expect(resize.observer.disconnect).toHaveBeenCalled();
+    });
+
+    it("does not fail where the browser cannot watch sizes", () => {
+      vi.stubGlobal("ResizeObserver", undefined);
+
+      expect(() => mounted()).not.toThrow();
+    });
   });
 });

@@ -38,6 +38,7 @@ export class MapService {
   private themeObserver: MutationObserver | null = null;
   /** Without a choice of theme, the style sheet follows the system: watch it too. */
   private systemTheme: MediaQueryList | null = null;
+  private sizeObserver: ResizeObserver | null = null;
   private aircraft: MapPosition[] = [];
   private segments: MapPosition[][] = [];
 
@@ -61,6 +62,12 @@ export class MapService {
     if (typeof window.matchMedia === "function") {
       this.systemTheme = window.matchMedia("(prefers-color-scheme: light)");
       this.systemTheme.addEventListener("change", this.redraw);
+    }
+    // The side bar folding, a rotated phone or a resized window change the room the map has:
+    // without this Leaflet keeps drawing for the old size and leaves a blank strip.
+    if (typeof ResizeObserver === "function") {
+      this.sizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
+      this.sizeObserver.observe(container);
     }
   }
 
@@ -94,6 +101,8 @@ export class MapService {
     this.themeObserver = null;
     this.systemTheme?.removeEventListener("change", this.redraw);
     this.systemTheme = null;
+    this.sizeObserver?.disconnect();
+    this.sizeObserver = null;
     this.map?.remove();
     this.map = null;
   }

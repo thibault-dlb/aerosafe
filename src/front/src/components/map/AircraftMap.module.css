@@ -1,5 +1,7 @@
 /* `div.map` is more specific than Leaflet's own `.leaflet-container` background. */
 div.map {
+  /* Leaflet panes and controls reach z-index 1000: they stay inside the map, under the bars and the drawer. */
+  isolation: isolate;
   width: 100%;
   height: 420px;
   background: var(--map-bg);
