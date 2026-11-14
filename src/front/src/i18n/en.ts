@@ -188,6 +188,16 @@ export const en: Record<TranslationKey, string> = {
   "flight.profile.range": "{title}: {min} to {max} {unit}",
   "flight.profile.label": "{title} profile",
 
+  "auth.loading": "Opening your session…",
+  "auth.error.invalid": "Incorrect e-mail or password.",
+  "auth.error.locked": "Too many failed log ins. Try again in a few minutes.",
+  "auth.error.taken": "This e-mail already has an account.",
+  "auth.error.invalidInput": "Check the e-mail address and the password length (12 characters at least).",
+  "auth.error.network": "The server could not be reached. Try again later.",
+  "auth.forbidden.title": "Restricted access",
+  "auth.forbidden.text": "This page is reserved for Supervisors.",
+  "auth.forbidden.back": "Back to the dashboard",
+
   "footer.disclaimer":
     "AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally.",
   "footer.data": "Data: The OpenSky Network. Map: © OpenStreetMap contributors.",
