@@ -30,4 +30,10 @@ describe("ReplayTime", () => {
     expect(ReplayTime.fromInput("2022-08-14")).toBeNull();
     expect(ReplayTime.fromInput("2022-13-45T99:99")).toBeNull();
   });
+
+  it("offers the first minute that is not before the start of the data", () => {
+    expect(ReplayTime.firstInput(new Date("2022-08-06T00:47:54Z"))).toBe("2022-08-06T00:48");
+    expect(ReplayTime.firstInput(new Date("2022-08-06T00:47:00Z"))).toBe("2022-08-06T00:47");
+    expect(ReplayTime.firstInput(new Date("2022-08-06T23:59:30Z"))).toBe("2022-08-07T00:00");
+  });
 });
