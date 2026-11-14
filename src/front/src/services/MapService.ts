@@ -2,6 +2,8 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import type { Criticality } from "@/models/Alert";
+import type { Zone } from "@/services/Basemap";
+import { BasemapLayer } from "@/services/BasemapLayer";
 import { MarkerIcon } from "@/services/MarkerIcon";
 import { MapTheme } from "@/services/MapTheme";
 
@@ -30,10 +32,9 @@ export interface MapArea {
   east: number;
 }
 
-/** OpenStreetMap tiles. The credit is required by the ODbL; OpenSky by its terms (§4 i). */
-export const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+/** The credits of the drawn map (public domain data) and of the traffic (OpenSky's terms, §4 i). */
 export const ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' +
+  '<a href="https://www.naturalearthdata.com">Natural Earth</a> | <a href="https://ourairports.com">OurAirports</a>' +
   ' | Data: <a href="https://opensky-network.org">The OpenSky Network</a>';
 
 /** Centre of the Île-de-France collection area, shown before anything is drawn. */
@@ -58,6 +59,7 @@ export class MapService {
   private readonly aircraftLayer = L.layerGroup();
   private readonly trajectoryLayer = L.layerGroup();
   private readonly areaLayer = L.layerGroup();
+  private basemap: BasemapLayer | null = null;
   private themeObserver: MutationObserver | null = null;
   /** Without a choice of theme, the style sheet follows the system: watch it too. */
   private systemTheme: MediaQueryList | null = null;
@@ -75,8 +77,24 @@ export class MapService {
     if (this.map) {
       throw new Error("The map is already mounted");
     }
-    this.map = L.map(container, { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM });
-    L.tileLayer(TILE_URL, { attribution: ATTRIBUTION, maxZoom: 18 }).addTo(this.map);
+    // The base map is a canvas redrawn on each move, so Leaflet must not animate a zoom by scaling
+    // its panes, which would leave the canvas behind. Fractional zooms let the wheel zoom smoothly.
+    this.map = L.map(container, {
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
+      zoomAnimation: false,
+      fadeAnimation: false,
+      markerZoomAnimation: false,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
+      wheelPxPerZoomLevel: 90,
+      maxZoom: 13,
+      minZoom: 4,
+    });
+    this.map.attributionControl.setPrefix(false);
+    this.map.attributionControl.addAttribution(ATTRIBUTION);
+    this.basemap = new BasemapLayer(this.map, this.theme);
+    this.basemap.mount();
     this.areaLayer.addTo(this.map);
     this.aircraftLayer.addTo(this.map);
     this.trajectoryLayer.addTo(this.map);
@@ -96,6 +114,17 @@ export class MapService {
       this.sizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
       this.sizeObserver.observe(container);
     }
+  }
+
+  /** The Leaflet map, for the layers that draw on it themselves (the traffic of the dashboard). */
+  get leaflet(): L.Map {
+    return this.requireMap();
+  }
+
+  /** Outlines the zone of the collection on the base map, or removes it. */
+  showZone(zone: Zone): void {
+    this.requireMap();
+    this.basemap?.setZone(zone);
   }
 
   /** Replaces the aircraft markers. */
@@ -193,6 +222,8 @@ export class MapService {
     this.systemTheme = null;
     this.sizeObserver?.disconnect();
     this.sizeObserver = null;
+    this.basemap?.destroy();
+    this.basemap = null;
     this.map?.remove();
     this.map = null;
   }
@@ -280,6 +311,7 @@ export class MapService {
 
   /** Draws again with the colours of the theme in use, without moving the view. */
   private readonly redraw = (): void => {
+    this.basemap?.setColors(this.theme.colors());
     this.drawAircraft();
     this.drawSegments();
     this.drawArea();
