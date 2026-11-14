@@ -15,7 +15,7 @@ This is the logical schema derived from the [class diagram](uml/class-diagram.md
 | Observation | `OBSERVATION` | Business | One OpenSky state vector: last contact, position time, PostGIS position, altitude, speed, heading, on ground |
 | Rule | `REGLE` | Business | Code, description, threshold, unit, default criticality; thresholds editable by the Supervisor (UC-05) |
 | Alert | `ALERTE` | Business | Public ULID, aircraft, rule, trigger time, end of episode, observed value, threshold copied at trigger time, message, criticality, processing |
-| User | `UTILISATEUR` | Business | Public ULID, email, argon2id password hash, role; anonymised, never deleted (A-06, D-17) |
+| User | `UTILISATEUR` | Business | Public ULID, email, argon2id password hash, role, provisional-password flag; anonymised, never deleted (A-06, D-17) |
 | RefreshToken | `JETON_RAFRAICHISSEMENT` | Business | Hash of a refresh token, expiry, revocation |
 | CollectionRun | `EXECUTION_COLLECTE` | Business | One OpenSky collection cycle: start (also the `now` given to the rules engine), end, status, profile, state vectors received, stored and rejected, credits left, collection error, evaluation error |
 | CollectionParameter | `PARAMETRE_COLLECTE` | Business | Single row: whether the Supervisor paused the collection, when, and who |
@@ -122,6 +122,7 @@ erDiagram
         text LB_HASH_MOT_DE_PASSE
         bigint ID_ROLE FK
         timestamptz DT_ANONYMISATION
+        boolean BL_MOT_DE_PASSE_PROVISOIRE
         boolean is_active
     }
     JETON_RAFRAICHISSEMENT {
@@ -346,6 +347,8 @@ The period and the bounding box of each profile are settings of the collector, n
 ## Personal data
 
 Personal data is limited to `UTILISATEUR`: email address and password hash. A deletion request anonymises the row (email replaced by `anonyme-<CD_ULID>@aerosafe.invalid`, hash removed, `DT_ANONYMISATION` set, refresh tokens revoked) so that alerts processed by this user stay consistent. See [project terms](project-terms.md).
+
+A Supervisor who creates an account gives it a generated password: `BL_MOT_DE_PASSE_PROVISOIRE` stays true until its owner chooses their own (migration `0047`, 2026-11-14), and the API refuses everything else meanwhile. Anonymisation sets it back to false.
 
 The email address is not encrypted: this is an educational project with few accounts, and the password is already hashed.
 

@@ -1,6 +1,6 @@
 # User guide
 
-The application is partly built. Searching for an aircraft, the aircraft record, the flight trajectory, the alerts and the rules work and are described below. The accounts and the dashboard (apart from its live overview, the figures and the map) are not built yet, and their instructions stay `TBD` (see [team work split](team-split.md#interface)). This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions are added as each part is developed.
+The application is partly built. Searching for an aircraft, the aircraft record, the flight trajectory, the alerts and the rules work and are described below. The accounts, the account page and the way a Supervisor creates accounts work too. The dashboard (apart from its live overview, the figures and the map) is not built yet, and its instructions stay `TBD` (see [team work split](team-split.md#interface)). This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions are added as each part is developed.
 
 > **Disclaimer:** AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally. This limitation is also shown in the application (§VII.3).
 
@@ -12,12 +12,22 @@ Access to the application requires authentication. Each account has one role, Us
 2. To create an account, choose **Inscription** (or **Sign up**), give an e-mail address and a password of 12 characters at least, and confirm. The gauge under the password shows how far you are from the 12 characters. You are logged in at once and the account has the User role.
 3. To log in, choose **Connexion** (or **Log in**), give your e-mail address and your password, and confirm. After five failed attempts in a row the account is locked for 15 minutes.
 4. The session stays open when you reload the page. To close it, use **Se déconnecter** (or **Log out**) in the bar.
+5. A Supervisor can create your account instead of you: they give you a provisional password. Log in with it as usual. The page that follows, **Choisissez votre mot de passe** (*Choose your password*), is the only one that opens until you have chosen your own password (12 characters at least, different from the provisional one): nothing else in the application works before.
 
 The Supervisor pages (alerts, rules, accounts) show an "access restricted" page to a User.
 
 ### Moving around
 
 Once logged in, the side bar on the left lists the pages you can open: the dashboard and the aircraft, and, for a Supervisor, the alerts (with the number of active ones), the rules and the accounts. Your account and **Se déconnecter** (or **Log out**) are at its foot. **Replier la barre** (or **Collapse the side bar**) folds it into a rail of icons; the choice is kept. On a phone, the menu button at the top left opens the bar over the page; the Escape key, a link or a tap outside closes it. The thin bar at the top names the page and holds the choice between live data and the replay, the language and the theme. An address that does not exist shows the "lost contact" page, with a way back.
+
+### My account
+
+Select your e-mail address, at the foot of the side bar, to open **Mon compte** (*My account*). It is open to every role.
+
+- **Informations**: your e-mail address and your role.
+- **Mot de passe** (*Password*): give the current password, then the new one (12 characters at least; the gauge shows how far you are). Your other sessions are closed, and you stay logged in here. After five failures in a row the page waits 15 minutes, like the log in.
+- **Préférences** (*Preferences*): the language, the theme (dark or light) and the **units**: metric (metres, metres per second, kilometres) or aeronautical (feet, knots, nautical miles). They are kept in this browser. The units change what the pages show (altitudes, speeds, distances); the thresholds of the rules stay in metric units.
+- **Supprimer mon compte** (*Delete my account*): after your password is asked again, your e-mail address and your password are erased, your sessions are closed and you leave for the home page. The history stays, without identifying you; it cannot be undone. The last active Supervisor cannot delete their account: give the role to another account first.
 
 Coverage of air traffic depends on the OpenSky Network receiver network and is not uniform across regions.
 
@@ -64,8 +74,18 @@ The Supervisor can also search for and view aircraft (UC-01). Only the dashboard
 | Filter and sort alerts by rule, period or aircraft | UC-04 | See [Alerts](#alerts) |
 | View the details of an alert and mark it as processed | UC-04 | See [Alerts](#alerts) |
 | View and adjust the thresholds of a rule | UC-05 | See [Rules](#rules) |
-| Create, modify or deactivate accounts and assign roles | UC-06 | `TBD` |
+| Create, modify or deactivate accounts and assign roles | UC-06 | See [Accounts](#accounts) |
 | Compare rule alerts with AI anomaly scores (bonus) | UC-07 | `TBD` |
+
+### Accounts
+
+Open **Comptes** (*Accounts*) in the side bar. The table lists every account, oldest first, 20 a page: the e-mail address, the role, the state, the creation date and the actions. **Rechercher un compte** looks for part of an e-mail address.
+
+1. To create an account, select **Créer un compte**, give the e-mail address and the role (User by default) and confirm. The application generates a **provisional password** and shows it once, with a button to copy it. Give it to the owner: it is not kept anywhere and cannot be shown again. The owner chooses their own at the first login, and until then the table shows **Mot de passe provisoire** under the account.
+2. To change a role, choose the other one in the list of the account. To deactivate an account, switch **Actif** off: its sessions end at once and it can no longer log in. Switch it on to reactivate it. A notification confirms each change.
+3. To anonymise an account, select **Anonymiser**, then type the word asked (**ANONYMISER**) and confirm. The e-mail address and the password are erased and the sessions closed; the history stays. The account remains in the list, greyed, and nothing more can be done to it. It cannot be undone.
+
+You cannot change your own account in this list (its controls are off and marked *vous*): use your account page. The last active Supervisor cannot be demoted, deactivated or anonymised.
 
 ### Alerts
 

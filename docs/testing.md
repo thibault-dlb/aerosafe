@@ -82,7 +82,7 @@ Each case is recorded with its expected and actual result. See [requirements](re
 | UC-03: Detect an unusual situation and generate an alert | The alert is persisted and available to the Supervisor | `TBD` |
 | UC-04: Supervise and process alerts | The state of the alert is updated | `TBD` |
 | UC-05: Configure a business rule | The change applies at the next evaluation | `TBD` |
-| UC-06: Authenticate and manage accounts | The user logs in; the Supervisor creates, modifies or deactivates accounts and assigns roles | `TBD` |
+| UC-06: Authenticate and manage accounts | The user logs in; the Supervisor creates, modifies or deactivates accounts and assigns roles | `e2e/accounts.spec.ts` (with the API mocked); the API is covered by `tests/api/test_users_routes.py` |
 
 ## Acceptance criteria
 
