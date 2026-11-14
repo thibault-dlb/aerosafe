@@ -71,7 +71,8 @@ describe("FlightDetail", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("1 missing segment,");
     expect(screen.getByText(/15 min 00 s/)).toBeInTheDocument();
-    expect(showSegments.mock.lastCall?.[0]).toHaveLength(2);
+    // The map draws in an effect that can run after the alert shows, so wait for it.
+    await waitFor(() => expect(showSegments.mock.lastCall?.[0]).toHaveLength(2));
   });
 
   it("says when the flight has no position or too few values for a profile", async () => {
