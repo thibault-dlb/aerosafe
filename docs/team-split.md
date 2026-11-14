@@ -49,9 +49,9 @@ The split above already gives each member the pages of their work package. This 
 | --- | --- | --- | --- |
 | Home | `/` | Thibault | Built on `feat/landing-page`: a dark landing page with a scroll-driven scene, the features, figures, steps and a call to action. The live figures and the map moved to the top of the dashboard |
 | Log in, sign up | `/login`, `/signup` | Louis-Amaury | Built (done with Thibault on `feat/auth-session` and `feat/auth-screens`): one shared screen, `AuthProvider`, `useAuth`, `AuthService`, the route guards and the session renewal of `ApiClient`. The two empty pages `pages/auth/Login.tsx` and `SignUp.tsx` are gone: the screen is `components/auth/AuthScreen.tsx` |
-| Accounts | `/admin/accounts` | Louis-Amaury | Empty page. The API route `users.py` is empty too (`/users` is `TBD` in [API](api.md)) |
-| Dashboard | `/dashboard` | Jules | Page title and, since `feat/landing-page`, the live overview (`components/overview/LiveOverview`: figures and a large map, live or replay) at the top; the rest is still to do. The API route `dashboard.py` is empty (`/dashboard` is `TBD` in [API](api.md)) |
-| Alerts, rules | `/alerts`, `/rules` | Sacha | Built, with their tests, without any styling |
+| Accounts | `/admin/accounts` | Louis-Amaury | Empty page, but inside the shell and closed to a User. The API route `users.py` is empty too (`/users` is `TBD` in [API](api.md)) |
+| Dashboard | `/dashboard` | Jules | Page title and, since `feat/landing-page`, the live overview (`components/overview/LiveOverview`: figures and a large map, live or replay) at the top; the rest is still to do. It is inside the shell. The API route `dashboard.py` is empty (`/dashboard` is `TBD` in [API](api.md)) |
+| Alerts, rules | `/alerts`, `/rules` | Sacha | Built, with their tests, without any styling; inside the shell, closed to a User |
 | Aircraft search, aircraft record, flight | `/aircraft`, `/aircraft/:id`, `/flights/:id` | Yassine | Built, with their tests, without any styling |
 
 The front has no stylesheet yet: every page shows plain HTML. The design is decided (D-19, 2026-11-12) and is being built on `feat/interface-design`; it lands before the other pages are styled.

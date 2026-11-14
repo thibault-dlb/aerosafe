@@ -15,6 +15,10 @@ Access to the application requires authentication. Each account has one role, Us
 
 The Supervisor pages (alerts, rules, accounts) show an "access restricted" page to a User.
 
+### Moving around
+
+Once logged in, the side bar on the left lists the pages you can open: the dashboard and the aircraft, and, for a Supervisor, the alerts (with the number of active ones), the rules and the accounts. Your account and **Se déconnecter** (or **Log out**) are at its foot. **Replier la barre** (or **Collapse the side bar**) folds it into a rail of icons; the choice is kept. On a phone, the menu button at the top left opens the bar over the page; the Escape key, a link or a tap outside closes it. The thin bar at the top names the page and holds the choice between live data and the replay, the language and the theme. An address that does not exist shows the "lost contact" page, with a way back.
+
 Coverage of air traffic depends on the OpenSky Network receiver network and is not uniform across regions.
 
 ## User
