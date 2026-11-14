@@ -34,6 +34,31 @@ describe("ErrorMessages", () => {
     expect(messages.key(new ApiError(422))).toBe("error.invalid");
   });
 
+  it("explains the failures of the account list", () => {
+    const messages = ErrorMessages.ACCOUNTS;
+
+    expect(messages.key(new ApiError(403))).toBe("accounts.error.own");
+    expect(messages.key(new ApiError(404))).toBe("accounts.error.notFound");
+    expect(messages.key(new ApiError(409))).toBe("accounts.error.conflict");
+  });
+
+  it("explains the failures of the creation of an account", () => {
+    expect(ErrorMessages.NEW_ACCOUNT.key(new ApiError(409))).toBe("auth.error.taken");
+    expect(ErrorMessages.NEW_ACCOUNT.key(new ApiError(422))).toBe("auth.error.invalidInput");
+  });
+
+  it("explains the failures of a password change", () => {
+    expect(ErrorMessages.PASSWORD.key(new ApiError(400))).toBe("account.password.error.wrong");
+    expect(ErrorMessages.PASSWORD.key(new ApiError(422))).toBe("account.password.error.invalid");
+    expect(ErrorMessages.PASSWORD.key(new ApiError(429))).toBe("auth.error.locked");
+  });
+
+  it("explains the failures of the deletion of an account", () => {
+    expect(ErrorMessages.DELETION.key(new ApiError(400))).toBe("account.delete.error.wrong");
+    expect(ErrorMessages.DELETION.key(new ApiError(409))).toBe("account.delete.error.lastSupervisor");
+    expect(ErrorMessages.DELETION.key(new ApiError(429))).toBe("auth.error.locked");
+  });
+
   it("treats any other failure as a network problem", () => {
     expect(new ErrorMessages().key(new Error("boom"))).toBe("error.unreachable");
   });

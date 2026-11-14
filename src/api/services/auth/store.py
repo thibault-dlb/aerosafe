@@ -2,13 +2,13 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import ColumnElement, select, update
+from sqlalchemy import ColumnElement, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from core.database import get_db
 from core.repository import Repository
-from models import RefreshToken, Role, User
+from models import AuditAction, AuditLog, RefreshToken, Role, User
 
 
 class UserStore:
@@ -32,10 +32,17 @@ class UserStore:
             raise LookupError(f"Role {code} is missing from R_ROLE or inactive")
         return role
 
-    async def add_user(self, email: str, password_hash: str, role: Role) -> User:
-        # is_active is set here: its server default would not be loaded after the flush.
+    async def add_user(
+        self, email: str, password_hash: str, role: Role, *, temporary_password: bool = False
+    ) -> User:
+        # The flags are set here: their server defaults would not be loaded after the flush.
         user = User(
-            email=email, password_hash=password_hash, role_id=role.id, role=role, is_active=True
+            email=email,
+            password_hash=password_hash,
+            role_id=role.id,
+            role=role,
+            is_active=True,
+            must_change_password=temporary_password,
         )
         self._session.add(user)
         await self._session.flush()
@@ -66,8 +73,108 @@ class UserStore:
         )
         return await self._session.scalar(statement)
 
+    async def revoke_user_tokens(self, user_id: int, now: datetime) -> None:
+        """Revoke every valid refresh token of the account: its sessions end at once."""
+        statement = (
+            update(RefreshToken)
+            .where(
+                RefreshToken.user_id == user_id,
+                RefreshToken.revoked_at.is_(None),
+                RefreshToken.deleted_at.is_(None),
+            )
+            .values(revoked_at=now)
+        )
+        await self._session.execute(statement)
+
     async def get_user(self, user_id: int) -> User | None:
         return await self._get_user(User.id == user_id)
+
+    async def lock_by_public_id(self, public_id: str) -> User | None:
+        """The account, with its row locked until the commit: changes to it are serialised."""
+        statement = (
+            self._users.select()
+            .options(joinedload(User.role))
+            .where(User.public_id == public_id)
+            .with_for_update(of=User)
+            .execution_options(populate_existing=True)
+        )
+        return await self._session.scalar(statement)
+
+    async def search_users(
+        self, search: str | None, limit: int, offset: int
+    ) -> tuple[list[User], int]:
+        """One page of accounts, oldest first, and how many match, all pages included."""
+        criteria: list[ColumnElement[bool]] = []
+        if search:
+            escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            criteria.append(User.email.ilike(f"%{escaped}%", escape="\\"))
+        statement = (
+            self._users.select()
+            .options(joinedload(User.role))
+            .where(*criteria)
+            .order_by(User.created_at, User.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        users = list((await self._session.scalars(statement)).all())
+        total = await self._session.scalar(
+            select(func.count()).select_from(User).where(User.deleted_at.is_(None), *criteria)
+        )
+        return users, total or 0
+
+    async def count_active_in_role(self, role: Role) -> int:
+        """How many accounts of the given role can log in."""
+        statement = (
+            select(func.count())
+            .select_from(User)
+            .where(
+                User.role_id == role.id,
+                User.is_active.is_(True),
+                User.anonymised_at.is_(None),
+                User.deleted_at.is_(None),
+            )
+        )
+        return await self._session.scalar(statement) or 0
+
+    async def record_audit(
+        self,
+        user: User,
+        action: str,
+        old_values: dict[str, object] | None,
+        new_values: dict[str, object] | None,
+        actor_id: int | None,
+    ) -> None:
+        """Write an account change to the append-only audit log (never the e-mail or a hash)."""
+        action_id = await self._session.scalar(
+            select(AuditAction.id).where(AuditAction.code == action)
+        )
+        self._session.add(
+            AuditLog(
+                table_name=User.__tablename__,
+                record_id=user.id,
+                action_id=action_id,
+                old_values=old_values,
+                new_values=new_values,
+                user_id=actor_id,
+            )
+        )
+        await self._session.flush()
+
+    async def anonymise(self, user: User, now: datetime, actor_id: int) -> None:
+        """Erase what identifies the account, end its sessions and keep the row (RGPD).
+
+        The e-mail becomes a placeholder built on the public identifier, the password hash
+        is dropped and the account can no longer log in. Its history stays: alerts it
+        handled, the audit trail.
+        """
+        user.email = f"anonyme-{user.public_id}@aerosafe.invalid"
+        user.password_hash = None
+        user.is_active = False
+        user.must_change_password = False
+        user.anonymised_at = now
+        await self._session.flush()
+        await self.revoke_user_tokens(user.id, now)
+        await self.record_audit(user, "update", None, {"anonymised": True}, actor_id)
 
     async def commit(self) -> None:
         await self._session.commit()

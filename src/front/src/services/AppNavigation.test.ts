@@ -37,3 +37,17 @@ describe("AppNavigation", () => {
     expect(AppNavigation.sectionOf("/nowhere")).toBeNull();
   });
 });
+
+describe("AppNavigation titles", () => {
+  it("names the account page, which is not an entry of the menu", () => {
+    expect(AppNavigation.ACCOUNT).toBe("/account");
+    expect(AppNavigation.titleOf("/account")).toBe("nav.myAccount");
+    expect(AppNavigation.sectionOf("/account")).toBeNull();
+  });
+
+  it("names a page by its menu entry, and anything else as the dashboard", () => {
+    expect(AppNavigation.titleOf("/rules")).toBe("nav.rules");
+    expect(AppNavigation.titleOf("/flights/01HZ")).toBe("nav.aircraft");
+    expect(AppNavigation.titleOf("/nowhere")).toBe("nav.dashboard");
+  });
+});

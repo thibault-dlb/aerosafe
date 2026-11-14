@@ -58,6 +58,7 @@ Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go bey
 | Dashboard | Active alerts, tracked aircraft, alert statistics, collection state. Flight statistics: duration and distance, altitude and speed, number of observations | A-04 |
 | Scope | Every requirement of the specifications is to be developed, including flight statistics (BF-08), alert configuration (UC-05) and account management (UC-06) | C-01, C-04 |
 | Account deletion | A user can request it; the account is anonymised, never deleted, following the database guide | C-05 |
+| Accounts created by a Supervisor | Besides self sign-up, a Supervisor creates an account (UC-06); the application generates a provisional password, shown once, that the owner must replace at the first login. A Supervisor cannot change their own role or state, or anonymise themselves, from the list, and the last active Supervisor stays. Added on 2026-11-14, to confirm with the teacher | C-02 |
 | AI module | Shown in the diagrams as optional, with an anomaly score | Bonus |
 
 Taken on 2026-11-09 for the collection work package (`feat/collection-dashboard`). Same status: the team's choice, to confirm with the supervising teacher.

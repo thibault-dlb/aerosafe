@@ -1,5 +1,8 @@
+import { Link, useLocation } from "react-router-dom";
+
 import { useTranslation } from "@/hooks/useTranslation";
 import type { User } from "@/models/User";
+import { AppNavigation } from "@/services/AppNavigation";
 
 import styles from "./AccountCard.module.css";
 
@@ -7,13 +10,25 @@ export interface AccountCardProps {
   user: User;
   /** Only the avatar is shown: the side bar is folded into a rail. */
   compact?: boolean;
+  /** Called when the link is followed, so a drawer can close. */
+  onNavigate?: () => void;
 }
 
-/** Who is logged in: an avatar with the initials, the e-mail address and the role, with a shape for it. */
-export default function AccountCard({ user, compact = false }: AccountCardProps) {
+/**
+ * Who is logged in: an avatar with the initials, the e-mail address and the role, with a shape for it.
+ * It is the link to the account page.
+ */
+export default function AccountCard({ user, compact = false, onNavigate }: AccountCardProps) {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   return (
-    <div className={[styles.account, compact && styles.compact].filter(Boolean).join(" ")} aria-label={t("nav.account")} role="group">
+    <Link
+      to={AppNavigation.ACCOUNT}
+      className={[styles.account, compact && styles.compact].filter(Boolean).join(" ")}
+      aria-current={pathname === AppNavigation.ACCOUNT ? "page" : undefined}
+      title={t("nav.myAccount")}
+      onClick={onNavigate}
+    >
       <span className={styles.avatar} aria-hidden="true">
         {user.initials}
       </span>
@@ -29,6 +44,7 @@ export default function AccountCard({ user, compact = false }: AccountCardProps)
           {t(user.isSupervisor ? "role.SUPERVISOR" : "role.USER")}
         </span>
       </span>
-    </div>
+      <span className="visually-hidden">{t("nav.myAccount")}</span>
+    </Link>
   );
 }

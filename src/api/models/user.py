@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Text,
+    false,
     true,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -69,6 +70,17 @@ class User(PublicIdMixin, TimestampMixin, Base):
         nullable=False,
         server_default=true(),
         comment="Indique si le compte peut se connecter.",
+    )
+
+    must_change_password: Mapped[bool] = mapped_column(
+        "BL_MOT_DE_PASSE_PROVISOIRE",
+        Boolean,
+        nullable=False,
+        server_default=false(),
+        comment=(
+            "Indique que le mot de passe a été généré par un superviseur à la création du "
+            "compte ; le titulaire doit en choisir un autre à sa première connexion."
+        ),
     )
 
     role: Mapped[Role] = relationship(lazy="raise")

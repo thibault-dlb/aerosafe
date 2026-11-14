@@ -42,20 +42,41 @@ Every work package has its router in `src/api/routes/v1/`, already included unde
 
 ### Authentication (`/api/v1/auth`)
 
-No access token needed. E-mails are trimmed and lowercased.
+No access token needed, except for `/auth/password`. E-mails are trimmed and lowercased.
 
 | Method and path | Body | Success | Errors |
 | --- | --- | --- | --- |
-| `POST /auth/signup` | `{"email", "password"}` | 201, the account: `{"id", "email", "role", "is_active"}`, role `USER` | 409 e-mail already registered, 422 invalid input |
+| `POST /auth/signup` | `{"email", "password"}` | 201, the account: `{"id", "email", "role", "is_active", "must_change_password"}`, role `USER` | 409 e-mail already registered, 422 invalid input |
 | `POST /auth/login` | `{"email", "password"}` | 200, `{"access_token", "token_type": "bearer", "expires_in", "user"}`, and sets the refresh cookie | 401 wrong e-mail or password, or inactive account (same message), 429 too many failures |
 | `POST /auth/refresh` | None, reads the refresh cookie | 200, same body as login, and sets a new refresh cookie | 401 missing, unknown, revoked or expired token; the cookie is cleared |
 | `POST /auth/logout` | None, reads the refresh cookie | 204, revokes the token and clears the cookie | None |
+| `POST /auth/password` | `{"current_password", "new_password"}`, with the access token | 200, same body as login: every session of the account is revoked and a new one opens; a provisional password stops being one | 400 wrong current password, 401 no valid token, 422 the new password is shorter than 12 characters or the same as the current one, 429 too many failures (the same limit as the login) |
 
 `id` is always the public ULID, never the internal key. A default Supervisor account (`admin@aerosafe.com`) is created by the migrations, and other Supervisors are promoted with a command, see [installation](installation.md#installation).
 
 ### Accounts (`/api/v1/users`)
 
-`TBD`.
+Work package `feat/auth-accounts` (BF-02, BF-14, UC-06, UC-09 to UC-11). Every endpoint answers 401 without a valid token. `id` is the public ULID.
+
+An account created by a Supervisor starts with a **provisional password** (`must_change_password: true`). Until its owner replaces it with `POST /auth/password`, every endpoint of the API answers `403 {"detail": "Password change required"}`, except `GET /users/me`, `POST /users/me/anonymise` and `POST /auth/password`.
+
+Supervisor only (403 for a User):
+
+| Method and path | Body or query | Success | Errors |
+| --- | --- | --- | --- |
+| `GET /users` | `search` (part of the e-mail), `limit` (1 to 200, default 50), `offset` (0 to 10 000) | 200, `{"items": [account], "total"}`, oldest first, anonymised accounts included. An account: `{"id", "email", "role", "is_active", "must_change_password", "is_anonymised", "created_at"}` | 422 invalid query |
+| `POST /users` | `{"email", "role"}`, role `USER` (default) or `SUPERVISOR` | 201, `{"account", "temporary_password"}`. The password is generated (four groups of five characters, without the ones that look alike), hashed at once and shown this once: the API keeps no copy | 409 e-mail already registered, 422 invalid input or role not available |
+| `PATCH /users/{id}` | `{"role"?, "is_active"?}`, a missing field stays as it is | 200, the account. Deactivating revokes its sessions at once | 403 the caller's own account, 404 unknown, 409 anonymised account or last active Supervisor, 422 |
+| `POST /users/{id}/anonymise` | None | 200, the account: e-mail `anonyme-<ULID>@aerosafe.invalid`, no password hash, inactive, sessions revoked | 403 the caller's own account, 404 unknown, 409 already anonymised or last active Supervisor |
+
+Every authenticated account, with the provisional password too:
+
+| Method and path | Body | Success | Errors |
+| --- | --- | --- | --- |
+| `GET /users/me` | None | 200, the account of the caller: `{"id", "email", "role", "is_active", "must_change_password"}` | 401 |
+| `POST /users/me/anonymise` | `{"password"}` | 204, anonymises the account of the caller and clears the refresh cookie (the right to erasure, A-06) | 400 wrong password, 409 the caller is the last active Supervisor, 429 too many failures |
+
+A Supervisor cannot change the role or the state of their own account, or anonymise it, from the list: the account page is where they leave. The last active Supervisor always stays: the API refuses to demote, deactivate or anonymise it. Every change is written to the audit log (`audit_logs`, table `UTILISATEUR`) with the old and new values of the role and the state; the e-mail address and the password are never written to it.
 
 ### Aircraft (`/api/v1/aircraft`)
 

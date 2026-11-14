@@ -15,7 +15,7 @@ function serviceWith(post: ReturnType<typeof vi.fn>): AuthService {
 }
 
 function Probe() {
-  const { status, user, login, signUp, logout } = useAuth();
+  const { status, user, login, signUp, logout, changePassword, deleteAccount } = useAuth();
   return (
     <div>
       <p data-testid="status">{status}</p>
@@ -23,6 +23,8 @@ function Probe() {
       <button onClick={() => void login("jane.doe@example.fr", "a long enough password")}>log in</button>
       <button onClick={() => void signUp("jane.doe@example.fr", "a long enough password")}>sign up</button>
       <button onClick={() => void logout()}>log out</button>
+      <button onClick={() => void changePassword("old password", "a new long password")}>change</button>
+      <button onClick={() => void deleteAccount("old password")}>delete</button>
     </div>
   );
 }
@@ -69,6 +71,22 @@ describe("AuthProvider", () => {
 
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
     expect(post).toHaveBeenCalledWith("/v1/auth/signup", expect.anything());
+  });
+
+  it("changes the password and deletes the account through the service", async () => {
+    const post = vi.fn().mockResolvedValue(TOKENS);
+    renderProbe(serviceWith(post));
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
+
+    await act(async () => screen.getByText("change").click());
+    expect(post).toHaveBeenLastCalledWith("/v1/auth/password", {
+      current_password: "old password",
+      new_password: "a new long password",
+    });
+
+    await act(async () => screen.getByText("delete").click());
+    expect(post).toHaveBeenLastCalledWith("/v1/users/me/anonymise", { password: "old password" });
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("anonymous"));
   });
 
   it("plugs the session into the API client", async () => {

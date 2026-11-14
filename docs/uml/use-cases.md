@@ -67,14 +67,14 @@ flowchart LR
 | UC-03 | Evaluate rules R1 to R5 on the collected data and generate and store an alert when a threshold is exceeded | Scheduler | Project sheet §6 |
 | UC-04 | Open the dashboard, filter and sort alerts, view an alert, mark it as processed | Supervisor | Project sheet §2, §3; processing from the specifications |
 | UC-05 | View and adjust the threshold of a rule; applies at the next evaluation | Supervisor | Specifications (A-02) |
-| UC-06 | Modify or deactivate an account; assign a role | Supervisor | Specifications |
+| UC-06 | Create, modify or deactivate an account; assign a role; anonymise an account | Supervisor | Specifications; creation and anonymisation added on 2026-11-14 |
 | UC-07 | Compare the alerts of rules R1 to R5 with the anomaly scores of the AI model | Supervisor | Project sheet §7 (bonus) |
 | UC-08 | Retrieve OpenSky data, clean and normalise it, store it in PostgreSQL | Scheduler | Project sheet §4 |
 | UC-09 | Create one's own account (role User by default) | Visitor | Team decision (C-02) |
 | UC-10 | Log in and out (password, short-lived token, refresh token) | All logged-in actors | Project sheet §8 (authentication component) |
 | UC-11 | Request deletion of one's own account; the account is anonymised, not deleted | User | Team decision (C-05); specifications §VII.3 (GDPR) |
 
-UC-01 to UC-07 keep the numbering of the specifications. UC-06 no longer covers account creation by the Supervisor, since accounts are created by self sign-up (UC-09), nor deletion, which is UC-11. UC-08 to UC-11 are added here.
+UC-01 to UC-07 keep the numbering of the specifications. Accounts are created by self sign-up (UC-09), and a Supervisor can also create one for somebody, with a provisional password (added on 2026-11-14, see [open points](../open-points.md)); deleting one's own account is UC-11. UC-08 to UC-11 are added here.
 
 ## Assumptions to confirm
 

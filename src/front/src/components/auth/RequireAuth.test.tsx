@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { AuthContext, type AuthContextValue, type AuthStatus } from "@/providers/AuthContext";
 import PreferencesProvider from "@/providers/PreferencesProvider";
+import ToastProvider from "@/providers/ToastProvider";
 import { PreferenceStore } from "@/services/PreferenceStore";
 import { User } from "@/models/User";
 
@@ -14,9 +15,9 @@ const NOBODY = async () => {
   throw new Error("not used");
 };
 
-function session(status: AuthStatus, role?: string): AuthContextValue {
-  const user = role ? new User("01HZ", "jane@example.fr", role, true) : null;
-  return { status, user, login: NOBODY, signUp: NOBODY, logout: NOBODY };
+function session(status: AuthStatus, role?: string, mustChangePassword = false): AuthContextValue {
+  const user = role ? new User("01HZ", "jane@example.fr", role, true, mustChangePassword) : null;
+  return { status, user, login: NOBODY, signUp: NOBODY, logout: NOBODY, changePassword: NOBODY, deleteAccount: NOBODY };
 }
 
 function LogIn() {
@@ -44,7 +45,9 @@ function renderAt(path: string, value: AuthContextValue) {
   render(
     <PreferencesProvider store={new PreferenceStore(null)}>
       <AuthContext.Provider value={value}>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </AuthContext.Provider>
     </PreferencesProvider>,
   );
@@ -68,6 +71,22 @@ describe("RequireAuth", () => {
     renderAt("/dashboard?tab=map#top", session("anonymous"));
 
     expect(screen.getByText(/log in screen/)).toHaveTextContent('{"from":"/dashboard?tab=map#top"}');
+  });
+});
+
+describe("RequireAuth with a provisional password", () => {
+  it("shows the screen that replaces the password, whatever the page asked for", () => {
+    renderAt("/dashboard", session("authenticated", "USER", true));
+
+    expect(screen.getByRole("heading", { level: 1, name: "Choisissez votre mot de passe" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Dashboard" })).not.toBeInTheDocument();
+  });
+
+  it("also blocks the pages of the Supervisor", () => {
+    renderAt("/rules", session("authenticated", "SUPERVISOR", true));
+
+    expect(screen.getByRole("heading", { level: 1, name: "Choisissez votre mot de passe" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Rules" })).not.toBeInTheDocument();
   });
 });
 

@@ -12,6 +12,10 @@ export interface AuthContextValue {
   /** Creates the account and logs in. */
   signUp: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
+  /** Replaces the password; the session goes on under the new one. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<User>;
+  /** Anonymises the account after its password and closes the session. */
+  deleteAccount: (password: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

@@ -1,0 +1,92 @@
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 13rem;
+}
+
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  background: color-mix(in srgb, var(--color-brand) 20%, var(--color-raised));
+  border: 1px solid var(--color-brand);
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.email {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.you {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.role {
+  min-height: 2.25rem;
+  padding: 0 var(--space-2);
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+}
+
+.role:disabled {
+  opacity: 0.6;
+}
+
+.provisional {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.date {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.anonymise {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 2.25rem;
+  padding: 0 var(--space-2);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.anonymise:hover:not(:disabled) {
+  border-color: var(--color-danger);
+}
+
+.anonymise:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* An anonymised account is still listed, but nobody is behind it any more. */
+.gone td {
+  opacity: 0.55;
+}

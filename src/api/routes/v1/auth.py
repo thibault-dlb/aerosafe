@@ -5,15 +5,17 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
 from config.auth import settings as auth_settings
+from core.security import CurrentUser, get_current_account
 from models import User
 from schemas.auth import LoginRequest, SignUpRequest, TokenResponse
-from schemas.user import UserRead
+from schemas.user import PasswordChange, UserRead
 from services.auth.service import (
     AuthService,
     AuthSession,
     EmailTakenError,
     InvalidCredentialsError,
     InvalidRefreshTokenError,
+    PasswordUnchangedError,
     TooManyAttemptsError,
     get_auth_service,
 )
@@ -30,7 +32,11 @@ RefreshCookie = Annotated[str | None, Cookie(alias=REFRESH_COOKIE)]
 
 def to_user_read(user: User) -> UserRead:
     return UserRead(
-        id=user.public_id, email=user.email, role=user.role.code, is_active=user.is_active
+        id=user.public_id,
+        email=user.email,
+        role=user.role.code,
+        is_active=user.is_active,
+        must_change_password=user.must_change_password,
     )
 
 
@@ -113,3 +119,35 @@ async def logout(response: Response, service: Service, token: RefreshCookie = No
     if token is not None:
         await service.logout(token, datetime.now(UTC))
     clear_cookie(response)
+
+
+@router.post("/password")
+async def change_password(
+    body: PasswordChange,
+    request: Request,
+    response: Response,
+    service: Service,
+    caller: Annotated[CurrentUser, Depends(get_current_account)],
+) -> TokenResponse:
+    """Replace the password of the caller.
+
+    It is also the way out of a provisional password: every other route answers 403 until
+    then. Every session of the account ends and the answer opens a new one.
+    """
+    address = request.client.host if request.client else "unknown"
+    try:
+        session = await service.change_password(
+            caller.id, body.current_password, body.new_password, address, datetime.now(UTC)
+        )
+    except TooManyAttemptsError as error:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS, "Too many failed attempts, try again later"
+        ) from error
+    except InvalidCredentialsError as error:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect") from error
+    except PasswordUnchangedError as error:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "The new password must differ from the current one",
+        ) from error
+    return open_session(response, service, session)

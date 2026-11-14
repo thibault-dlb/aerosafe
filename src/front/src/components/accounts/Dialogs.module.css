@@ -1,0 +1,48 @@
+.text {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.select {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.select select {
+  min-height: 2.5rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+}
+
+.secret {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-raised);
+  border: 1px solid var(--color-selection);
+  border-radius: var(--radius-md);
+}
+
+.secretLabel {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.password {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}

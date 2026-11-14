@@ -63,6 +63,24 @@ export class AuthService {
     return this.login(email, password);
   }
 
+  /**
+   * Replaces the password. The API ends every session of the account and answers with a new one,
+   * so the session goes on with the new token. It is also how a provisional password is replaced.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<User> {
+    const body = await this.client.post<TokenResponseJson>("/v1/auth/password", {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    return this.open(body);
+  }
+
+  /** Anonymises the account of the visitor, after their password, and closes the session. */
+  async deleteAccount(password: string): Promise<void> {
+    await this.client.post("/v1/users/me/anonymise", { password });
+    this.close();
+  }
+
   async logout(): Promise<void> {
     try {
       await this.client.post("/v1/auth/logout");
