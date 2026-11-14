@@ -1,40 +1,43 @@
+import type { TranslationKey } from "@/i18n/fr";
 import { ApiError } from "@/services/ApiClient";
 
-/** Texts of the API failures a page explains, by HTTP status. */
-export type ErrorTexts = Partial<Record<401 | 403 | 404 | 409 | 422, string>>;
+/** Texts (as translation keys) of the API failures a page explains, by HTTP status. */
+export type ErrorKeys = Partial<Record<401 | 403 | 404 | 409 | 422, TranslationKey>>;
 
-/** Turns an API failure into a message for the user. Each page gives the texts that depend
- * on what it shows; the others keep a general wording. */
+/**
+ * Turns an API failure into the key of a message for the user. Each page gives the texts that
+ * depend on what it shows; the others keep a general wording.
+ */
 export class ErrorMessages {
-  static readonly UNREACHABLE = "The server could not be reached. Try again later.";
+  static readonly UNREACHABLE: TranslationKey = "error.unreachable";
 
-  private static readonly GENERAL: ErrorTexts = {
-    401: "Log in to see this page.",
-    403: "You are not allowed to see this page.",
-    404: "Not found.",
-    409: "This change conflicts with the current state. Reload and try again.",
-    422: "Check the values entered.",
+  private static readonly GENERAL: ErrorKeys = {
+    401: "error.login",
+    403: "error.forbidden",
+    404: "error.notFound",
+    409: "error.conflict",
+    422: "error.invalid",
   };
 
   /** Pages reserved to Supervisors: alerts and rules. */
   static readonly SUPERVISOR = new ErrorMessages({
-    401: "Log in as a Supervisor to see this page.",
-    403: "Only Supervisors can see this page.",
-    404: "This item no longer exists.",
-    409: "This alert was already processed.",
+    401: "error.supervisor.login",
+    403: "error.supervisor.forbidden",
+    404: "error.supervisor.notFound",
+    409: "error.supervisor.conflict",
   });
 
-  private readonly texts: ErrorTexts;
+  private readonly keys: ErrorKeys;
 
-  constructor(texts: ErrorTexts = {}) {
-    this.texts = { ...ErrorMessages.GENERAL, ...texts };
+  constructor(keys: ErrorKeys = {}) {
+    this.keys = { ...ErrorMessages.GENERAL, ...keys };
   }
 
   /** The message for this failure; any failure without an HTTP status is a network one. */
-  describe(error: unknown): string {
+  key(error: unknown): TranslationKey {
     if (error instanceof ApiError) {
-      const text = this.texts[error.status as keyof ErrorTexts];
-      if (text !== undefined) return text;
+      const key = this.keys[error.status as keyof ErrorKeys];
+      if (key !== undefined) return key;
     }
     return ErrorMessages.UNREACHABLE;
   }

@@ -1,0 +1,90 @@
+.pick {
+  cursor: pointer;
+}
+
+.pick:hover td {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+/* The row whose details are open: a bar on its left edge, as in the side bar. */
+.pick[aria-selected="true"] td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-selection);
+}
+
+.tight {
+  width: 1%;
+  padding-right: 0;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.rule {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+button.rule {
+  cursor: pointer;
+}
+
+.rule svg {
+  color: var(--color-brand);
+}
+
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.sort:hover,
+.sorted {
+  color: var(--color-text);
+}
+
+.down {
+  transform: rotate(90deg);
+}
+
+.up {
+  transform: rotate(-90deg);
+}
+
+button.process {
+  min-height: 1.875rem;
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.compact {
+  display: none;
+}
+
+/* Where the page is narrow (the page is a container), the least useful columns give way. */
+@container (max-width: 760px) {
+  .narrowHidden {
+    display: none;
+  }
+}
