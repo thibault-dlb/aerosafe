@@ -33,6 +33,14 @@ class InvalidRefreshTokenError(Exception):
     """Unknown, revoked or expired refresh token."""
 
 
+class PasswordUnchangedError(Exception):
+    """The new password is the current one."""
+
+
+class LastSupervisorError(Exception):
+    """The change would leave the application without an active Supervisor."""
+
+
 @dataclass(frozen=True)
 class AuthSession:
     access_token: str
@@ -100,6 +108,50 @@ class AuthService:
     async def logout(self, refresh_token: str, now: datetime) -> None:
         if await self._store.revoke_refresh_token(RefreshTokens.hash(refresh_token), now):
             await self._store.commit()
+
+    async def change_password(
+        self, user_id: int, current: str, new: str, address: str, now: datetime
+    ) -> AuthSession:
+        """Replace the password of the caller and move them to a new session.
+
+        The current password is asked again, with the same limit on failures as the login: a
+        stolen access token must not be enough to take the account over. Every other session
+        of the account ends, and a provisional password stops being one.
+        """
+        user = await self._checked_owner(user_id, current, address, now)
+        if new == current:
+            raise PasswordUnchangedError
+        user.password_hash = await asyncio.to_thread(hasher.hash, new)
+        user.must_change_password = False
+        await self._store.revoke_user_tokens(user.id, now)
+        return await self._open_session(user, now)
+
+    async def delete_account(
+        self, user_id: int, password: str, address: str, now: datetime
+    ) -> None:
+        """Anonymise the account of the caller after their password (RGPD right to erasure)."""
+        user = await self._checked_owner(user_id, password, address, now)
+        if (
+            user.role.code == RoleCode.SUPERVISOR
+            and await self._store.count_active_in_role(user.role) <= 1
+        ):
+            raise LastSupervisorError
+        await self._store.anonymise(user, now, user.id)
+        await self._store.commit()
+
+    async def _checked_owner(
+        self, user_id: int, password: str, address: str, now: datetime
+    ) -> User:
+        user = await self._store.get_user(user_id)
+        if user is None:
+            raise InvalidCredentialsError
+        if self._throttle.is_blocked(user.email, address, now):
+            raise TooManyAttemptsError
+        self._throttle.record_attempt(user.email, address, now)
+        if not await self._password_matches(user, password):
+            raise InvalidCredentialsError
+        self._throttle.reset(user.email, address)
+        return user
 
     @property
     def access_lifetime(self) -> timedelta:

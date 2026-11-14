@@ -7,7 +7,13 @@ import pytest
 from fastapi import Depends, FastAPI
 
 from config.auth import settings as auth_settings
-from core.security import CurrentUser, RoleCode, get_current_user, require_role
+from core.security import (
+    CurrentUser,
+    RoleCode,
+    get_current_account,
+    get_current_user,
+    require_role,
+)
 from services.auth.store import get_user_store
 from services.auth.tokens import AccessClaims, AccessTokenCodec
 from tests.auth_support import SECRET, SETTINGS, FakeUserStore
@@ -28,6 +34,10 @@ async def client(
     @application.get("/me")
     async def me(user: Annotated[CurrentUser, Depends(get_current_user)]) -> dict:
         return {"id": user.id, "public_id": user.public_id, "role": user.role}
+
+    @application.get("/account")
+    async def account(user: Annotated[CurrentUser, Depends(get_current_account)]) -> dict:
+        return {"must_change_password": user.must_change_password}
 
     @application.get("/supervision")
     async def supervision(
@@ -97,3 +107,18 @@ async def test_a_deactivated_account_loses_access_at_once(
     user.is_active = False
 
     assert (await client.get("/me", headers=headers)).status_code == 401
+
+
+async def test_a_provisional_password_blocks_every_route_but_the_password_ones(
+    client: httpx.AsyncClient, store: FakeUserStore
+) -> None:
+    user = await store.add_user(
+        "new@example.com", "hash", store.roles[RoleCode.USER], temporary_password=True
+    )
+    headers = bearer(user.public_id)
+
+    blocked = await client.get("/me", headers=headers)
+    allowed = await client.get("/account", headers=headers)
+
+    assert (blocked.status_code, blocked.json()["detail"]) == (403, "Password change required")
+    assert allowed.json() == {"must_change_password": True}
