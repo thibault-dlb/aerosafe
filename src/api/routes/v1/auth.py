@@ -129,7 +129,7 @@ async def change_password(
     service: Service,
     caller: Annotated[CurrentUser, Depends(get_current_account)],
 ) -> TokenResponse:
-    """Replace the password of the caller (UC-14).
+    """Replace the password of the caller.
 
     It is also the way out of a provisional password: every other route answers 403 until
     then. Every session of the account ends and the answer opens a new one.

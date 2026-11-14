@@ -40,7 +40,7 @@ MAX_RESULTS = 200
 MAX_OFFSET = 10_000
 
 Service = Annotated[UserService, Depends(get_user_service)]
-# Account management belongs to the Supervisor (UC-11 to UC-13).
+# Account management belongs to the Supervisor (UC-06).
 Supervisor = Annotated[CurrentUser, Depends(require_role(RoleCode.SUPERVISOR))]
 # The account page stays open while the password is a provisional one.
 Caller = Annotated[CurrentUser, Depends(get_current_account)]
@@ -81,7 +81,7 @@ async def list_accounts(
     limit: Annotated[int, Query(ge=1, le=MAX_RESULTS)] = 50,
     offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
 ) -> AccountPage:
-    """The accounts, oldest first, anonymised ones included (UC-11)."""
+    """The accounts, oldest first, anonymised ones included (UC-06)."""
     users, total = await service.search(search, limit, offset)
     return AccountPage(items=[to_account_read(user) for user in users], total=total)
 
@@ -90,7 +90,7 @@ async def list_accounts(
 async def create_account(
     body: AccountCreate, service: Service, supervisor: Supervisor
 ) -> AccountCreated:
-    """Create an account with a generated password, returned this once (UC-12).
+    """Create an account with a generated password, returned this once (UC-06).
 
     The owner must choose their own password at the first login."""
     try:
@@ -121,7 +121,7 @@ async def delete_me(
     caller: Caller,
     auth: Annotated[AuthService, Depends(get_auth_service)],
 ) -> None:
-    """Anonymise the account of the caller after their password (RGPD erasure).
+    """Anonymise the account of the caller after their password (UC-11, RGPD erasure).
 
     The e-mail and the password are erased, the sessions end, and the history stays."""
     address = request.client.host if request.client else "unknown"
@@ -142,7 +142,7 @@ async def delete_me(
 async def update_account(
     account_id: str, body: AccountUpdate, service: Service, supervisor: Supervisor
 ) -> AccountRead:
-    """Change the role, deactivate or reactivate an account (UC-13).
+    """Change the role, deactivate or reactivate an account (UC-06).
 
     A deactivated account loses its sessions at once. Nobody changes their own account here,
     and the last active Supervisor stays."""

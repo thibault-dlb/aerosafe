@@ -29,7 +29,7 @@ class RoleUnavailableError(Exception):
 
 
 class UserService:
-    """Account management by a Supervisor (UC-11 to UC-13).
+    """Account management by a Supervisor (UC-06).
 
     A Supervisor lists the accounts, creates one with a provisional password, changes a role,
     deactivates or reactivates it, and anonymises it. Nobody can do any of this to their own
