@@ -1,0 +1,208 @@
+.screen {
+  --swap: 0.75s cubic-bezier(0.65, 0, 0.35, 1);
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+/* The radar lies on the ground and its edges fade into it. It reaches under the form. */
+.radarPane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 47%;
+  width: 56%;
+  z-index: 1;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 20%, #000 80%, transparent),
+    linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  mask-image:
+    linear-gradient(to right, transparent, #000 20%, #000 80%, transparent),
+    linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  transition: transform var(--swap);
+}
+
+/* The form floats above the radar, with no ground of its own: the radar is seen under it while panels swap. */
+.formPane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  padding: var(--space-5) var(--space-6);
+  transition: transform var(--swap);
+}
+
+.signup .formPane {
+  transform: translateX(100%);
+}
+
+/* 56 % wide, 47 % from the left: moving by 89.286 % of its width brings it to the left half. */
+.signup .radarPane {
+  transform: translateX(-89.286%);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.brand img {
+  display: block;
+  border-radius: var(--radius-sm);
+}
+
+.brand span {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-5) 0;
+}
+
+.edu {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.edu svg {
+  margin-top: 1px;
+}
+
+/* The tagline, on a soft halo of the ground colour so it reads over the map. */
+.pitch {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 3.5rem 18% 4.5rem;
+  background: radial-gradient(
+    ellipse 62% 70% at 42% 62%,
+    color-mix(in srgb, var(--color-bg) 94%, transparent) 38%,
+    transparent 100%
+  );
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--color-data);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-data);
+  box-shadow: 0 0 8px var(--color-data);
+  animation: live 2s ease-in-out infinite;
+}
+
+@keyframes live {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.pitch h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.6rem;
+  letter-spacing: 0.1em;
+}
+
+.text {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+/* Phone: the radar becomes a band above the form, and nothing swaps. */
+@media (max-width: 720px) {
+  .screen {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .radarPane,
+  .formPane {
+    position: relative;
+    width: 100%;
+    transform: none !important;
+  }
+
+  .radarPane {
+    left: 0;
+    height: 230px;
+    flex: none;
+    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+    mask-image: linear-gradient(to bottom, #000 55%, transparent);
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+  }
+
+  .formPane {
+    flex: 1;
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+
+  .pitch {
+    padding: 2rem var(--space-4) 2.25rem;
+    text-align: center;
+  }
+
+  .pitch h2 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .eyebrow,
+  .text {
+    display: none;
+  }
+
+  .main {
+    justify-content: flex-start;
+    padding: var(--space-4) 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eyebrow::before {
+    animation: none;
+  }
+}
