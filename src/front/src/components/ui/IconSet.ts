@@ -63,7 +63,7 @@ const rect = (x: number, y: number, width: number, height: number, rx: number, d
 });
 
 /** The silhouette of the aircraft of the landing page scene, nose to the north. */
-const AIRCRAFT =
+export const AIRCRAFT_SILHOUETTE =
   "M0 -13L2.6 -4.5L12 2.5L12 5L2.6 2.2L2 8.5L5.2 11L5.2 12.6L0 11.4L-5.2 12.6L-5.2 11L-2 8.5L-2.6 2.2L-12 5L-12 2.5L-2.6 -4.5Z";
 
 /**
@@ -73,7 +73,7 @@ const AIRCRAFT =
 export class IconSet {
   private static readonly SHAPES: Record<IconName, IconShape[]> = {
     dashboard: [rect(3.5, 3.5, 7, 9, 1.5), rect(13.5, 3.5, 7, 5, 1.5), rect(13.5, 11.5, 7, 9, 1.5), rect(3.5, 15.5, 7, 5, 1.5)],
-    aircraft: [path(AIRCRAFT, "translate(12 12.2) scale(.74)")],
+    aircraft: [path(AIRCRAFT_SILHOUETTE, "translate(12 12.2) scale(.74)")],
     alert: [path("M12 3.8 21.2 19.6H2.8Z"), path("M12 10v4.4"), circle(12, 17, 0.9, true)],
     rules: [
       path("M4 6h8.5M17.5 6H20M4 12h2.5M11.5 12H20M4 18h10.5M19.5 18h.5"),

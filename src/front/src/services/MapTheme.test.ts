@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { MapTheme } from "./MapTheme";
 
-const COLORS = { low: "#111111", mid: "#222222", high: "#333333", selected: "#444444" };
+const COLORS = { ...MapTheme.FALLBACK, low: "#111111", mid: "#222222", high: "#333333", selected: "#444444" };
 
 describe("MapTheme", () => {
   it("reads the colours from the tokens of the page", () => {
@@ -11,6 +11,10 @@ describe("MapTheme", () => {
     root.style.setProperty("--map-aircraft-mid", "#00aa00");
     root.style.setProperty("--map-aircraft-high", "#0000aa");
     root.style.setProperty("--map-selected", "#aaaa00");
+    root.style.setProperty("--map-bg", "#010101");
+    root.style.setProperty("--color-danger", "#ff0001");
+    root.style.setProperty("--color-warning", "#ff0002");
+    root.style.setProperty("--color-brand", "#ff0003");
     document.body.appendChild(root);
 
     expect(new MapTheme(root).colors()).toEqual({
@@ -18,6 +22,10 @@ describe("MapTheme", () => {
       mid: "#00aa00",
       high: "#0000aa",
       selected: "#aaaa00",
+      outline: "#010101",
+      alertHigh: "#ff0001",
+      alertMedium: "#ff0002",
+      alertLow: "#ff0003",
     });
     root.remove();
   });
@@ -37,6 +45,27 @@ describe("MapTheme", () => {
     [undefined, "mid"],
   ] as const)("colours an aircraft at %s m with the %s shade", (altitude, shade) => {
     expect(new MapTheme().aircraftColor(altitude, COLORS)).toBe(COLORS[shade]);
+  });
+
+  it.each([
+    ["HIGH", "alertHigh"],
+    ["MEDIUM", "alertMedium"],
+    ["LOW", "alertLow"],
+  ] as const)("colours an alert of %s criticality with %s", (criticality, key) => {
+    expect(new MapTheme().alertColor(criticality, COLORS)).toBe(COLORS[key]);
+  });
+
+  it("has no alert colour without a criticality", () => {
+    expect(new MapTheme().alertColor(null, COLORS)).toBeNull();
+    expect(new MapTheme().alertColor(undefined, COLORS)).toBeNull();
+  });
+
+  it("colours a marker with its alert first, and with its altitude otherwise", () => {
+    const theme = new MapTheme();
+
+    expect(theme.markerColor({ altitude: 11000, criticality: "HIGH" }, COLORS)).toBe(COLORS.alertHigh);
+    expect(theme.markerColor({ altitude: 11000 }, COLORS)).toBe(COLORS.high);
+    expect(theme.markerColor({}, COLORS)).toBe(COLORS.mid);
   });
 
   it("reads the colours of the theme when none are given", () => {

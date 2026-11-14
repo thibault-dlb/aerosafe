@@ -10,6 +10,10 @@ export interface AircraftJson {
   longitude: number | null;
   /** Altitude of the latest observation, in metres. */
   altitude: number | null;
+  /** True heading of the latest observation, in degrees from north. */
+  heading?: number | null;
+  /** Whether the latest observation is on the ground. */
+  on_ground?: boolean | null;
 }
 
 /** JSON of one observation: the flight parameters at one time. */
@@ -70,6 +74,8 @@ export class Aircraft {
     readonly latitude: number | null,
     readonly longitude: number | null,
     readonly altitude: number | null = null,
+    readonly heading: number | null = null,
+    readonly onGround: boolean | null = null,
   ) {}
 
   static fromJson(json: AircraftJson): Aircraft {
@@ -83,6 +89,8 @@ export class Aircraft {
       json.latitude,
       json.longitude,
       json.altitude,
+      json.heading ?? null,
+      json.on_ground ?? null,
     );
   }
 
