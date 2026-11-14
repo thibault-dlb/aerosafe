@@ -11,8 +11,8 @@ test("a visitor signs up, lands on the page that was asked for, logs out and log
   await expect(page).toHaveURL(/\/login$/);
   await page.getByRole("navigation", { name: "Connexion ou inscription" }).getByRole("link", { name: "Inscription" }).click();
   await expect(page).toHaveURL(/\/signup$/);
-  await page.getByLabel("Adresse e-mail").fill(email);
-  await page.getByLabel("Mot de passe").fill(PASSWORD);
+  await page.getByLabel("Adresse e-mail", { exact: true }).fill(email);
+  await page.getByLabel("Mot de passe", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Créer mon compte" }).click();
 
   await expect(page).toHaveURL(/\/aircraft$/);
@@ -24,8 +24,8 @@ test("a visitor signs up, lands on the page that was asked for, logs out and log
   await expect(page.getByRole("link", { name: "Connexion" })).toBeVisible();
 
   await page.goto("/login");
-  await page.getByLabel("Adresse e-mail").fill(email);
-  await page.getByLabel("Mot de passe").fill(PASSWORD);
+  await page.getByLabel("Adresse e-mail", { exact: true }).fill(email);
+  await page.getByLabel("Mot de passe", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Se connecter" }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/);
@@ -35,8 +35,8 @@ test("a visitor signs up, lands on the page that was asked for, logs out and log
 test("the session survives a reload and the pages of the Supervisor stay closed to a User", async ({ page }) => {
   const email = freshEmail();
   await page.goto("/signup");
-  await page.getByLabel("Adresse e-mail").fill(email);
-  await page.getByLabel("Mot de passe").fill(PASSWORD);
+  await page.getByLabel("Adresse e-mail", { exact: true }).fill(email);
+  await page.getByLabel("Mot de passe", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Créer mon compte" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
@@ -50,8 +50,8 @@ test("the session survives a reload and the pages of the Supervisor stay closed 
 
 test("a wrong password is refused, and the message stays on the log in mode", async ({ page }) => {
   await page.goto("/login");
-  await page.getByLabel("Adresse e-mail").fill(freshEmail());
-  await page.getByLabel("Mot de passe").fill(PASSWORD);
+  await page.getByLabel("Adresse e-mail", { exact: true }).fill(freshEmail());
+  await page.getByLabel("Mot de passe", { exact: true }).fill(PASSWORD);
 
   await page.getByRole("button", { name: "Se connecter" }).click();
 
@@ -64,15 +64,15 @@ test("a wrong password is refused, and the message stays on the log in mode", as
 test("an e-mail that already has an account cannot sign up again", async ({ page }) => {
   const email = freshEmail();
   await page.goto("/signup");
-  await page.getByLabel("Adresse e-mail").fill(email);
-  await page.getByLabel("Mot de passe").fill(PASSWORD);
+  await page.getByLabel("Adresse e-mail", { exact: true }).fill(email);
+  await page.getByLabel("Mot de passe", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Créer mon compte" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.getByRole("button", { name: "Se déconnecter" }).click();
 
   await page.goto("/signup");
-  await page.getByLabel("Adresse e-mail").fill(email);
-  await page.getByLabel("Mot de passe").fill(PASSWORD);
+  await page.getByLabel("Adresse e-mail", { exact: true }).fill(email);
+  await page.getByLabel("Mot de passe", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Créer mon compte" }).click();
 
   await expect(page.getByRole("alert")).toContainText("Cet e-mail a déjà un compte.");
@@ -80,7 +80,7 @@ test("an e-mail that already has an account cannot sign up again", async ({ page
 
 test("the length gauge follows the password, and the password can be shown", async ({ page }) => {
   await page.goto("/signup");
-  const password = page.getByLabel("Mot de passe");
+  const password = page.getByLabel("Mot de passe", { exact: true });
 
   await password.fill("court");
   await expect(page.getByRole("meter", { name: "Longueur du mot de passe" })).toHaveAttribute("aria-valuenow", "5");
@@ -97,13 +97,13 @@ test("the radar goes on when the panels swap, and what was typed is kept", async
   const radar = page.getByRole("img", { name: /Écran radar/ });
   await expect(radar).toBeVisible();
   await radar.evaluate((element) => element.setAttribute("data-same-radar", "yes"));
-  await page.getByLabel("Adresse e-mail").fill("jane@example.fr");
+  await page.getByLabel("Adresse e-mail", { exact: true }).fill("jane@example.fr");
 
   await page.getByRole("link", { name: "Créer un compte" }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: "Créer un compte" })).toBeVisible();
   await expect(radar).toHaveAttribute("data-same-radar", "yes");
-  await expect(page.getByLabel("Adresse e-mail")).toHaveValue("jane@example.fr");
+  await expect(page.getByLabel("Adresse e-mail", { exact: true })).toHaveValue("jane@example.fr");
   // The form slides to the right half and the radar to the left half.
   await expect
     .poll(async () => {

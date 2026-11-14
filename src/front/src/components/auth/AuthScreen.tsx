@@ -34,7 +34,9 @@ export default function AuthScreen() {
   return (
     <div className={`${styles.screen} darkScope ${mode === "signup" ? styles.signup : ""}`}>
       <div className={styles.radarPane}>
-        <RadarScene />
+        <div className={styles.radarMask}>
+          <RadarScene />
+        </div>
         <div className={styles.pitch}>
           <p className={styles.eyebrow}>{t("auth.radar.eyebrow")}</p>
           <h2>{t("auth.radar.title")}</h2>
