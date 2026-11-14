@@ -231,6 +231,9 @@ export const en: Record<TranslationKey, string> = {
   "auth.home": "Back to the home page",
   "auth.welcome": "Account created. Welcome to AeroSafe!",
 
+  "nav.logout": "Log out",
+  "auth.welcomeClose": "Close",
+
   "footer.disclaimer":
     "AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally.",
   "footer.data": "Data: The OpenSky Network. Map: © OpenStreetMap contributors.",

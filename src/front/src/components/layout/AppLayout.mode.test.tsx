@@ -3,9 +3,11 @@ import { useEffect } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AuthContext } from "@/providers/AuthContext";
 import PreferencesProvider from "@/providers/PreferencesProvider";
 import { DataModeService } from "@/services/DataModeService";
 import { PreferenceStore } from "@/services/PreferenceStore";
+import { fakeSession } from "@/test/auth";
 
 import AppLayout from "./AppLayout";
 
@@ -53,7 +55,9 @@ function renderLayout(store = memoryStore(), path = "/alerts") {
   );
   render(
     <PreferencesProvider store={store}>
-      <RouterProvider router={router} />
+      <AuthContext.Provider value={fakeSession("anonymous")}>
+        <RouterProvider router={router} />
+      </AuthContext.Provider>
     </PreferencesProvider>,
   );
 }

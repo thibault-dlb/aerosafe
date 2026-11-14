@@ -229,6 +229,9 @@ export const fr = {
   "auth.home": "Retour à l'accueil",
   "auth.welcome": "Compte créé. Bienvenue sur AeroSafe !",
 
+  "nav.logout": "Se déconnecter",
+  "auth.welcomeClose": "Fermer",
+
   "footer.disclaimer":
     "AeroSafe est un projet pédagogique. Ce n'est pas un système certifié de surveillance ou de gestion du trafic aérien et il ne doit pas servir à un usage opérationnel.",
   "footer.data": "Données : The OpenSky Network. Fond de carte : © contributeurs OpenStreetMap.",

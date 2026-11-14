@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { emptyData, openSession } from "./session";
+
 test("the home page shows the application name", async ({ page }) => {
   await page.goto("/");
 
@@ -99,12 +101,16 @@ test("the landing page stays dark even when the system asks for the light theme"
   const dark = await page.evaluate(() => getComputedStyle(document.querySelector(".darkScope")!).backgroundColor);
   expect(dark).toBe("rgb(28, 17, 11)");
 
-  await page.goto("/alerts");
+  await openSession(page);
+  await emptyData(page);
+  await page.goto("/dashboard");
   const light = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(light).toBe("rgb(251, 245, 230)");
 });
 
 test("the sections under the scene tell what the application does and lead to its pages", async ({ page }) => {
+  await openSession(page);
+  await emptyData(page);
   await page.goto("/");
   await page.getByRole("heading", { name: "Comment ça marche" }).scrollIntoViewIfNeeded();
 
@@ -126,16 +132,24 @@ test("with reduced motion the scene does not play and the page shows its final s
 });
 
 test("the dashboard opens on the live overview and the map", async ({ page }) => {
-  await page.route("**/api/v1/aircraft**", (route) => route.fulfill({ status: 401, json: {} }));
-  await page.route("**/api/v1/alerts**", (route) => route.fulfill({ status: 401, json: {} }));
+  await openSession(page);
+  await emptyData(page);
 
   await page.goto("/dashboard");
 
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await expect(page.getByText("Connectez-vous pour voir le trafic en direct.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "En direct · Île-de-France" })).toBeVisible();
+});
+
+test("the dashboard sends a visitor who is not logged in to the log in screen", async ({ page }) => {
+  await page.goto("/dashboard");
+
+  await expect(page).toHaveURL(/\/login$/);
 });
 
 test("the replay link of the features opens the dashboard in the replay mode", async ({ page }) => {
+  await openSession(page);
+  await emptyData(page);
   await page.goto("/");
   await page.getByRole("heading", { level: 3, name: "Rejouez une année de trafic" }).scrollIntoViewIfNeeded();
 

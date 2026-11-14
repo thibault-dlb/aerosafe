@@ -1,9 +1,12 @@
-import { useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import logoUrl from "@/assets/logo/aerosafe-logo.svg";
+import LanguageSwitch from "@/components/layout/LanguageSwitch";
 import ReplayBar from "@/components/replay/ReplayBar";
+import Icon from "@/components/ui/Icon";
 import Notice from "@/components/ui/Notice";
+import { useAuth } from "@/hooks/useAuth";
 import { useDataMode } from "@/hooks/useDataMode";
 import { useScrolled } from "@/hooks/useScrolled";
 import { useTheme } from "@/hooks/useTheme";
@@ -11,7 +14,6 @@ import { useTranslation } from "@/hooks/useTranslation";
 import type { TranslationKey } from "@/i18n/fr";
 import ReplayProvider from "@/providers/ReplayProvider";
 import { DATA_MODES } from "@/services/DataModeService";
-import { LANGUAGES } from "@/services/TranslationService";
 
 import styles from "./AppLayout.module.css";
 
@@ -21,22 +23,27 @@ const LINKS: { to: string; label: TranslationKey }[] = [
   { to: "/alerts", label: "nav.alerts" },
   { to: "/rules", label: "nav.rules" },
   { to: "/admin/accounts", label: "nav.accounts" },
-  { to: "/login", label: "nav.login" },
 ];
 
 const NAV_ID = "main-links";
 
-/** Pages where the visitor is about to use the data: they carry the educational notice. */
-const NOTICE_PATHS = ["/login", "/signup"];
-
 /** Shared page frame: the top bar with the navigation, the current page, then the footer. */
 export default function AppLayout() {
-  const { t, language, setLanguage } = useTranslation();
+  const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const { status, logout } = useAuth();
+  const navigate = useNavigate();
   const { mode, setMode } = useDataMode();
   const [menuOpen, setMenuOpen] = useState(false);
   // The landing page is always dark, edge to edge, under a bar that is clear until it scrolls.
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
+  // A new account is welcomed once, on the first page it opens: the mark is removed from the history.
+  const [welcome, setWelcome] = useState(() => (state as { welcome?: boolean } | null)?.welcome === true);
+  useEffect(() => {
+    if (welcome) navigate(pathname, { replace: true, state: null });
+    // Only on arrival: the mark is read once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const landing = pathname === "/";
   const scrolled = useScrolled();
   const frameClass = landing ? `${styles.frame} ${styles.landing} darkScope` : styles.frame;
@@ -80,6 +87,27 @@ export default function AppLayout() {
                   </NavLink>
                 </li>
               ))}
+              <li>
+                {status === "authenticated" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void logout().then(() => navigate("/"));
+                    }}
+                  >
+                    {t("nav.logout")}
+                  </button>
+                ) : (
+                  <NavLink
+                    to="/login"
+                    className={({ isActive }) => (isActive ? styles.active : undefined)}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {t("nav.login")}
+                  </NavLink>
+                )}
+              </li>
             </ul>
           </nav>
 
@@ -96,20 +124,7 @@ export default function AppLayout() {
                 </button>
               ))}
             </div>
-            <div role="group" aria-label={t("language.label")} className={styles.group}>
-              {LANGUAGES.map((code) => (
-                <button
-                  key={code}
-                  type="button"
-                  lang={code}
-                  aria-label={t(code === "fr" ? "language.fr" : "language.en")}
-                  aria-pressed={language === code}
-                  onClick={() => setLanguage(code)}
-                >
-                  {code.toUpperCase()}
-                </button>
-              ))}
-            </div>
+            <LanguageSwitch />
             <button
               type="button"
               className={styles.themeButton}
@@ -123,9 +138,17 @@ export default function AppLayout() {
 
         {mode === "replay" && <ReplayBar />}
 
+        {welcome && (
+          <Notice className={styles.welcome}>
+            <span>{t("auth.welcome")}</span>
+            <button type="button" aria-label={t("auth.welcomeClose")} onClick={() => setWelcome(false)}>
+              <Icon name="close" size={16} />
+            </button>
+          </Notice>
+        )}
+
         {/* The key remounts the page when the mode changes, so it loads the data of the new mode. */}
         <div id="content" key={mode} className={styles.content}>
-          {NOTICE_PATHS.includes(pathname) && <Notice className={styles.notice}>{t("layout.disclaimer")}</Notice>}
           <Outlet />
         </div>
 

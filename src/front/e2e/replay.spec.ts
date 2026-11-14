@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { openSession } from "./session";
+
 const CLOCK = {
   available: true,
   start: "2022-08-01T00:00:00Z",
@@ -104,6 +106,7 @@ test("the replay requests carry the source, and the live ones do not", async ({ 
     if (url.pathname.endsWith("/api/v1/aircraft")) sources.push(url.searchParams.get("source"));
   });
 
+  await openSession(page);
   // The overview that reads the aircraft is the top of the dashboard.
   await page.goto("/dashboard");
   await expect.poll(() => sources.length).toBeGreaterThan(0);
