@@ -277,7 +277,16 @@ The clock stops at the end of the data. It is stored in `PARAMETRE_REJEU` (a sta
 
 ### Dashboard (`/api/v1/dashboard`)
 
-`TBD`.
+Work package `feat/dashboard` (BF-11, UC-04, team decision A-04). **Every account** reads the dashboard, a User as well as a Supervisor: 401 without a token, 403 while the password is a provisional one. It changes nothing; the actions behind it (processing an alert, pausing the collection) stay the Supervisor's, on their own routes. The service reads through `AlertService` and `CollectionStateStore`, never the tables. With `source=replay` the alerts are those of the replayed traffic up to the simulated instant, and a replay that was never started has no alert; the collection state is the real one in both modes.
+
+| Method and path | Query | Success | Errors |
+| --- | --- | --- | --- |
+| `GET /dashboard` | `source` (`live` or `replay`) | 200, `{"counters": {"active_alerts", "unprocessed_alerts", "alerts_24h"}, "active_alerts": [alert], "collection": {...}}`. `active_alerts` holds the 5 latest alerts whose situation lasts (same body as in [Alerts](#alerts)); `alerts_24h` counts the 24 hours before now, or before the simulated instant | 401 |
+| `GET /dashboard/statistics` | `period` (`24h` default, `7d`, `30d`), `source` | 200, `{"period", "unit", "start", "end", "total", "slices": [{"start", "total", "per_rule": {"R1": 2}}]}`. 24 slices of one hour for `24h`, 7 or 30 of one day otherwise, the last one being the current hour or day (UTC). The slices without alert are present, with a total of 0 | 401, 422 unknown period |
+
+`collection` is a summary the User may read: `{"enabled", "paused", "running", "last_success_at", "remaining_credits", "recent_runs": [{"started_at", "status"}]}`, the 12 latest runs, newest first. It carries no error text; the Supervisor's `GET /collection/status` has the detail.
+
+The map of the dashboard is not part of this answer: it reads the aircraft of the area with `GET /aircraft`.
 
 ### Collection (`/api/v1/collection`)
 

@@ -79,6 +79,8 @@ The minimal Dashboard of the Supervisor shows:
 - alert statistics: number of alerts per rule and per period;
 - the state of the collection: last successful run, OpenSky credits used, errors.
 
+Built on `feat/dashboard`: a User sees the same page without the buttons that act (see [open points](open-points.md)). The alerts page, the rules and the accounts stay closed to a User. The Supervisor's page of alerts keeps the filters; the dashboard shows the latest active alerts only.
+
 Flight statistics, computed per flight: duration and distance, altitude and speed (maximum, mean), and number of observations.
 
 ## Testing
