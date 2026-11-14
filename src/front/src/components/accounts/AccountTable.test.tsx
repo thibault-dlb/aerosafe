@@ -20,7 +20,7 @@ function renderTable(accounts: Account[], busyId: string | null = null) {
 }
 
 function row(email: string) {
-  return screen.getByRole("row", { name: new RegExp(email.replace(/[.@]/g, "\\$&")) });
+  return screen.getByRole("row", { name: (name) => name.includes(email) });
 }
 
 describe("AccountTable", () => {
