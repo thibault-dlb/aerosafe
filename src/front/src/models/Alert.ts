@@ -33,6 +33,22 @@ export interface AlertStatisticsJson {
   per_rule: Record<string, number>;
 }
 
+/** Which of several criticalities weighs the most. */
+export class CriticalityRank {
+  private static readonly ORDER: readonly Criticality[] = ["LOW", "MEDIUM", "HIGH"];
+
+  /** The highest of the levels given, or `null` when there is none. */
+  static highest(levels: readonly (Criticality | null)[]): Criticality | null {
+    let best: Criticality | null = null;
+    for (const level of levels) {
+      if (level !== null && (best === null || CriticalityRank.ORDER.indexOf(level) > CriticalityRank.ORDER.indexOf(best))) {
+        best = level;
+      }
+    }
+    return best;
+  }
+}
+
 /** Where an alert stands: processed by a Supervisor, still going on, or ended without processing. */
 export type AlertState = "processed" | "active" | "ended";
 
