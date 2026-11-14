@@ -30,6 +30,15 @@ export class AppNavigation {
     return user?.isSupervisor ? AppNavigation.ITEMS.filter((item) => item.supervisor) : [];
   }
 
+  /** The address of the page of one's own account, which is not an entry of the menu. */
+  static readonly ACCOUNT = "/account";
+
+  /** The name of the page shown in the top bar. */
+  static titleOf(pathname: string): TranslationKey {
+    if (pathname === AppNavigation.ACCOUNT) return "nav.myAccount";
+    return AppNavigation.sectionOf(pathname)?.label ?? "nav.dashboard";
+  }
+
   /**
    * The entry of the menu that an address belongs to: an aircraft record and a flight both
    * belong to "Aircraft". Null when no entry does.

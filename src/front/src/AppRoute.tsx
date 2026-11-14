@@ -5,6 +5,7 @@ import RequireAuth from "@/components/auth/RequireAuth";
 import RequireRole from "@/components/auth/RequireRole";
 import AppLayout from "@/components/layout/AppLayout";
 import AppShell from "@/components/layout/AppShell";
+import MyAccount from "@/pages/account/MyAccount";
 import Accounts from "@/pages/admin/Accounts";
 import AircraftRecord from "@/pages/aircraft/AircraftRecord";
 import AircraftSearch from "@/pages/aircraft/AircraftSearch";
@@ -19,7 +20,8 @@ import Rules from "@/pages/rules/Rules";
  * Three frames. The home page, and the page for an address that leads nowhere, are public and
  * share the landing frame. The log in and sign up screen has its own, and the one route of its
  * two modes keeps it in place while it turns from one into the other. Every other page needs a
- * login and lives in the shell with the side bar; the supervision pages need a Supervisor.
+ * login and lives in the shell with the side bar; the supervision pages need a Supervisor. The
+ * account page is open to every role.
  */
 export const routes: RouteObject[] = [
   {
@@ -43,6 +45,7 @@ export const routes: RouteObject[] = [
           { path: "/aircraft", element: <AircraftSearch /> },
           { path: "/aircraft/:aircraftId", element: <AircraftRecord /> },
           { path: "/flights/:flightId", element: <FlightDetail /> },
+          { path: "/account", element: <MyAccount /> },
           {
             element: <RequireRole role="SUPERVISOR" />,
             children: [

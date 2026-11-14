@@ -72,6 +72,7 @@ function renderShell({
           { path: "/flights/:id", element: <h1>Flight page</h1> },
           { path: "/alerts", element: <h1>Alerts page</h1> },
           { path: "/rules", element: <h1>Rules page</h1> },
+          { path: "/account", element: <h1>Account page</h1> },
         ],
       },
     ],
@@ -135,13 +136,21 @@ describe("AppShell", () => {
     expect(within(menu()).getByRole("link", { name: "Alertes" })).toBeInTheDocument();
   });
 
-  it("shows who is logged in, with the role", () => {
+  it("shows who is logged in, with the role, as the link to the account page", () => {
     renderShell();
 
-    const account = screen.getByRole("group", { name: "Compte" });
-    expect(account).toHaveTextContent("jane.doe@example.fr");
+    const account = screen.getByRole("link", { name: /jane\.doe@example\.fr/ });
     expect(account).toHaveTextContent("Superviseur");
     expect(account).toHaveTextContent("JD");
+    expect(account).toHaveAttribute("href", "/account");
+    expect(account).not.toHaveAttribute("aria-current");
+  });
+
+  it("names the account page in the top bar and marks the link while it is open", () => {
+    renderShell({ path: "/account" });
+
+    expect(within(screen.getByRole("banner")).getByText("Mon compte")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /jane\.doe@example\.fr/ })).toHaveAttribute("aria-current", "page");
   });
 
   it("marks the page that is open, and names it in the top bar", () => {

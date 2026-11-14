@@ -11,6 +11,11 @@ describe("User", () => {
     expect(user).toMatchObject({ id: "01HZ", email: "jane.doe@example.fr", role: "USER", isActive: true });
   });
 
+  it("knows whether its password is a provisional one", () => {
+    expect(User.fromJson(json).mustChangePassword).toBe(false);
+    expect(User.fromJson({ ...json, must_change_password: true }).mustChangePassword).toBe(true);
+  });
+
   it("knows whether it is a Supervisor", () => {
     expect(User.fromJson(json).isSupervisor).toBe(false);
     expect(User.fromJson({ ...json, role: "SUPERVISOR" }).isSupervisor).toBe(true);

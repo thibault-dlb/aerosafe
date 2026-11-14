@@ -97,7 +97,7 @@ export default function Sidebar({
       </nav>
 
       <div className={styles.foot}>
-        <AccountCard user={user} compact={railed} />
+        <AccountCard user={user} compact={railed} onNavigate={onNavigate} />
         <button type="button" className={styles.link} onClick={onLogout}>
           <Icon name="logout" />
           <span className={styles.label}>{t("nav.logout")}</span>

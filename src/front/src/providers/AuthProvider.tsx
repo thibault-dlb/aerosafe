@@ -36,6 +36,8 @@ export default function AuthProvider({ children, service }: AuthProviderProps) {
       login: (email, password) => auth.login(email, password),
       signUp: (email, password) => auth.signUp(email, password),
       logout: () => auth.logout(),
+      changePassword: (currentPassword, newPassword) => auth.changePassword(currentPassword, newPassword),
+      deleteAccount: (password) => auth.deleteAccount(password),
     }),
     [auth, session],
   );

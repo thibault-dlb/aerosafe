@@ -67,7 +67,7 @@ export default function AppShell({ preferences, alerts }: AppShellProps) {
   if (!user) return null;
 
   const railed = folded && !phone;
-  const title = AppNavigation.sectionOf(pathname)?.label ?? "nav.dashboard";
+  const title = AppNavigation.titleOf(pathname);
 
   function toggleFold() {
     saved.setFolded(!folded);

@@ -13,7 +13,7 @@ test("a User finds the dashboard and the aircraft in the side bar, and nothing o
   await expect(menu.getByRole("link", { name: "Aéronefs" })).toBeVisible();
   await expect(menu.getByRole("link", { name: /Alertes/ })).toHaveCount(0);
   await expect(page.getByText("Supervision", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("group", { name: "Compte" })).toContainText("Utilisateur");
+  await expect(page.getByRole("link", { name: /e2e@example.fr/ })).toContainText("Utilisateur");
 });
 
 test("a Supervisor also gets the supervision pages, with the number of active alerts", async ({ page }) => {
@@ -28,7 +28,7 @@ test("a Supervisor also gets the supervision pages, with the number of active al
     await expect(menu.getByRole("link", { name: new RegExp(name) })).toBeVisible();
   }
   await expect(menu.getByRole("link", { name: /Alertes/ })).toContainText("4 actives");
-  await expect(page.getByRole("group", { name: "Compte" })).toContainText("Superviseur");
+  await expect(page.getByRole("link", { name: /e2e@example.fr/ })).toContainText("Superviseur");
 
   await menu.getByRole("link", { name: /Règles/ }).click();
   await expect(page).toHaveURL(/\/rules$/);

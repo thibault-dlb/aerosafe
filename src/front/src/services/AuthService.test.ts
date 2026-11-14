@@ -73,6 +73,59 @@ describe("AuthService", () => {
     expect(post).toHaveBeenCalledTimes(1);
   });
 
+  it("changes the password and goes on with the new session", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce({ ...tokens(), user: { ...USER, must_change_password: true } })
+      .mockResolvedValueOnce(tokens("access-2"));
+    const service = serviceWith(post);
+    await service.login("jane.doe@example.fr", "provisional");
+    expect(service.snapshot().user?.mustChangePassword).toBe(true);
+
+    const user = await service.changePassword("provisional", "a long enough password");
+
+    expect(post).toHaveBeenLastCalledWith("/v1/auth/password", {
+      current_password: "provisional",
+      new_password: "a long enough password",
+    });
+    expect(user.mustChangePassword).toBe(false);
+    expect(service.token()).toBe("access-2");
+    expect(service.snapshot()).toMatchObject({ status: "authenticated", user });
+  });
+
+  it("keeps the session when the password is not changed", async () => {
+    const post = vi.fn().mockResolvedValueOnce(tokens()).mockRejectedValueOnce(new ApiError(400));
+    const service = serviceWith(post);
+    await service.login("jane.doe@example.fr", "x");
+
+    await expect(service.changePassword("wrong", "a long enough password")).rejects.toMatchObject({ status: 400 });
+
+    expect(service.token()).toBe("access-1");
+    expect(service.snapshot().status).toBe("authenticated");
+  });
+
+  it("deletes the account and closes the session", async () => {
+    const post = vi.fn().mockResolvedValueOnce(tokens()).mockResolvedValueOnce(undefined);
+    const service = serviceWith(post);
+    await service.login("jane.doe@example.fr", "x");
+
+    await service.deleteAccount("the password");
+
+    expect(post).toHaveBeenLastCalledWith("/v1/users/me/anonymise", { password: "the password" });
+    expect(service.token()).toBeNull();
+    expect(service.snapshot()).toEqual({ status: "anonymous", user: null });
+  });
+
+  it("keeps the session when the account is not deleted", async () => {
+    const post = vi.fn().mockResolvedValueOnce(tokens()).mockRejectedValueOnce(new ApiError(409));
+    const service = serviceWith(post);
+    await service.login("jane.doe@example.fr", "x");
+
+    await expect(service.deleteAccount("the password")).rejects.toMatchObject({ status: 409 });
+
+    expect(service.snapshot().status).toBe("authenticated");
+  });
+
   it("logs out: forgets the token even when the API cannot be reached", async () => {
     const post = vi.fn().mockResolvedValueOnce(tokens()).mockRejectedValueOnce(new TypeError("offline"));
     const service = serviceWith(post);

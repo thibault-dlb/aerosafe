@@ -1,0 +1,87 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 44rem;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  background: color-mix(in srgb, var(--color-brand) 20%, var(--color-raised));
+  border: 1px solid var(--color-brand);
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.details {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.details dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.details dd {
+  margin: 0;
+}
+
+.email {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.hint {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.prefs {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.pref {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.pref .hint {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.danger {
+  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-border));
+}
