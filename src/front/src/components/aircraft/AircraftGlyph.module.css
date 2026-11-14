@@ -1,0 +1,43 @@
+.glyph {
+  flex: none;
+  overflow: visible;
+}
+
+.shape {
+  fill: currentcolor;
+  stroke: var(--map-bg);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
+.ground {
+  fill: none;
+  stroke: var(--map-text);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.low {
+  color: var(--map-aircraft-low);
+}
+
+.mid {
+  color: var(--map-aircraft-mid);
+}
+
+.high {
+  color: var(--map-aircraft-high);
+}
+
+.alertHigh {
+  color: var(--color-danger);
+}
+
+.alertMedium {
+  color: var(--color-warning);
+}
+
+.alertLow {
+  color: var(--color-brand);
+}

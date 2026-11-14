@@ -57,6 +57,12 @@ describe("AircraftMap", () => {
     expect(stop).toHaveBeenCalled();
   });
 
+  it("takes the name it is given, in the language of the page", () => {
+    render(<AircraftMap aircraft={[PARIS]} label="Carte de 1 aéronef" />);
+
+    expect(screen.getByRole("img", { name: "Carte de 1 aéronef" })).toBeInTheDocument();
+  });
+
   it("can be given more height", () => {
     render(<AircraftMap aircraft={[]} size="large" />);
 

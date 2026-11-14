@@ -17,6 +17,8 @@ export interface AircraftMapProps {
   onAreaDrawn?: (area: MapArea) => void;
   /** Gives the map more height than the default (the dashboard, the record, the flight). */
   size?: "default" | "large";
+  /** Names the map for screen readers. Without it, an English sentence with the number of aircraft. */
+  label?: string;
 }
 
 const EMPTY: MapPosition[][] = [];
@@ -29,6 +31,7 @@ export default function AircraftMap({
   selectingArea = false,
   onAreaDrawn,
   size = "default",
+  label,
 }: AircraftMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const service = useRef<MapService | null>(null);
@@ -68,7 +71,7 @@ export default function AircraftMap({
   return (
     <div
       ref={container}
-      aria-label={`Map of ${aircraft.length} aircraft`}
+      aria-label={label ?? `Map of ${aircraft.length} aircraft`}
       role="img"
       className={[styles.map, size === "large" && styles.large].filter(Boolean).join(" ")}
     />
