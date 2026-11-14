@@ -13,11 +13,13 @@ export interface IconProps {
 function draw(shape: IconShape, index: number) {
   switch (shape.tag) {
     case "path":
-      return <path key={index} d={shape.d} transform={shape.transform} />;
+      return <path key={index} d={shape.d} transform={shape.transform} strokeDasharray={shape.dash} />;
     case "circle":
       return <circle key={index} cx={shape.cx} cy={shape.cy} r={shape.r} className={shape.solid ? styles.solid : undefined} />;
     case "rect":
-      return <rect key={index} x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx={shape.rx} />;
+      return (
+        <rect key={index} x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx={shape.rx} strokeDasharray={shape.dash} />
+      );
   }
 }
 

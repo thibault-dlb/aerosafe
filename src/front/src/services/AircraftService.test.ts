@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AircraftJson, ObservationJson } from "@/models/Aircraft";
+import { Aircraft, type AircraftJson, type ObservationJson } from "@/models/Aircraft";
 import type { FlightDetailJson } from "@/models/Flight";
 import { ApiClient } from "@/services/ApiClient";
 
@@ -16,6 +16,8 @@ const AIRCRAFT: AircraftJson = {
   latitude: 48.85,
   longitude: 2.35,
   altitude: 10972.8,
+  heading: 284,
+  on_ground: false,
 };
 
 const OBSERVATION: ObservationJson = {
@@ -85,6 +87,19 @@ describe("AircraftService", () => {
     expect(aircraft.displayName).toBe("D-AIBD");
     expect(aircraft.lastContactAt).toEqual(new Date("2026-11-09T10:00:00Z"));
     expect(aircraft.hasPosition).toBe(true);
+    expect(aircraft.heading).toBe(284);
+    expect(aircraft.onGround).toBe(false);
+  });
+
+  it("accepts an aircraft sent without its heading or ground state", () => {
+    const old: AircraftJson = { ...AIRCRAFT };
+    delete old.heading;
+    delete old.on_ground;
+
+    const aircraft = Aircraft.fromJson(old);
+
+    expect(aircraft.heading).toBeNull();
+    expect(aircraft.onGround).toBeNull();
   });
 
   it("reads one aircraft record", async () => {

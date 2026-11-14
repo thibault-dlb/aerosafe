@@ -84,6 +84,8 @@ def aircraft_row() -> FakeRow:
         latitude=48.1,
         longitude=2.3,
         altitude=10000.0,
+        heading=284.0,
+        on_ground=False,
     )
 
 
@@ -191,6 +193,7 @@ async def test_the_aircraft_search_builds_its_query_and_maps_the_rows(connect) -
     [found] = response.json()
     assert (found["icao24"], found["model"], found["airline"]) == ("3c6444", "A320", "Lufthansa")
     assert (found["latitude"], found["longitude"]) == (48.1, 2.3)
+    assert (found["heading"], found["on_ground"]) == (284.0, False)
     sql = session.sql()
     assert "ST_Intersects" in sql
     assert "ORDER BY" in sql

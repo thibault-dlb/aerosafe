@@ -176,6 +176,9 @@ Token mapping between the two themes (same token names, different values):
 | Map: low / mid / high aircraft | `#B07A1C` / `#E3B23C` / `#F5D77E` | `#9A7000` / `#7F5F00` / `#4F3A00` |
 | Map: radar beam | `#3DD6C4` at 22% | `#1F6F63` at 22% |
 | Map: radar rings (gold) | `#A07A25` | `#9A7420` |
+| Rule R1 / R2 / R3 / R4 / R5 (charts) | `#22A596` / `#B98A1F` / `#9D6EE0` / `#D9684A` / `#4F8FE8` | `#008C7D` / `#A87400` / `#7A4BD0` / `#C04F2E` / `#2F6FD0` |
+
+The five rule colours (`--rule-1` to `--rule-5`) colour the bars of the alert chart of the dashboard. They are separate from the status colours (danger, warning) and from the criticality marks, so a rule is never mistaken for a level. They were checked for colour blindness in both themes (adjacent pairs, lightness band, contrast with the surface); the chart also has a legend and a data table, so the colour is never the only clue.
 
 Planned implementation: tokens defined on `:root` for one theme and redefined for the other under `prefers-color-scheme` and a `data-theme` attribute (dark by default), so that no component uses a literal colour.
 

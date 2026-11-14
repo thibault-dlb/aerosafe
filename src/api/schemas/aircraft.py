@@ -25,6 +25,12 @@ class AircraftSummary(BaseModel):
     altitude: float | None = Field(
         default=None, description="Altitude of the latest observation, in metres"
     )
+    heading: float | None = Field(
+        default=None, description="True track of the latest observation, in degrees from north"
+    )
+    on_ground: bool | None = Field(
+        default=None, description="True when the latest observation is on the ground"
+    )
 
 
 class ObservationPoint(BaseModel):

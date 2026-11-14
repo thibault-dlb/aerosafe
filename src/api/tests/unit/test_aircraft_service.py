@@ -42,6 +42,8 @@ def row(**values) -> FakeRow:
         "latitude": 48.85,
         "longitude": 2.35,
         "altitude": Decimal("10972.80"),
+        "heading": Decimal("284.00"),
+        "on_ground": False,
     }
     columns.update(values)
     return FakeRow(aircraft, columns)
@@ -127,17 +129,32 @@ async def test_search_maps_each_row_to_a_summary() -> None:
     assert summary.last_contact_at == SEEN_AT
     assert (summary.latitude, summary.longitude) == (48.85, 2.35)
     assert summary.altitude == 10972.8
+    assert summary.heading == 284.0
+    assert summary.on_ground is False
 
 
 async def test_an_aircraft_never_observed_has_no_position() -> None:
     service = AircraftService(
-        session_returning([row(last_contact_at=None, latitude=None, longitude=None, altitude=None)])
+        session_returning(
+            [
+                row(
+                    last_contact_at=None,
+                    latitude=None,
+                    longitude=None,
+                    altitude=None,
+                    heading=None,
+                    on_ground=None,
+                )
+            ]
+        )
     )
 
     [summary] = await service.search(AircraftSearchCriteria())
 
     assert summary.latitude is None
     assert summary.altitude is None
+    assert summary.heading is None
+    assert summary.on_ground is None
     assert summary.last_contact_at is None
 
 

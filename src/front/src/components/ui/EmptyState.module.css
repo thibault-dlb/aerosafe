@@ -1,0 +1,125 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+}
+
+.scene {
+  width: 8.5rem;
+  height: 8.5rem;
+  overflow: visible;
+}
+
+.rim {
+  fill: var(--map-bg);
+  stroke: var(--color-border);
+  stroke-width: 1.2;
+}
+
+.ring {
+  fill: none;
+  stroke: var(--map-rings);
+  stroke-dasharray: 2 5;
+  opacity: 0.6;
+}
+
+.cross {
+  stroke: var(--map-grid);
+}
+
+.beam {
+  fill: var(--map-beam);
+  opacity: 0.14;
+  transform-origin: 60px 60px;
+  animation: turn 5s linear infinite;
+}
+
+.edge {
+  stroke: var(--map-beam);
+  stroke-width: 1.4;
+  opacity: 0.7;
+  transform-origin: 60px 60px;
+  animation: turn 5s linear infinite;
+}
+
+/* A collection that is stopped: the radar stops turning. */
+.still {
+  animation: none;
+  opacity: 0.5;
+}
+
+.good {
+  fill: none;
+  stroke: var(--color-data);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.question {
+  fill: var(--color-brand);
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 500;
+  animation: blink 2s ease-in-out infinite;
+}
+
+.route {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 6;
+  stroke-linecap: round;
+}
+
+.airport {
+  fill: var(--map-bg);
+  stroke: var(--color-brand);
+  stroke-width: 1.6;
+}
+
+.pause {
+  fill: var(--color-warning);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.text {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.action {
+  margin-top: var(--space-2);
+}
+
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beam,
+  .edge,
+  .question {
+    animation: none;
+  }
+}

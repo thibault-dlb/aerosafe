@@ -1,0 +1,171 @@
+.diagram {
+  width: 100%;
+  max-width: 15rem;
+  height: auto;
+  overflow: visible;
+}
+
+.axis {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.label {
+  fill: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.threshold {
+  fill: none;
+  stroke: var(--color-warning);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.thresholdLabel {
+  fill: var(--color-warning);
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+.ok {
+  fill: none;
+  stroke: var(--color-data);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bad {
+  fill: none;
+  stroke: var(--color-danger);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: draw 4s ease-in-out infinite;
+}
+
+.late {
+  animation-name: drawLate;
+}
+
+.tick {
+  stroke: var(--color-data);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.dot {
+  fill: var(--color-data);
+}
+
+.alert {
+  fill: var(--color-danger);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.pop {
+  animation: pop 4s ease-in-out infinite;
+}
+
+.grow {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: grow 4s linear infinite;
+}
+
+.fillOk {
+  fill: var(--color-data);
+  opacity: 0.8;
+}
+
+.fillBad {
+  fill: var(--color-danger);
+}
+
+.ghostPlane {
+  fill: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.badPlane {
+  fill: var(--color-danger);
+}
+
+@keyframes draw {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  45%,
+  90% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes drawLate {
+  0%,
+  45% {
+    stroke-dashoffset: 1;
+  }
+  75%,
+  90% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  0%,
+  70% {
+    opacity: 0;
+  }
+  78%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes grow {
+  0% {
+    transform: scaleX(0);
+  }
+  80%,
+  92% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* Reduced motion: the drawing is shown as it ends. */
+@media (prefers-reduced-motion: reduce) {
+  .bad,
+  .pop,
+  .grow {
+    animation: none;
+  }
+
+  .bad {
+    stroke-dasharray: none;
+  }
+}

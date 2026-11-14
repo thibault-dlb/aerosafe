@@ -256,6 +256,37 @@ export const fr = {
   "footer.disclaimer":
     "AeroSafe est un projet pédagogique. Ce n'est pas un système certifié de surveillance ou de gestion du trafic aérien et il ne doit pas servir à un usage opérationnel.",
   "footer.data": "Données : The OpenSky Network. Fond de carte : © contributeurs OpenStreetMap.",
+
+  // Shared interface elements.
+  "criticality.high": "Haute",
+  "criticality.medium": "Moyenne",
+  "criticality.low": "Basse",
+  "criticality.none": "Aucune",
+  "criticality.label": "Criticité {level}",
+  "toast.close": "Fermer la notification",
+  "toast.undo": "Annuler",
+  "toast.retry": "Réessayer",
+  "dialog.cancel": "Annuler",
+  "dialog.close": "Fermer",
+  "pagination.label": "Pagination",
+  "pagination.previous": "Page précédente",
+  "pagination.next": "Page suivante",
+  "pagination.page": "Page {page}",
+  "pagination.summary": "{from} à {to} sur {total}",
+  "breadcrumb.label": "Fil d'Ariane",
+  "diagram.label": "Schéma de la règle {code}",
+  "diagram.threshold": "seuil",
+  "diagram.messages": "messages reçus",
+  "diagram.messagesContinuous": "messages (continus)",
+  "diagram.silence": "silence",
+  "diagram.positions": "positions",
+  "diagram.altitude": "altitude",
+  "diagram.speed": "vitesse",
+  "diagram.time": "temps",
+  "diagram.slope": "pente seuil",
+  "diagram.initialHeading": "cap initial",
+  "diagram.newHeading": "nouveau cap",
+  "diagram.turnThreshold": "virage au seuil",
 } as const;
 
 export type TranslationKey = keyof typeof fr;

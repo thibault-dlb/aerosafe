@@ -48,8 +48,22 @@ describe("Icon", () => {
     expect(container.querySelector("circle")?.getAttribute("class")).toMatch(/solid/);
   });
 
-  it("offers the 25 icons of the design", () => {
-    expect(IconSet.names()).toHaveLength(25);
-    expect(IconSet.names()).toEqual(expect.arrayContaining(["dashboard", "eyeOff", "capsLock", "replay"]));
+  it("offers the 44 icons of the design", () => {
+    expect(IconSet.names()).toHaveLength(44);
+    expect(IconSet.names()).toEqual(
+      expect.arrayContaining(["dashboard", "eyeOff", "capsLock", "replay", "ruleR1", "ruleR5", "anonymous", "table"]),
+    );
+  });
+
+  it("draws dashed shapes where the design asks for them", () => {
+    const { container } = render(
+      <>
+        <Icon name="area" />
+        <Icon name="ruleR5" />
+      </>,
+    );
+
+    expect(container.querySelector("rect")).toHaveAttribute("stroke-dasharray", "3 3");
+    expect(container.querySelector("path[stroke-dasharray]")).not.toBeNull();
   });
 });

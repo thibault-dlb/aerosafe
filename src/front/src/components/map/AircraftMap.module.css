@@ -9,8 +9,47 @@ div.map {
   border-radius: var(--radius-md);
 }
 
+div.large {
+  height: clamp(22rem, 60vh, 44rem);
+}
+
+/* The markers are drawn by Leaflet, outside React: their classes are global. */
+:global(.aircraftMarker) {
+  background: none;
+  border: 0;
+}
+
+/* The echo of an aircraft with an active alert pulses. */
+:global(.aircraftMarker) :global(.halo) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: echo 2.2s ease-out infinite;
+}
+
+@keyframes echo {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
 @media (max-width: 720px) {
   div.map {
     height: 320px;
+  }
+
+  div.large {
+    height: 22rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(.aircraftMarker) :global(.halo) {
+    animation: none;
+    opacity: 0.6;
   }
 }
