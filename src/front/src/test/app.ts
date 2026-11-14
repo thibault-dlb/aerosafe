@@ -27,10 +27,9 @@ export function renderInApp(ui: ReactElement, options: AppRenderOptions = {}) {
     setItem: (key, value) => void values.set(key, value),
   });
   const wrapper = ({ children }: { children: ReactNode }) =>
-    createElement(
-      PreferencesProvider,
-      { store },
-      createElement(ToastProvider, null, createElement(MemoryRouter, { initialEntries: [path] }, children)),
-    );
+    createElement(PreferencesProvider, {
+      store,
+      children: createElement(ToastProvider, null, createElement(MemoryRouter, { initialEntries: [path] }, children)),
+    });
   return render(ui, { wrapper, ...renderOptions });
 }

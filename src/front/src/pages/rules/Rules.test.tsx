@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Rule, type RuleChanges } from "@/models/Rule";
 import { ApiError } from "@/services/ApiClient";
 import type { RuleService } from "@/services/RuleService";
+import { renderInApp } from "@/test/app";
 
 import Rules from "./Rules";
 
@@ -17,8 +18,10 @@ const R1 = new Rule(
   new Date("2026-11-09T10:00:00Z"),
 );
 
+const R3 = new Rule("R3", "Variation importante d'altitude", 25, "m/s", "HIGH", true, new Date("2026-11-09T10:00:00Z"));
+
 function renderWith(
-  list: RuleService["list"] = async () => [R1],
+  list: RuleService["list"] = async () => [R1, R3],
   update: RuleService["update"] = async (code: string, changes: RuleChanges) =>
     new Rule(
       code,
@@ -31,74 +34,55 @@ function renderWith(
     ),
 ) {
   const service = { list: vi.fn(list), update: vi.fn(update) } as unknown as RuleService;
-  render(<Rules service={service} />);
+  renderInApp(<Rules service={service} />);
   return service.update as ReturnType<typeof vi.fn>;
 }
 
 describe("Rules", () => {
-  it("shows its title", () => {
+  it("shows its title and says when changes apply", () => {
     renderWith();
 
-    expect(screen.getByRole("heading", { name: "Rules" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Règles" })).toBeInTheDocument();
+    expect(screen.getByText(/s'applique à la prochaine évaluation/)).toBeInTheDocument();
+    expect(screen.getByText("Chargement des règles…")).toBeInTheDocument();
   });
 
-  it("lists the rules with their settings", async () => {
+  it("shows one card for each rule", async () => {
     renderWith();
 
-    expect(await screen.findByLabelText("Threshold of R1 (s)")).toHaveValue(300);
-    expect(screen.getByLabelText("Criticality of R1")).toHaveValue("MEDIUM");
-    expect(screen.getByLabelText("R1 evaluated")).toBeChecked();
-    expect(screen.getByRole("button", { name: "Save R1" })).toBeDisabled();
+    expect(await screen.findByRole("form", { name: "R1 · Contact perdu" })).toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "R3 · Variation d'altitude" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Seuil de R1 (s)")).toHaveValue(300);
   });
 
-  it("saves only the changed settings", async () => {
+  it("says when there is no rule", async () => {
+    renderWith(async () => []);
+
+    expect(await screen.findByText("Aucune règle n'est définie.")).toBeInTheDocument();
+  });
+
+  it("saves a rule, confirms it and shows the new settings", async () => {
     const update = renderWith();
 
-    fireEvent.change(await screen.findByLabelText("Threshold of R1 (s)"), {
-      target: { value: "420" },
-    });
-    fireEvent.change(screen.getByLabelText("Criticality of R1"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save R1" }));
+    fireEvent.change(await screen.findByLabelText("Seuil de R1 (s)"), { target: { value: "420" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Enregistrer" })[0]);
 
-    await waitFor(() =>
-      expect(update).toHaveBeenCalledWith("R1", { threshold: 420, criticality: null }),
-    );
-    expect(await screen.findByRole("status")).toHaveTextContent("R1 saved");
-    expect(screen.getByLabelText("Threshold of R1 (s)")).toHaveValue(420);
+    await waitFor(() => expect(update).toHaveBeenCalledWith("R1", { threshold: 420 }));
+    expect(await screen.findByText(/R1 enregistrée/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Seuil de R1 (s)")).toHaveValue(420);
+    expect(screen.queryByRole("button", { name: "Enregistrer" })).not.toBeInTheDocument();
   });
 
-  it("can deactivate a rule", async () => {
-    const update = renderWith();
-
-    fireEvent.click(await screen.findByLabelText("R1 evaluated"));
-    fireEvent.click(screen.getByRole("button", { name: "Save R1" }));
-
-    await waitFor(() => expect(update).toHaveBeenCalledWith("R1", { is_active: false }));
-  });
-
-  it("refuses a negative or empty threshold", async () => {
-    renderWith();
-    const input = await screen.findByLabelText("Threshold of R1 (s)");
-
-    fireEvent.change(input, { target: { value: "-1" } });
-    expect(screen.getByRole("button", { name: "Save R1" })).toBeDisabled();
-    expect(input).toHaveAttribute("aria-invalid", "true");
-
-    fireEvent.change(input, { target: { value: "" } });
-    expect(screen.getByRole("button", { name: "Save R1" })).toBeDisabled();
-  });
-
-  it("explains a failed save", async () => {
+  it("explains a failed save in a notification and keeps the change", async () => {
     renderWith(undefined, async () => {
       throw new ApiError(403);
     });
 
-    fireEvent.change(await screen.findByLabelText("Threshold of R1 (s)"), {
-      target: { value: "1" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Save R1" }));
+    fireEvent.change(await screen.findByLabelText("Seuil de R1 (s)"), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Only Supervisors");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Seuls les Superviseurs");
+    expect(screen.getByLabelText("Seuil de R1 (s)")).toHaveValue(1);
   });
 
   it("explains a failed loading", async () => {
@@ -106,6 +90,7 @@ describe("Rules", () => {
       throw new ApiError(401);
     });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Log in");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Connectez-vous");
+    expect(screen.queryByText("Chargement des règles…")).not.toBeInTheDocument();
   });
 });

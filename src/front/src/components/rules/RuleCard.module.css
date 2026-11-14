@@ -1,0 +1,138 @@
+.card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+
+/* A card with a change that is not saved yet gets a gold border and its Save button. */
+.dirty {
+  border-color: var(--color-selection);
+}
+
+.off .middle,
+.off .levels {
+  opacity: 0.7;
+}
+
+.headline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.names {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  font-size: 0.9375rem;
+  letter-spacing: 0.02em;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-brand);
+}
+
+.middle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 13.5rem;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.left {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.left > div {
+  max-width: 11rem;
+}
+
+.detects {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.diagram {
+  justify-self: end;
+}
+
+.levels {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.levelsLabel {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.segments {
+  display: flex;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  background: transparent;
+  border: 0;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.segment + .segment {
+  border-left: 1px solid var(--color-border);
+}
+
+.segment[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--color-selection) 18%, transparent);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+}
+
+@media (max-width: 480px) {
+  .middle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .diagram {
+    justify-self: start;
+  }
+}
