@@ -203,6 +203,11 @@ export const fr = {
   "auth.password.enough": "Longueur suffisante",
   "auth.password.gauge": "Longueur du mot de passe",
 
+  "auth.radar.label": "Écran radar : la France et quelques aéronefs en vol",
+  "auth.radar.eyebrow": "Trafic en direct",
+  "auth.radar.title": "Surveillez le ciel",
+  "auth.radar.text": "Le trafic aérien en direct, et cinq règles qui lèvent l'alerte à votre place.",
+
   "footer.disclaimer":
     "AeroSafe est un projet pédagogique. Ce n'est pas un système certifié de surveillance ou de gestion du trafic aérien et il ne doit pas servir à un usage opérationnel.",
   "footer.data": "Données : The OpenSky Network. Fond de carte : © contributeurs OpenStreetMap.",

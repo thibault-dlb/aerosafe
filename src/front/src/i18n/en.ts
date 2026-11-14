@@ -205,6 +205,11 @@ export const en: Record<TranslationKey, string> = {
   "auth.password.enough": "Long enough",
   "auth.password.gauge": "Password length",
 
+  "auth.radar.label": "Radar screen: France and a few aircraft in flight",
+  "auth.radar.eyebrow": "Live traffic",
+  "auth.radar.title": "Watch the sky",
+  "auth.radar.text": "Air traffic live, and five rules that raise the alert for you.",
+
   "footer.disclaimer":
     "AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally.",
   "footer.data": "Data: The OpenSky Network. Map: © OpenStreetMap contributors.",
