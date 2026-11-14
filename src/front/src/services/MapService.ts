@@ -285,11 +285,16 @@ export class MapService {
     this.drawArea();
   };
 
+  /**
+   * Moves the view to show `positions`. Without animation: the aircraft and the trajectory of a
+   * flight are drawn one after the other, and Leaflet finishes the first animation after the
+   * second move, which would leave the view where the first one was going.
+   */
   private fit(map: L.Map, positions: MapPosition[]): void {
     if (positions.length === 1) {
-      map.setView(toLatLng(positions[0]), Math.max(map.getZoom(), 10));
+      map.setView(toLatLng(positions[0]), Math.max(map.getZoom(), 10), { animate: false });
     } else if (positions.length > 1) {
-      map.fitBounds(L.latLngBounds(positions.map(toLatLng)), { padding: [24, 24] });
+      map.fitBounds(L.latLngBounds(positions.map(toLatLng)), { padding: [24, 24], animate: false });
     }
   }
 

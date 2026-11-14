@@ -70,6 +70,20 @@ describe("MapService", () => {
     expect(service.counts.segments).toBe(2);
   });
 
+  it("moves the view without animation, so drawing the aircraft then the trajectory ends on the trajectory", () => {
+    mounted();
+    const setView = vi.spyOn(L.Map.prototype, "setView");
+    const fitBounds = vi.spyOn(L.Map.prototype, "fitBounds");
+
+    service.showAircraft([PARIS]);
+    service.showSegments([[PARIS, LYON]]);
+
+    expect(setView).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ animate: false }));
+    expect(fitBounds).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ animate: false }));
+    expect(service.counts).toEqual({ aircraft: 1, segments: 1 });
+    vi.restoreAllMocks();
+  });
+
   it("accepts nothing to draw", () => {
     mounted();
 

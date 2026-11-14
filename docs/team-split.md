@@ -52,7 +52,7 @@ The split above already gives each member the pages of their work package. This 
 | Accounts | `/admin/accounts` | Louis-Amaury | Empty page, but inside the shell and closed to a User. The API route `users.py` is empty too (`/users` is `TBD` in [API](api.md)) |
 | Dashboard | `/dashboard` | Jules | Page title and, since `feat/landing-page`, the live overview (`components/overview/LiveOverview`: figures and a large map, live or replay) at the top; the rest is still to do. It is inside the shell. The API route `dashboard.py` is empty (`/dashboard` is `TBD` in [API](api.md)) |
 | Alerts, rules | `/alerts`, `/rules` | Sacha | Built and styled with the shared elements (chips, sortable table, detail panel, notifications; one card for each rule), translated, with their tests; inside the shell, closed to a User. `components/alerts/` and `components/rules/` hold their parts |
-| Aircraft search, aircraft record, flight | `/aircraft`, `/aircraft/:id`, `/flights/:id` | Yassine | Built, with their tests, without any styling |
+| Aircraft search, aircraft record, flight | `/aircraft`, `/aircraft/:id`, `/flights/:id` | Yassine | Built and styled with the shared elements, translated, with their tests: one search field and an area drawn on the map, an identity banner with figures, a large map with oriented markers, profiles read by pointing. `components/aircraft/` holds the banner and the small marker of the lists |
 
 The front has no stylesheet yet: every page shows plain HTML. The design is decided (D-19, 2026-11-12) and is being built on `feat/interface-design`; it lands before the other pages are styled.
 
