@@ -1,166 +1,235 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Aircraft } from "@/models/Aircraft";
-import PreferencesProvider from "@/providers/PreferencesProvider";
 import { ApiError } from "@/services/ApiClient";
 import type { AircraftService } from "@/services/AircraftService";
 import { MapService } from "@/services/MapService";
+import { renderInApp } from "@/test/app";
 
 import AircraftSearch from "./AircraftSearch";
-import { parseArea } from "./area";
-import { memoryStore } from "./testStore";
 
-const LOCATED = new Aircraft(
-  "01JC0000000000000000000001",
-  "3c6444",
-  "D-AIBD",
-  "Airbus A319",
-  "Lufthansa",
-  new Date("2026-11-09T10:00:00Z"),
-  48.85,
-  2.35,
-  10972.8,
-);
-const UNSEEN = new Aircraft("01JC0000000000000000000002", "4ca123", null, null, null, null, null, null);
-
-function renderWith(search: AircraftService["search"], language: "en" | "fr" = "en") {
-  const service = { search: vi.fn(search) } as unknown as AircraftService;
-  render(
-    <PreferencesProvider store={memoryStore(language)}>
-      <MemoryRouter>
-        <AircraftSearch service={service} />
-      </MemoryRouter>
-    </PreferencesProvider>,
-  );
-  return service.search as ReturnType<typeof vi.fn>;
-}
-
-function fill(label: string, value: string) {
-  fireEvent.change(screen.getByLabelText(label), { target: { value } });
-}
+const SEEN = new Date("2026-11-09T10:00:00Z");
+const FLYING = new Aircraft("01JC0000000000000000000001", "3c6444", "D-AIBD", "Airbus A319", "Lufthansa", SEEN, 48.85, 2.35, 10400, 284, false);
+const GROUNDED = new Aircraft("01JC0000000000000000000002", "4ca123", null, null, null, null, 49.0, 2.5, 0, 0, true);
+const NOWHERE = new Aircraft("01JC0000000000000000000003", "4ca124", "F-HBNK", "Airbus A320", "Air France", null, null, null);
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("parseArea", () => {
-  it("is empty when no bound is filled", () => {
-    expect(parseArea({ south: "", west: " ", north: "", east: "" })).toBeUndefined();
-  });
+function renderSearch(search: AircraftService["search"] = async () => [FLYING, GROUNDED], preferences: Record<string, string> = {}) {
+  const service = { search: vi.fn(search) } as unknown as AircraftService;
+  renderInApp(<AircraftSearch service={service} />, { preferences });
+  return service.search as ReturnType<typeof vi.fn>;
+}
 
-  it("is invalid when only some bounds are filled", () => {
-    expect(parseArea({ south: "48", west: "", north: "", east: "" })).toBeNull();
-  });
+function type(text: string) {
+  fireEvent.change(screen.getByLabelText("Rechercher un aéronef"), { target: { value: text } });
+}
 
-  it("reads the four bounds as numbers", () => {
-    expect(parseArea({ south: "48.1", west: "1.4", north: "49.3", east: "3.6" })).toEqual({
-      south: 48.1,
-      west: 1.4,
-      north: 49.3,
-      east: 3.6,
-    });
-  });
-});
+function submit() {
+  fireEvent.click(screen.getByRole("button", { name: "Chercher" }));
+}
 
 describe("AircraftSearch", () => {
-  it("shows its title", () => {
-    renderWith(async () => []);
+  it("shows its title, examples and what to do first", () => {
+    renderSearch();
 
-    expect(screen.getByRole("heading", { name: "Aircraft search" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Recherche d'aéronefs" })).toBeInTheDocument();
+    expect(screen.getByText("F-GKXA")).toBeInTheDocument();
+    expect(screen.getByText(/Saisissez une adresse/)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Carte de 0 aéronef(s)" })).toBeInTheDocument();
   });
 
-  it("is in French by default", async () => {
-    renderWith(async () => [], "fr");
+  it.each([
+    ["Air France", "compagnie « Air France »"],
+    ["F-GKXA", "immatriculation « F-GKXA »"],
+    ["3c6444", "adresse ICAO24 « 3c6444 »"],
+  ])("tells how it understood %s", (typed, understood) => {
+    renderSearch();
 
-    expect(screen.getByRole("heading", { name: "Recherche d'aéronefs" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Rechercher" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Aucun aéronef");
+    type(typed);
+
+    expect(screen.getByText("Recherche comprise comme :")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: understood })).toBeDisabled();
   });
 
-  it("sends the criteria and lists the aircraft with a link to their record", async () => {
-    const search = renderWith(async () => [LOCATED, UNSEEN]);
+  it("searches with the criterion the text stands for", async () => {
+    const search = renderSearch();
 
-    fill("ICAO24 address", "3c64");
-    fill("Airline", "Luft");
-    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    type("Air France");
+    submit();
 
-    expect(await screen.findByText("2 aircraft found")).toBeInTheDocument();
-    expect(search).toHaveBeenCalledWith({
-      icao24: "3c64",
-      registration: "",
-      airline: "Luft",
-      area: undefined,
+    await waitFor(() => expect(search).toHaveBeenCalledWith({ airline: "Air France", area: undefined }));
+  });
+
+  it("searches with no criterion when the field is empty", async () => {
+    const search = renderSearch();
+
+    submit();
+
+    await waitFor(() => expect(search).toHaveBeenCalledWith({ area: undefined }));
+  });
+
+  it("lists the aircraft found with their altitude, their state and a link to their record", async () => {
+    renderSearch();
+
+    submit();
+
+    expect(await screen.findByRole("heading", { name: "2 aéronefs" })).toBeInTheDocument();
+    const flying = screen.getByRole("link", { name: /D-AIBD/ });
+    expect(flying).toHaveAttribute("href", "/aircraft/01JC0000000000000000000001");
+    expect(flying).toHaveTextContent("10400 m");
+    expect(flying).toHaveTextContent("Airbus A319 · Lufthansa");
+    const grounded = screen.getByRole("link", { name: /4CA123/ });
+    expect(grounded).toHaveTextContent("Au sol");
+    expect(grounded).toHaveTextContent("Inconnu · Inconnu");
+    expect(grounded).toHaveTextContent("Jamais");
+    expect(screen.getByRole("img", { name: "Carte de 2 aéronef(s)" })).toBeInTheDocument();
+  });
+
+  it("counts one aircraft in the singular, and leaves the ones without a position off the map", async () => {
+    renderSearch(async () => [NOWHERE]);
+
+    submit();
+
+    expect(await screen.findByRole("heading", { name: "1 aéronef" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Carte de 0 aéronef(s)" })).toBeInTheDocument();
+  });
+
+  it("shows the altitude in feet with the aeronautical units", async () => {
+    renderSearch(undefined, { "aerosafe.units": "aeronautical" });
+
+    submit();
+
+    expect(await screen.findByRole("link", { name: /D-AIBD/ })).toHaveTextContent("34121 ft");
+  });
+
+  it("says when nothing matches", async () => {
+    renderSearch(async () => []);
+
+    submit();
+
+    expect(await screen.findByText("Aucun écho")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "0 aéronefs" })).toBeInTheDocument();
+  });
+
+  it("explains a failed search", async () => {
+    renderSearch(async () => {
+      throw new ApiError(422);
     });
-    expect(screen.getByRole("link", { name: "D-AIBD" })).toHaveAttribute(
-      "href",
-      "/aircraft/01JC0000000000000000000001",
-    );
-    expect(screen.getByText("Never")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Map of 1 aircraft" })).toBeInTheDocument();
+
+    submit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Vérifiez les critères de recherche.");
+    expect(screen.getByText(/Saisissez une adresse/)).toBeInTheDocument();
   });
 
-  it("puts the altitude on the map so the marker takes its shade", async () => {
+  it("blocks the search button while it runs", async () => {
+    renderSearch(() => new Promise(() => undefined));
+
+    submit();
+
+    expect(await screen.findByRole("button", { name: "Chercher" })).toBeDisabled();
+    expect(screen.getByText("Chargement…")).toBeInTheDocument();
+  });
+
+  it("rings the aircraft the pointer is on, on the map", async () => {
     const showAircraft = vi.spyOn(MapService.prototype, "showAircraft");
-    renderWith(async () => [LOCATED]);
+    renderSearch();
+    submit();
 
-    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    fireEvent.mouseEnter(await screen.findByRole("link", { name: /D-AIBD/ }));
 
-    await screen.findByText("1 aircraft found");
-    expect(showAircraft).toHaveBeenLastCalledWith([
-      { latitude: 48.85, longitude: 2.35, altitude: 10972.8, label: "D-AIBD" },
-    ]);
+    await waitFor(() => {
+      const positions = showAircraft.mock.lastCall?.[0] ?? [];
+      expect(positions.map((position) => position.selected)).toEqual([true, false]);
+    });
+    expect(screen.getByRole("link", { name: /D-AIBD/ }).className).toMatch(/selected/);
   });
 
-  it("sends the area when its four bounds are filled", async () => {
-    const search = renderWith(async () => [LOCATED]);
+  it("gives the heading and the ground state of each aircraft to the map", async () => {
+    const showAircraft = vi.spyOn(MapService.prototype, "showAircraft");
+    renderSearch();
 
-    fill("South", "48.1");
-    fill("West", "1.4");
-    fill("North", "49.3");
-    fill("East", "3.6");
-    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    submit();
 
-    await screen.findByText("1 aircraft found");
-    expect(search.mock.calls[0][0].area).toEqual({ south: 48.1, west: 1.4, north: 49.3, east: 3.6 });
+    await waitFor(() => {
+      const positions = showAircraft.mock.lastCall?.[0] ?? [];
+      expect(positions).toHaveLength(2);
+    });
+    const [flying, grounded] = showAircraft.mock.lastCall?.[0] ?? [];
+    expect(flying).toMatchObject({ heading: 284, onGround: false, label: "D-AIBD" });
+    expect(grounded).toMatchObject({ onGround: true, label: "4CA123" });
   });
 
-  it("refuses an incomplete area without calling the API", async () => {
-    const search = renderWith(async () => []);
+  describe("the area drawn on the map", () => {
+    const AREA = { south: 48.12, west: 1.5, north: 49.04, east: 3.2 };
 
-    fill("South", "48.1");
-    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    it("lets the user draw while the button is on, and tells how", () => {
+      const start = vi.spyOn(MapService.prototype, "startAreaSelection");
+      const stop = vi.spyOn(MapService.prototype, "stopAreaSelection");
+      renderSearch();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("four bounds");
-    expect(search).not.toHaveBeenCalled();
-  });
+      fireEvent.click(screen.getByRole("button", { name: "Tracer une zone" }));
 
-  it("suggests broader criteria when nothing matches", async () => {
-    renderWith(async () => []);
+      expect(start).toHaveBeenCalledOnce();
+      expect(screen.getByRole("button", { name: "Annuler le tracé" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByText("Glissez sur la carte pour tracer la zone de recherche")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Search" }));
-
-    expect(await screen.findByRole("status")).toHaveTextContent("Try broader criteria");
-  });
-
-  it("asks to log in when the API refuses the request", async () => {
-    renderWith(async () => {
-      throw new ApiError(401);
+      fireEvent.click(screen.getByRole("button", { name: "Annuler le tracé" }));
+      expect(stop).toHaveBeenCalled();
+      expect(screen.queryByText("Glissez sur la carte pour tracer la zone de recherche")).not.toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    it("searches the area as soon as it is drawn, and shows it as a filter", async () => {
+      const start = vi.spyOn(MapService.prototype, "startAreaSelection");
+      const search = renderSearch();
+      fireEvent.click(screen.getByRole("button", { name: "Tracer une zone" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Log in");
-  });
+      start.mock.lastCall?.[0](AREA);
 
-  it("explains when the server cannot be reached", async () => {
-    renderWith(async () => {
-      throw new TypeError("Failed to fetch");
+      await waitFor(() => expect(search).toHaveBeenCalledWith({ area: AREA }));
+      expect(screen.getByText("zone 48.1° – 49.0° N · 1.5° – 3.2° E")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Tracer une zone" })).toHaveAttribute("aria-pressed", "false");
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    it("combines the text and the area", async () => {
+      const start = vi.spyOn(MapService.prototype, "startAreaSelection");
+      const search = renderSearch();
+      type("Air France");
+      fireEvent.click(screen.getByRole("button", { name: "Tracer une zone" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("could not be reached");
+      start.mock.lastCall?.[0](AREA);
+
+      await waitFor(() => expect(search).toHaveBeenCalledWith({ airline: "Air France", area: AREA }));
+    });
+
+    it("removes the area and searches again, once there are results", async () => {
+      const start = vi.spyOn(MapService.prototype, "startAreaSelection");
+      const search = renderSearch();
+      fireEvent.click(screen.getByRole("button", { name: "Tracer une zone" }));
+      start.mock.lastCall?.[0](AREA);
+      await screen.findByRole("heading", { name: "2 aéronefs" });
+
+      fireEvent.click(screen.getByRole("button", { name: "Retirer la zone" }));
+
+      await waitFor(() => expect(search).toHaveBeenLastCalledWith({ area: undefined }));
+      expect(screen.queryByText(/zone 48/)).not.toBeInTheDocument();
+    });
+
+    it("removes the area without a search when there was none yet", () => {
+      const start = vi.spyOn(MapService.prototype, "startAreaSelection");
+      const search = renderSearch(() => new Promise(() => undefined));
+      fireEvent.click(screen.getByRole("button", { name: "Tracer une zone" }));
+      act(() => start.mock.lastCall?.[0](AREA));
+      expect(search).toHaveBeenCalledTimes(1);
+      search.mockClear();
+
+      fireEvent.click(screen.getByRole("button", { name: "Retirer la zone" }));
+
+      expect(search).not.toHaveBeenCalled();
+    });
   });
 });

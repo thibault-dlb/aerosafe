@@ -25,7 +25,7 @@ Coverage of air traffic depends on the OpenSky Network receiver network and is n
 
 | Task | Use case | Instructions |
 | --- | --- | --- |
-| Search for an aircraft by ICAO24, registration, airline or area | UC-01 | See [Searching for an aircraft](#searching-for-an-aircraft) |
+| Search for an aircraft by ICAO24, registration, airline or an area drawn on the map | UC-01 | See [Searching for an aircraft](#searching-for-an-aircraft) |
 | View an aircraft record and its observation history | UC-01 | See [Aircraft record](#aircraft-record) |
 | View a flight trajectory on a map, with altitude and speed profiles | UC-02 | See [Flight trajectory](#flight-trajectory) |
 | View flight statistics | UC-02 | See [Flight trajectory](#flight-trajectory) |
@@ -34,23 +34,23 @@ Coverage of air traffic depends on the OpenSky Network receiver network and is n
 
 The interface is in French by default; the English labels, shown with the language switch, are given in brackets.
 
-1. Open **Aéronefs** (*Aircraft*) in the navigation bar.
-2. Fill one or more criteria: the start of the ICAO24 address (for example `3c64`), part of the registration (`F-GK`), part of the airline name or code (`Air France`, `AFR`). Case does not matter.
-3. To search an area, fill its four bounds in degrees: south and north latitudes, west and east longitudes. The area applies to the latest known position of each aircraft.
-4. Select **Rechercher** (*Search*). The matching aircraft are listed with their model, airline and last contact, and those with a known position are shown on the map. The shade of a marker gives the altitude of the aircraft: below FL150, FL150 to FL300, above FL300.
+1. Open **Aéronefs** (*Aircraft*) in the side bar.
+2. Type what you know in the one field: the start of the ICAO24 address (`3c64`, six characters at most), the registration (`F-GKXA`, or its start `F-GK`; an American one such as `N123AB`) or the airline (`Air France`, `AFR`). The page tells how it understood the text (*Recherche comprise comme*), so a mistake shows at once. Case does not matter.
+3. To search an area, select **Tracer une zone** (*Draw an area*) and drag a rectangle on the map. The area applies to the latest known position of each aircraft, and the search starts as soon as the rectangle is drawn. The area stays under the field as a filter: select its cross to remove it. The text and the area combine.
+4. Select **Chercher** (*Search*). The matching aircraft are listed beside the map with their altitude, model, airline and last contact, and those with a known position are drawn on it. A marker is a silhouette turned the way the aircraft flies; its shade gives the altitude (below FL150, FL150 to FL300, above FL300), and an aircraft on the ground is a hollow diamond. Pointing at an aircraft in the list rings it on the map.
 5. Select an aircraft to open its record.
 
-If nothing matches, the page says so: broaden the criteria, for example by shortening the address or removing a criterion.
+If nothing matches, the page says so: broaden the criteria, for example by shortening the address or removing the area.
 
 ### Aircraft record
 
-The record (**Fiche aéronef**) shows the address, registration, model, airline and last contact of the aircraft, its latest position on the map, its flights and its latest 50 observations, newest first: time, altitude (m), speed (m/s), heading (°), position and whether the aircraft was on the ground. A dash means OpenSky did not send the value. Times, codes and measured values are set in a monospaced font so that they line up. Select a flight to open its trajectory.
+The record (**Fiche aéronef**) starts with a banner: the name of the aircraft, its model, airline and address, whether it is in the air or on the ground, and four figures (altitude, ground speed, heading and last contact). A Supervisor also sees there the number of alerts in progress for the aircraft and their highest criticality, and the marker on the map takes the colour of that criticality and pulses. Under the banner come the map with the latest position, the flights, and the latest 50 observations, newest first: time, altitude, speed, heading, position and state. A dash means OpenSky did not send the value. The path at the top (*Aéronefs › F-GKXA*) leads back. Select a flight to open its trajectory.
 
 ### Flight trajectory
 
-The flight page shows the trajectory on the map, with the latest position marked, then the statistics (duration, distance, mean and maximum altitude and speed, number of observations) and the altitude and speed profiles.
+The flight page starts with a banner: the callsign, the aircraft, the route (an unknown destination reads *arrivée inconnue*) and the statistics: duration, distance, maximum altitude and speed (the mean under each) and number of observations. Under it come the trajectory on the map, ending on the aircraft turned to its last heading, and the altitude and speed profiles. Point at a profile to read the value and the time under the pointer.
 
-When observations are missing for more than 5 minutes, the trajectory is partial: a warning lists the missing segments and the map does not join the points on either side of a gap. The distance leaves those segments out.
+When observations are missing for more than 5 minutes, the trajectory is partial: a warning lists the missing segments, the map does not join the points on either side of a gap, and the profiles are cut and shaded there. The distance leaves those segments out.
 
 The map shows OpenStreetMap tiles. The aircraft data comes from the OpenSky Network, credited on the map.
 

@@ -1,31 +1,53 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import AircraftBanner from "@/components/aircraft/AircraftBanner";
 import AircraftMap from "@/components/map/AircraftMap";
+import Breadcrumb from "@/components/ui/Breadcrumb";
+import EmptyState from "@/components/ui/EmptyState";
+import Icon from "@/components/ui/Icon";
 import Notice from "@/components/ui/Notice";
 import Panel from "@/components/ui/Panel";
+import Pill from "@/components/ui/Pill";
 import StatTile from "@/components/ui/StatTile";
-import { useTranslation } from "@/hooks/useTranslation";
+import { usePreferences } from "@/hooks/usePreferences";
 import type { TranslationKey } from "@/i18n/fr";
 import type { Observation } from "@/models/Aircraft";
 import type { FlightDetail as Flight } from "@/models/Flight";
 import { AircraftService } from "@/services/AircraftService";
 import { Formatter } from "@/services/Formatter";
 import type { MapPosition } from "@/services/MapService";
+import type { UnitSystem } from "@/services/UnitService";
+import { Units } from "@/services/Units";
 
-import styles from "../aircraft/Aircraft.module.css";
 import { errorKey } from "../aircraft/errors";
+import styles from "./FlightDetail.module.css";
 import Profile, { type ProfilePoint } from "./Profile";
 
 function toPosition(point: Observation): MapPosition {
-  return { latitude: point.latitude as number, longitude: point.longitude as number, altitude: point.altitude };
+  return {
+    latitude: point.latitude as number,
+    longitude: point.longitude as number,
+    altitude: point.altitude,
+    heading: point.heading,
+    onGround: point.onGround,
+  };
 }
 
-function profile(points: Observation[], read: (point: Observation) => number | null): ProfilePoint[] {
+/** The values of one parameter over the flight, converted to the unit shown, without the missing ones. */
+function profile(points: Observation[], read: (point: Observation) => number | null, convert: (value: number) => number): ProfilePoint[] {
   return points.flatMap((point) => {
     const value = read(point);
-    return value === null ? [] : [{ time: point.lastContactAt.getTime(), value }];
+    return value === null ? [] : [{ time: point.lastContactAt.getTime(), value: convert(value) }];
   });
+}
+
+function altitudeUnit(units: UnitSystem): string {
+  return Units.altitude(0, units).unit;
+}
+
+function speedUnit(units: UnitSystem): string {
+  return Units.speed(0, units).unit;
 }
 
 export interface FlightDetailProps {
@@ -34,7 +56,7 @@ export interface FlightDetailProps {
 
 /** UC-02: the trajectory of a flight on the map, its profiles and its statistics. */
 export default function FlightDetail({ service }: FlightDetailProps) {
-  const { t } = useTranslation();
+  const { t, units } = usePreferences();
   const { flightId = "" } = useParams();
   const api = useMemo(() => service ?? new AircraftService(), [service]);
   const [flight, setFlight] = useState<Flight | null>(null);
@@ -61,12 +83,17 @@ export default function FlightDetail({ service }: FlightDetailProps) {
     () => (flight ? flight.segments().map((segment) => segment.map(toPosition)) : []),
     [flight],
   );
+  // The aircraft where the flight ends, turned to its last heading.
   const current = useMemo(() => {
     const last = segments.at(-1)?.at(-1);
     return last ? [last] : [];
   }, [segments]);
+  const gaps = useMemo(
+    () => (flight ? flight.gaps.map((gap) => ({ start: gap.start.getTime(), end: gap.end.getTime() })) : []),
+    [flight],
+  );
 
-  const title = <h1>{t("flight.title")}</h1>;
+  const title = <h1 className={styles.title}>{t("flight.title")}</h1>;
 
   if (error) {
     return (
@@ -88,36 +115,71 @@ export default function FlightDetail({ service }: FlightDetailProps) {
   }
 
   const stats = flight.statistics;
+  const aircraftName = flight.registration ?? flight.icao24.toUpperCase();
+  const unknown = t("flight.unknownAirport");
   return (
     <main className={styles.page}>
-      {title}
-      <div>
-        <h2 className="mono">{flight.displayName}</h2>
-        <p className={styles.subtitle}>
-          <Link to={`/aircraft/${flight.aircraftId}`} className="mono">
-            {flight.registration ?? flight.icao24}
-          </Link>
-          {" · "}
-          {flight.origin ?? t("flight.unknownOrigin")} → {flight.destination ?? t("flight.unknownDestination")}
-          {" · "}
-          <span className="mono">
-            {Formatter.date(flight.startedAt)} →{" "}
-            {flight.inProgress ? t("flight.inProgress") : Formatter.date(flight.endedAt)}
-          </span>
-        </p>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: t("nav.aircraft"), to: "/aircraft" },
+          { label: aircraftName, to: `/aircraft/${flight.aircraftId}` },
+          { label: flight.displayName },
+        ]}
+      />
+
+      <AircraftBanner
+        title={flight.displayName}
+        subtitle={
+          <>
+            <Link to={`/aircraft/${flight.aircraftId}`} className="mono">
+              {aircraftName}
+            </Link>
+          </>
+        }
+        badges={flight.inProgress && <Pill tone="air">{t("flight.pill.inProgress")}</Pill>}
+        route={
+          <div className={styles.route}>
+            <span className="mono">
+              {flight.origin ?? unknown} <span className={styles.muted}>{Formatter.date(flight.startedAt)}</span>
+            </span>
+            <i aria-hidden="true" />
+            <Icon name="aircraft" size={20} />
+            <i aria-hidden="true" />
+            <span className="mono">
+              {flight.destination ?? unknown}{" "}
+              <span className={styles.muted}>{flight.inProgress ? t("flight.route.arrivalUnknown") : Formatter.date(flight.endedAt)}</span>
+            </span>
+          </div>
+        }
+      >
+        <StatTile label={t("flight.stat.duration")} value={Formatter.duration(stats.durationSeconds)} />
+        <StatTile label={t("flight.stat.distance")} value={Formatter.distance(stats.distanceKm, units)} />
+        <StatTile
+          label={t("flight.stat.maxAltitude")}
+          value={Formatter.altitude(stats.maxAltitude, units)}
+          hint={t("flight.stat.meanHint", { value: Formatter.altitude(stats.meanAltitude, units) })}
+        />
+        <StatTile
+          label={t("flight.stat.maxSpeed")}
+          value={Formatter.speed(stats.maxSpeed, units)}
+          hint={t("flight.stat.meanHint", { value: Formatter.speed(stats.meanSpeed, units) })}
+        />
+        <StatTile label={t("flight.stat.observations")} value={stats.observationCount} />
+      </AircraftBanner>
 
       {flight.isPartial && (
         <Notice variant="warning">
           <p>
-            {flight.gaps.length === 1
-              ? t("flight.partial.one")
-              : t("flight.partial.many", { count: flight.gaps.length })}
+            {flight.gaps.length === 1 ? t("flight.partial.one") : t("flight.partial.many", { count: flight.gaps.length })}
           </p>
           <ul className={styles.gaps}>
             {flight.gaps.map((gap) => (
               <li key={gap.start.toISOString()} className="mono">
-                {Formatter.date(gap.start)} → {Formatter.date(gap.end)} ({Formatter.duration(gap.durationSeconds)})
+                {t("flight.partial.gap", {
+                  start: Formatter.date(gap.start),
+                  end: Formatter.date(gap.end),
+                  duration: Formatter.duration(gap.durationSeconds),
+                })}
               </li>
             ))}
           </ul>
@@ -126,35 +188,28 @@ export default function FlightDetail({ service }: FlightDetailProps) {
 
       <Panel title={t("flight.trajectory")}>
         {segments.length > 0 ? (
-          <AircraftMap aircraft={current} trajectory={segments} />
+          <AircraftMap aircraft={current} trajectory={segments} size="large" label={t("map.label", { count: current.length })} />
         ) : (
-          <p className={styles.muted}>{t("flight.noPosition")}</p>
+          <EmptyState kind="flights" title={t("flight.trajectory")}>
+            {t("flight.noPosition")}
+          </EmptyState>
         )}
       </Panel>
 
-      <Panel title={t("flight.statistics")}>
-        <div className={styles.tiles}>
-          <StatTile label={t("flight.stat.duration")} value={Formatter.duration(stats.durationSeconds)} />
-          <StatTile label={t("flight.stat.distance")} value={Formatter.number(stats.distanceKm, "km", 1)} />
-          <StatTile label={t("flight.stat.meanAltitude")} value={Formatter.number(stats.meanAltitude, "m")} />
-          <StatTile label={t("flight.stat.maxAltitude")} value={Formatter.number(stats.maxAltitude, "m")} />
-          <StatTile label={t("flight.stat.meanSpeed")} value={Formatter.number(stats.meanSpeed, "m/s")} />
-          <StatTile label={t("flight.stat.maxSpeed")} value={Formatter.number(stats.maxSpeed, "m/s")} />
-          <StatTile label={t("flight.stat.observations")} value={stats.observationCount} />
-        </div>
-      </Panel>
-
       <Panel title={t("flight.profiles")}>
+        <p className={styles.hint}>{t("flight.profile.hint")}</p>
         <div className={styles.profiles}>
           <Profile
             title={t("flight.profile.altitude")}
-            unit="m"
-            points={profile(flight.trajectory, (p) => p.altitude)}
+            unit={altitudeUnit(units)}
+            points={profile(flight.trajectory, (p) => p.altitude, (value) => Units.altitude(value, units).value)}
+            gaps={gaps}
           />
           <Profile
             title={t("flight.profile.speed")}
-            unit="m/s"
-            points={profile(flight.trajectory, (p) => p.speed)}
+            unit={speedUnit(units)}
+            points={profile(flight.trajectory, (p) => p.speed, (value) => Units.speed(value, units).value)}
+            gaps={gaps}
           />
         </div>
       </Panel>

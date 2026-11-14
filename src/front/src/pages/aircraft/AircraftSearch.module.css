@@ -1,0 +1,211 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  container-type: inline-size;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.input {
+  display: flex;
+  flex: 1 1 16rem;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+}
+
+.input:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.input input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) 0;
+  background: transparent;
+  border: 0;
+  color: var(--color-text);
+  outline: none;
+}
+
+.bar button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--color-selection) 18%, transparent);
+  border-color: var(--color-selection);
+}
+
+.hints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.areaChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.125rem var(--space-2) 0.125rem var(--space-3);
+  border: 1px dashed var(--color-selection);
+  border-radius: 999px;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+}
+
+.remove {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.results {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+
+.resultsHead {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.resultsHead h2 {
+  margin: 0;
+  font-size: var(--text-sm);
+  letter-spacing: 0.1em;
+}
+
+.prompt {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  max-height: 34rem;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "glyph name altitude"
+    "glyph meta seen";
+  column-gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.row > svg {
+  grid-area: glyph;
+}
+
+.row:hover,
+.selected {
+  background: color-mix(in srgb, var(--color-selection) 12%, transparent);
+}
+
+.selected {
+  box-shadow: inset 3px 0 0 var(--color-selection);
+}
+
+.name {
+  grid-area: name;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.altitude {
+  grid-area: altitude;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.meta {
+  grid-area: meta;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seen {
+  grid-area: seen;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-align: right;
+}
+
+.map {
+  position: relative;
+  min-width: 0;
+}
+
+.drawingHint {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 500;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  background: var(--map-bg);
+  border: 1px dashed var(--color-selection);
+  border-radius: 999px;
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  pointer-events: none;
+}
+
+@container (max-width: 760px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* On a narrow page the map comes first: it is what the area is drawn on. */
+  .map {
+    order: -1;
+  }
+
+  .list {
+    max-height: none;
+  }
+}
