@@ -6,7 +6,7 @@ import { PreferenceStore } from "@/services/PreferenceStore";
 
 /** The preferences of the application (French, dark, metric) without any browser storage. */
 function wrapper({ children }: { children: ReactNode }) {
-  return createElement(PreferencesProvider, { store: new PreferenceStore(null) }, children);
+  return createElement(PreferencesProvider, { store: new PreferenceStore(null), children });
 }
 
 /** Renders a component that reads the preferences, for example to translate its texts. */
