@@ -52,7 +52,7 @@ The flight page starts with a banner: the callsign, the aircraft, the route (an 
 
 When observations are missing for more than 5 minutes, the trajectory is partial: a warning lists the missing segments, the map does not join the points on either side of a gap, and the profiles are cut and shaded there. The distance leaves those segments out.
 
-The map shows OpenStreetMap tiles. The aircraft data comes from the OpenSky Network, credited on the map. Altitudes, speeds and distances are metric by default; the aeronautical units (feet, knots, nautical miles) can be chosen in the account settings.
+The map shows OpenStreetMap tiles. The aircraft data comes from the OpenSky Network, credited on the map.
 
 ## Supervisor
 
