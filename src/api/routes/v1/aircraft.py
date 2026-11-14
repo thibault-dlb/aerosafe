@@ -20,7 +20,8 @@ from services.replay.dependencies import Scope
 
 router = APIRouter(prefix="/aircraft", tags=["aircraft"])
 
-MAX_RESULTS = 200
+# The dashboard map draws every aircraft of the area, a few thousand at the busiest hour.
+MAX_RESULTS = 2000
 MAX_OBSERVATIONS = 5000
 
 

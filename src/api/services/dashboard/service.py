@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from core.data_mode import DataMode
+from schemas.alert import AlertOut
 from schemas.dashboard import (
     CollectionRunSummary,
     CollectionSummary,
@@ -16,6 +17,9 @@ from services.collection.run_state import CollectionStateStore
 
 ACTIVE_ALERTS_SHOWN = 5
 RECENT_RUNS_SHOWN = 12
+# The aircraft with an active alert the map colours: far more than the list shows.
+ALERTED_AIRCRAFT_SHOWN = 500
+CRITICALITY_RANK = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
 
 
 @dataclass(frozen=True)
@@ -70,6 +74,9 @@ class DashboardService:
         unprocessed = await self._alerts.search(
             AlertFilters(status=AlertStatus.UNPROCESSED, limit=1, mode=mode, at=at)
         )
+        active = await self._alerts.search(
+            AlertFilters(status=AlertStatus.ACTIVE, limit=ALERTED_AIRCRAFT_SHOWN, mode=mode, at=at)
+        )
         day = await self._alerts.statistics(now - timedelta(hours=24), now, mode)
         return DashboardOut(
             counters=DashboardCounters(
@@ -78,8 +85,20 @@ class DashboardService:
                 alerts_24h=day.total,
             ),
             active_alerts=latest.items,
+            alerted_aircraft=self.most_critical_per_aircraft(active.items),
             collection=await self.collection(collection_enabled, collection_running),
         )
+
+    @staticmethod
+    def most_critical_per_aircraft(alerts: list[AlertOut]) -> list[AlertOut]:
+        """One alert for each aircraft: the most critical, the latest among equals."""
+        best: dict[str, AlertOut] = {}
+        for alert in alerts:  # newest first
+            held = best.get(alert.aircraft_id)
+            rank = CRITICALITY_RANK.get(alert.criticality or "", 0)
+            if held is None or rank > CRITICALITY_RANK.get(held.criticality or "", 0):
+                best[alert.aircraft_id] = alert
+        return list(best.values())
 
     @staticmethod
     def empty(collection: CollectionSummary) -> DashboardOut:

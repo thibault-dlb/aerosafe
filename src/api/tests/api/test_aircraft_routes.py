@@ -130,7 +130,7 @@ async def test_the_search_passes_the_area(
         {"icao24": "xyz"},
         {"icao24": "3c64441"},
         {"limit": 0},
-        {"limit": 201},
+        {"limit": 2001},
         {"north": 91, "south": 0, "west": 0, "east": 1},
     ],
 )

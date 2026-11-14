@@ -31,6 +31,9 @@ class AircraftSummary(BaseModel):
     on_ground: bool | None = Field(
         default=None, description="True when the latest observation is on the ground"
     )
+    speed: float | None = Field(
+        default=None, description="Ground speed of the latest observation, in metres per second"
+    )
 
 
 class ObservationPoint(BaseModel):

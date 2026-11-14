@@ -55,6 +55,10 @@ class DashboardOut(BaseModel):
 
     counters: DashboardCounters
     active_alerts: list[AlertOut] = Field(description="The latest alerts whose situation lasts")
+    alerted_aircraft: list[AlertOut] = Field(
+        default_factory=list,
+        description="For each aircraft with an active alert, its most critical one",
+    )
     collection: CollectionSummary
 
 

@@ -111,6 +111,31 @@ class TestOverview:
         assert alerts.period is not None
         assert alerts.period[2] is DataMode.REPLAY
 
+    async def test_it_keeps_one_alert_per_aircraft_the_most_critical(self) -> None:
+        def alert(identifier: str, aircraft: str, level: str | None) -> AlertOut:
+            return ALERT.model_copy(
+                update={"id": identifier, "aircraft_id": aircraft, "criticality": level}
+            )
+
+        kept = DashboardService.most_critical_per_aircraft(
+            [
+                alert("A1", "X", "LOW"),
+                alert("A2", "X", "HIGH"),
+                alert("A3", "X", "MEDIUM"),
+                alert("A4", "Y", None),
+                alert("A5", "Y", "LOW"),
+            ]
+        )
+
+        assert [(item.aircraft_id, item.id) for item in kept] == [("X", "A2"), ("Y", "A5")]
+
+    async def test_it_lists_the_alerted_aircraft(self, service: DashboardService) -> None:
+        out = await service.overview(
+            DataMode.LIVE, NOW, collection_enabled=True, collection_running=False
+        )
+
+        assert [item.aircraft_id for item in out.alerted_aircraft] == [ALERT.aircraft_id]
+
     async def test_a_replay_that_never_started_shows_nothing_but_the_collection(
         self, service: DashboardService
     ) -> None:

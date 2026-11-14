@@ -82,6 +82,7 @@ class AircraftService:
                 func.ST_X(Observation.position).label("longitude"),
                 Observation.altitude,
                 Observation.heading,
+                Observation.speed,
                 Observation.on_ground,
             )
             .where(*conditions)
@@ -103,6 +104,7 @@ class AircraftService:
                 func.ST_X(Observation.position).label("longitude"),
                 Observation.altitude,
                 Observation.heading,
+                Observation.speed,
                 Observation.on_ground,
             )
             .where(
@@ -146,6 +148,7 @@ class AircraftService:
             latest.c.longitude,
             latest.c.altitude,
             latest.c.heading,
+            latest.c.speed,
             latest.c.on_ground,
         )
         return statement, latest
@@ -207,4 +210,5 @@ class AircraftService:
             altitude=to_float(row.altitude),
             heading=to_float(row.heading),
             on_ground=row.on_ground,
+            speed=to_float(row.speed),
         )
