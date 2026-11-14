@@ -1,0 +1,23 @@
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  list-style: none;
+}
+
+.link {
+  color: var(--color-link);
+}
+
+.current {
+  color: var(--color-text);
+}
+
+.separator {
+  display: inline-flex;
+}
