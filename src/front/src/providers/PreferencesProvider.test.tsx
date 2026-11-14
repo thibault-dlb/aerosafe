@@ -1,7 +1,8 @@
-import { fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
+import { usePreferences } from "@/hooks/usePreferences";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "@/hooks/useTranslation";
 import { PreferenceStore } from "@/services/PreferenceStore";
@@ -64,6 +65,19 @@ describe("PreferencesProvider", () => {
     render(<Probe />, { wrapper: wrapperWith(store) });
 
     expect(screen.getByText("en/dark")).toBeInTheDocument();
+  });
+
+  it("switches the units and keeps the choice for the next visit", () => {
+    const store = memoryStore();
+    const { result, unmount } = renderHook(() => usePreferences(), { wrapper: wrapperWith(store) });
+    expect(result.current.units).toBe("metric");
+
+    act(() => result.current.setUnits("aeronautical"));
+    expect(result.current.units).toBe("aeronautical");
+    unmount();
+
+    const next = renderHook(() => usePreferences(), { wrapper: wrapperWith(store) });
+    expect(next.result.current.units).toBe("aeronautical");
   });
 
   it("refuses to be used outside the provider", () => {
