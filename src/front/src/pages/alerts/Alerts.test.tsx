@@ -1,5 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Alert, AlertPage } from "@/models/Alert";
@@ -7,6 +6,7 @@ import { Rule } from "@/models/Rule";
 import { ApiError } from "@/services/ApiClient";
 import type { AlertService } from "@/services/AlertService";
 import type { RuleService } from "@/services/RuleService";
+import { renderInApp } from "@/test/app";
 
 import Alerts from "./Alerts";
 import { AlertCriteria } from "./AlertCriteria";
@@ -34,9 +34,7 @@ function alert(id: string, processedAt: Date | null = null): Alert {
   );
 }
 
-const RULES = ["R1", "R3", "R6"].map(
-  (code) => new Rule(code, code, 1, "s", null, true, TRIGGERED),
-);
+const RULES = ["R1", "R3", "R6"].map((code) => new Rule(code, code, 1, "s", null, true, TRIGGERED));
 
 function renderWith(
   search: AlertService["search"],
@@ -47,15 +45,18 @@ function renderWith(
     process: vi.fn(process),
   } as unknown as AlertService;
   const ruleService = { list: vi.fn(async () => RULES) } as unknown as RuleService;
-  render(
-    <MemoryRouter>
-      <Alerts service={service} ruleService={ruleService} />
-    </MemoryRouter>,
-  );
+  renderInApp(<Alerts service={service} ruleService={ruleService} />);
   return {
     search: service.search as ReturnType<typeof vi.fn>,
     process: service.process as ReturnType<typeof vi.fn>,
   };
+}
+
+const DETAILS = "Détails de R1 pour 3c6444";
+const PROCESS = "Marquer l'alerte R1 de 3c6444 comme traitée";
+
+function openMoreFilters() {
+  fireEvent.click(screen.getByRole("button", { name: "Plus de filtres" }));
 }
 
 describe("filters", () => {
@@ -87,91 +88,136 @@ describe("Alerts", () => {
   it("shows its title", () => {
     renderWith(async () => new AlertPage([], 0));
 
-    expect(screen.getByRole("heading", { name: "Alerts" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Alertes" })).toBeInTheDocument();
   });
 
-  it("lists the alerts left to process by default", async () => {
+  it("lists the alerts left to process by default, and counts them", async () => {
     const { search } = renderWith(async () => new AlertPage([alert("A1")], 1));
 
-    expect(await screen.findByText("Alerts 1 to 1 of 1")).toBeInTheDocument();
+    expect(await screen.findByText("1 alerte")).toBeInTheDocument();
     expect(search).toHaveBeenCalledWith(expect.objectContaining({ status: "unprocessed", offset: 0 }));
+    expect(screen.getByRole("button", { name: "Non traitées" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("says when no alert matches", async () => {
+  it("says the sky is clear when no alert matches", async () => {
     renderWith(async () => new AlertPage([], 0));
 
-    expect(await screen.findByText("No alert matches these criteria.")).toBeInTheDocument();
+    expect(await screen.findByText("Ciel calme")).toBeInTheDocument();
+    expect(screen.getByText("Aucune alerte ne correspond à ces filtres.")).toBeInTheDocument();
+    expect(screen.getByText("0 alerte", { exact: false })).toBeInTheDocument();
   });
 
   it("offers the rules read from the API", async () => {
     renderWith(async () => new AlertPage([], 0));
+    openMoreFilters();
 
     expect(await screen.findByRole("option", { name: "R6" })).toBeInTheDocument();
     const options = screen.getAllByRole("option").map((option) => option.textContent);
-    expect(options.slice(0, 4)).toEqual(["All rules", "R1", "R3", "R6"]);
+    expect(options).toEqual(["Toutes les règles", "R1", "R3", "R6"]);
   });
 
-  it("applies the filters", async () => {
+  it("applies a status and a criticality at once, and a second click on a criticality removes it", async () => {
     const { search } = renderWith(async () => new AlertPage([], 0));
-    await screen.findByText("No alert matches these criteria.");
+    await screen.findByText("Ciel calme");
+
+    fireEvent.click(screen.getByRole("button", { name: "En cours" }));
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ status: "active" })));
+
+    fireEvent.click(screen.getByRole("button", { name: "Toutes" }));
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ status: undefined })));
+
+    fireEvent.click(screen.getByRole("button", { name: "Haute" }));
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ criticality: "HIGH" })));
+    expect(screen.getByRole("button", { name: "Haute" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Haute" }));
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ criticality: undefined })));
+  });
+
+  it("applies the rule, the address and the period of the other filters", async () => {
+    const { search } = renderWith(async () => new AlertPage([], 0));
+    await screen.findByText("Ciel calme");
+    await screen.findByText("Ciel calme");
+    openMoreFilters();
     await screen.findByRole("option", { name: "R3" });
 
-    fireEvent.change(screen.getByLabelText("Rule"), { target: { value: "R3" } });
-    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "" } });
-    fireEvent.change(screen.getByLabelText("Criticality"), { target: { value: "HIGH" } });
-    fireEvent.change(screen.getByLabelText("ICAO24 address"), { target: { value: "3c6" } });
-    fireEvent.change(screen.getByLabelText("Sort by"), { target: { value: "criticality" } });
-    fireEvent.change(screen.getByLabelText("Order"), { target: { value: "asc" } });
-    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-11-09T08:00" } });
-    fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-11-09T12:00" } });
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    fireEvent.change(screen.getByLabelText("Règle"), { target: { value: "R3" } });
+    fireEvent.change(screen.getByLabelText("Adresse ICAO24"), { target: { value: "3c6" } });
+    fireEvent.change(screen.getByLabelText("Du"), { target: { value: "2026-11-09T08:00" } });
+    fireEvent.change(screen.getByLabelText("Au"), { target: { value: "2026-11-09T12:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
 
     await waitFor(() =>
       expect(search).toHaveBeenLastCalledWith(
         expect.objectContaining({
           rule: "R3",
-          status: undefined,
-          criticality: "HIGH",
           icao24: "3c6",
-          sort: "criticality",
-          order: "asc",
           start: new Date("2026-11-09T08:00"),
+          end: new Date("2026-11-09T12:00"),
         }),
       ),
     );
   });
 
+  it("clears every filter", async () => {
+    const { search } = renderWith(async () => new AlertPage([], 0));
+    await screen.findByText("Ciel calme");
+    fireEvent.click(screen.getByRole("button", { name: "Toutes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Haute" }));
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ criticality: "HIGH" })));
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Effacer les filtres" })[0]);
+
+    await waitFor(() =>
+      expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ status: "unprocessed", criticality: undefined })),
+    );
+  });
+
   it("refuses a reversed period", async () => {
     const { search } = renderWith(async () => new AlertPage([], 0));
-    await screen.findByText("No alert matches these criteria.");
+    await screen.findByText("Ciel calme");
+    openMoreFilters();
 
-    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-11-09T12:00" } });
-    fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-11-09T08:00" } });
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    fireEvent.change(screen.getByLabelText("Du"), { target: { value: "2026-11-09T12:00" } });
+    fireEvent.change(screen.getByLabelText("Au"), { target: { value: "2026-11-09T08:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("must not be after its end");
+    expect(await screen.findByRole("alert")).toHaveTextContent("ne peut pas suivre sa fin");
     expect(search).toHaveBeenCalledTimes(1);
+  });
+
+  it("sorts by a column, then reverses the sort on a second click", async () => {
+    const { search } = renderWith(async () => new AlertPage([alert("A1")], 1));
+    await screen.findByText("1 alerte");
+
+    fireEvent.click(screen.getByRole("button", { name: "Trier par Règle" }));
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ sort: "rule", order: "asc" })));
+
+    fireEvent.click(screen.getByRole("button", { name: "Trier par Règle" }));
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ sort: "rule", order: "desc" })));
+
+    fireEvent.click(screen.getByRole("button", { name: "Trier par Criticité" }));
+    await waitFor(() =>
+      expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ sort: "criticality", order: "desc" })),
+    );
+    expect(screen.getByRole("columnheader", { name: /Crit\./ })).toHaveAttribute("aria-sort", "descending");
   });
 
   it("pages through the alerts", async () => {
     const { search } = renderWith(async (filters) =>
       new AlertPage([alert(`A${filters?.offset ?? 0}`)], PAGE_SIZE + 1),
     );
-    expect(await screen.findByText(`Alerts 1 to ${PAGE_SIZE} of ${PAGE_SIZE + 1}`)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(await screen.findByText(`1 à ${PAGE_SIZE} sur ${PAGE_SIZE + 1}`)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Page précédente" })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Page suivante" }));
 
-    expect(
-      await screen.findByText(`Alerts ${PAGE_SIZE + 1} to ${PAGE_SIZE + 1} of ${PAGE_SIZE + 1}`),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(`${PAGE_SIZE + 1} à ${PAGE_SIZE + 1} sur ${PAGE_SIZE + 1}`)).toBeInTheDocument();
     expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ offset: PAGE_SIZE }));
-    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Page suivante" })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
-    await waitFor(() =>
-      expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 })),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Page précédente" }));
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 })));
   });
 
   it("ignores the answer of a search replaced by a newer one", async () => {
@@ -184,47 +230,55 @@ describe("Alerts", () => {
           }),
     );
 
+    openMoreFilters();
     await screen.findByRole("option", { name: "R3" });
-    fireEvent.change(screen.getByLabelText("Rule"), { target: { value: "R3" } });
+    fireEvent.change(screen.getByLabelText("Règle"), { target: { value: "R3" } });
     // Submitted while the first search runs (the Apply button is then disabled).
-    fireEvent.submit(screen.getByRole("form", { name: "Alert filters" }));
+    fireEvent.submit(screen.getByRole("form", { name: "Plus de filtres" }));
     await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("Alerts 1 to 1 of 1")).toBeInTheDocument();
+    expect(await screen.findByText("1 alerte")).toBeInTheDocument();
 
     answerFirstPage(new AlertPage([alert("A1"), alert("A2")], 2));
 
-    await waitFor(() => expect(screen.getByText("Alerts 1 to 1 of 1")).toBeInTheDocument());
-    expect(screen.queryByText("Alerts 1 to 2 of 2")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("1 alerte")).toBeInTheDocument());
+    expect(screen.queryByText("2 alertes")).not.toBeInTheDocument();
   });
 
-  it("opens the details of an alert", async () => {
+  it("opens the details of an alert, and closes them", async () => {
     renderWith(async () => new AlertPage([alert("A1")], 1));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Details of R1 for 3c6444" }));
+    fireEvent.click(await screen.findByRole("button", { name: DETAILS }));
 
-    const details = screen.getByRole("region", { name: "Alert details" });
-    expect(details).toHaveTextContent("R1: Délai trop long depuis le dernier contact");
+    const details = screen.getByRole("region", { name: "Détail de l'alerte" });
+    expect(details).toHaveTextContent("R1 · Contact perdu");
     expect(details).toHaveTextContent("420 s");
-    expect(details).toHaveTextContent("300 s");
-    expect(details).toHaveTextContent("Still active");
-    expect(screen.getByRole("link", { name: "Adjust the threshold of R1" })).toHaveAttribute(
-      "href",
-      "/rules",
-    );
+    expect(details).toHaveTextContent("seuil 300 s");
+    expect(details).toHaveTextContent("Toujours en cours");
+    expect(screen.getByRole("link", { name: "Pas pertinent ? Ajuster le seuil de R1" })).toHaveAttribute("href", "/rules");
 
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    expect(screen.queryByRole("region", { name: "Alert details" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fermer le détail" }));
+    expect(screen.queryByRole("region", { name: "Détail de l'alerte" })).not.toBeInTheDocument();
   });
 
-  it("marks an alert as processed and reloads the list", async () => {
+  it("closes the details when the filters change", async () => {
+    renderWith(async () => new AlertPage([alert("A1")], 1));
+    fireEvent.click(await screen.findByRole("button", { name: DETAILS }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Toutes" }));
+
+    expect(screen.queryByRole("region", { name: "Détail de l'alerte" })).not.toBeInTheDocument();
+  });
+
+  it("marks an alert as processed, confirms it and reloads the list", async () => {
     const { search, process } = renderWith(async () => new AlertPage([alert("A1")], 1));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Details of R1 for 3c6444" }));
-    fireEvent.click(screen.getByRole("button", { name: "Mark R1 for 3c6444 as processed" }));
+    fireEvent.click(await screen.findByRole("button", { name: DETAILS }));
+    fireEvent.click(screen.getByRole("button", { name: "Marquer comme traitée" }));
 
     await waitFor(() => expect(process).toHaveBeenCalledWith("A1"));
     await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
-    expect(screen.getByRole("region", { name: "Alert details" })).toHaveTextContent("Processed on");
+    expect(await screen.findByText("Alerte R1 de 3c6444 traitée.")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Détail de l'alerte" })).toHaveTextContent("Traitée le");
   });
 
   it("keeps the range of the rows shown while the next page loads", async () => {
@@ -241,22 +295,18 @@ describe("Alerts", () => {
         PAGE_SIZE + 1,
       );
     });
-    await screen.findByText(`Alerts 1 to ${PAGE_SIZE} of ${PAGE_SIZE + 1}`);
+    await screen.findByText(`1 à ${PAGE_SIZE} sur ${PAGE_SIZE + 1}`);
 
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Page suivante" }));
 
     // The rows of the first page stay on screen until the second one arrives, so the
-    // caption must keep describing them.
-    expect(screen.getByText(`Alerts 1 to ${PAGE_SIZE} of ${PAGE_SIZE + 1}`)).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Details of R1 for 3c6444" })).toHaveLength(
-      PAGE_SIZE,
-    );
+    // summary must keep describing them.
+    expect(screen.getByText(`1 à ${PAGE_SIZE} sur ${PAGE_SIZE + 1}`)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: DETAILS })).toHaveLength(PAGE_SIZE);
 
     release();
-    expect(
-      await screen.findByText(`Alerts ${PAGE_SIZE + 1} to ${PAGE_SIZE + 1} of ${PAGE_SIZE + 1}`),
-    ).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Details of R1 for 3c6444" })).toHaveLength(1);
+    expect(await screen.findByText(`${PAGE_SIZE + 1} à ${PAGE_SIZE + 1} sur ${PAGE_SIZE + 1}`)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: DETAILS })).toHaveLength(1);
   });
 
   it("goes back a page when processing empties the current one", async () => {
@@ -275,18 +325,18 @@ describe("Alerts", () => {
         return alert(id, TRIGGERED);
       },
     );
-    await screen.findByText(`Alerts 1 to ${PAGE_SIZE} of ${PAGE_SIZE + 1}`);
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByText(`Alerts ${PAGE_SIZE + 1} to ${PAGE_SIZE + 1} of ${PAGE_SIZE + 1}`);
+    await screen.findByText(`1 à ${PAGE_SIZE} sur ${PAGE_SIZE + 1}`);
+    fireEvent.click(screen.getByRole("button", { name: "Page suivante" }));
+    await screen.findByText(`${PAGE_SIZE + 1} à ${PAGE_SIZE + 1} sur ${PAGE_SIZE + 1}`);
 
-    fireEvent.click(screen.getByRole("button", { name: "Mark R1 for 3c6444 as processed" }));
+    fireEvent.click(screen.getByRole("button", { name: PROCESS }));
 
-    expect(await screen.findByText(`Alerts 1 to ${PAGE_SIZE} of ${PAGE_SIZE}`)).toBeInTheDocument();
+    expect(await screen.findByText(`1 à ${PAGE_SIZE} sur ${PAGE_SIZE}`)).toBeInTheDocument();
     expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 }));
-    expect(screen.queryByText("No alert matches these criteria.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ciel calme")).not.toBeInTheDocument();
   });
 
-  it("explains a failed processing", async () => {
+  it("explains a failed processing in a notification", async () => {
     renderWith(
       async () => new AlertPage([alert("A1")], 1),
       async () => {
@@ -294,9 +344,9 @@ describe("Alerts", () => {
       },
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "Mark R1 for 3c6444 as processed" }));
+    fireEvent.click(await screen.findByRole("button", { name: PROCESS }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("already processed");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Cette alerte a déjà été traitée.");
   });
 
   it("explains a failed loading", async () => {
@@ -304,6 +354,12 @@ describe("Alerts", () => {
       throw new ApiError(403);
     });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Only Supervisors");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Seuls les Superviseurs");
+  });
+
+  it("says it is loading until the first answer", () => {
+    renderWith(() => new Promise(() => undefined));
+
+    expect(screen.getByText("Chargement des alertes…")).toBeInTheDocument();
   });
 });

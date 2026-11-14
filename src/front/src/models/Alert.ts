@@ -33,6 +33,9 @@ export interface AlertStatisticsJson {
   per_rule: Record<string, number>;
 }
 
+/** Where an alert stands: processed by a Supervisor, still going on, or ended without processing. */
+export type AlertState = "processed" | "active" | "ended";
+
 /** An alert raised by the rules engine. `id` is the public ULID. */
 export class Alert {
   constructor(
@@ -76,10 +79,10 @@ export class Alert {
     return this.episodeEndedAt === null;
   }
 
-  /** Where the alert stands for the Supervisor. */
-  get statusLabel(): string {
-    if (this.processed) return "Processed";
-    return this.active ? "Active" : "Ended, not processed";
+  /** Where the alert stands for the Supervisor: processed, or else whether the situation lasts. */
+  get status(): AlertState {
+    if (this.processed) return "processed";
+    return this.active ? "active" : "ended";
   }
 
   get processed(): boolean {
