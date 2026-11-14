@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { AuthContext, type AuthContextValue } from "@/providers/AuthContext";
 import PreferencesProvider from "@/providers/PreferencesProvider";
+import { DataModeService } from "@/services/DataModeService";
 import { PreferenceStore } from "@/services/PreferenceStore";
 import { fakeSession } from "@/test/auth";
 
@@ -43,11 +44,17 @@ function renderAt(path: string | { pathname: string; state: unknown }, session: 
 }
 
 describe("AppLayout", () => {
-  it("shows the navigation of every work package, in French by default", () => {
+  afterEach(() => {
+    // The data mode is kept in memory too: it must not leak into the next case.
+    DataModeService.reset();
+  });
+
+  it("offers the way in to a visitor, and no page of the application, in French by default", () => {
     renderAt("/alerts");
 
-    for (const label of ["Aéronefs", "Tableau de bord", "Alertes", "Règles", "Comptes", "Connexion"]) {
-      expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Connexion" })).toHaveAttribute("href", "/login");
+    for (const label of ["Aéronefs", "Tableau de bord", "Alertes", "Règles", "Comptes"]) {
+      expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
     }
   });
 
@@ -57,19 +64,12 @@ describe("AppLayout", () => {
     expect(screen.getByRole("heading", { name: "Page content" })).toBeInTheDocument();
   });
 
-  it("marks the link of the current page", () => {
-    renderAt("/alerts");
-
-    expect(screen.getByRole("link", { name: "Alertes" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Règles" })).not.toHaveAttribute("aria-current");
-  });
-
-  it("switches the navigation to English", () => {
+  it("switches the interface to English", () => {
     renderAt("/alerts");
 
     fireEvent.click(screen.getByRole("button", { name: "English" }));
 
-    expect(screen.getByRole("link", { name: "Aircraft" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Log in" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Français" })).toHaveAttribute("aria-pressed", "false");
   });
@@ -81,25 +81,6 @@ describe("AppLayout", () => {
 
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     expect(screen.getByRole("button", { name: "Passer au thème sombre" })).toBeInTheDocument();
-  });
-
-  it("opens and closes the menu of the phone layout", () => {
-    renderAt("/alerts");
-    const menu = screen.getByRole("button", { name: "Ouvrir le menu" });
-    expect(menu).toHaveAttribute("aria-expanded", "false");
-
-    fireEvent.click(menu);
-
-    expect(screen.getByRole("button", { name: "Fermer le menu" })).toHaveAttribute("aria-expanded", "true");
-  });
-
-  it("closes the menu when a link is followed", () => {
-    renderAt("/alerts");
-    fireEvent.click(screen.getByRole("button", { name: "Ouvrir le menu" }));
-
-    fireEvent.click(screen.getByRole("link", { name: "Alertes" }));
-
-    expect(screen.getByRole("button", { name: "Ouvrir le menu" })).toBeInTheDocument();
   });
 
   it("offers to skip the navigation and shows the disclaimer", () => {
@@ -115,39 +96,19 @@ describe("AppLayout", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
-  it("offers to log in to a visitor, and to log out to a logged in user", () => {
-    renderAt("/alerts");
-    expect(screen.getByRole("link", { name: "Connexion" })).toHaveAttribute("href", "/login");
-    expect(screen.queryByRole("button", { name: "Se déconnecter" })).not.toBeInTheDocument();
-  });
+  it("offers a logged in user to open the application instead of logging in", () => {
+    renderAt("/", fakeSession("authenticated", "USER"));
 
-  it("logs the user out and goes back to the home page", async () => {
-    const logout = vi.fn().mockResolvedValue(undefined);
-    renderAt("/alerts", fakeSession("authenticated", "USER", { logout }));
     expect(screen.queryByRole("link", { name: "Connexion" })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Se déconnecter" }));
-
-    expect(logout).toHaveBeenCalledOnce();
-    expect(await screen.findByRole("heading", { name: "Landing" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ouvrir l'application" })).toHaveAttribute("href", "/dashboard");
   });
 
-  it("welcomes a new account once, then lets the visitor close the notice", async () => {
-    renderAt({ pathname: "/alerts", state: { welcome: true } }, fakeSession("authenticated", "USER"));
+  it("lets the visitor choose the data source", () => {
+    renderAt("/");
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Bienvenue sur AeroSafe");
-    fireEvent.click(screen.getByRole("button", { name: "Fermer" }));
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  });
-
-  it("does not welcome again once the mark has been removed from the history", async () => {
-    renderAt({ pathname: "/alerts", state: { welcome: true } }, fakeSession("authenticated", "USER"));
-    await screen.findByRole("status");
-
-    fireEvent.click(screen.getByRole("link", { name: "Règles" }));
-    fireEvent.click(screen.getByRole("link", { name: "Alertes" }));
-
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Direct" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Rejeu" }));
+    expect(screen.getByRole("button", { name: "Rejeu" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("keeps the landing page in the dark theme, and only that page", () => {
