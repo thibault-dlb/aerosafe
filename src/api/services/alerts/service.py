@@ -20,6 +20,14 @@ class AlertStatistics:
     per_rule: dict[str, int] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class AlertBucketCount:
+    """Alerts triggered in one slice of time (its start, in UTC), per rule code."""
+
+    start: datetime
+    per_rule: dict[str, int] = field(default_factory=dict)
+
+
 class AlertSort(StrEnum):
     TRIGGERED_AT = "triggered_at"
     CRITICALITY = "criticality"
@@ -192,6 +200,35 @@ class AlertService:
         rows = (await self._session.execute(statement)).all()
         per_rule = {code: count for code, count in rows}
         return AlertStatistics(total=sum(per_rule.values()), per_rule=per_rule)
+
+    async def statistics_by_slice(
+        self, start: datetime, end: datetime, unit: str, mode: DataMode = DataMode.LIVE
+    ) -> list[AlertBucketCount]:
+        """Count the alerts triggered between `start` and `end` per hour or per day (`unit`)
+        and per rule code. The slices without alert are not returned."""
+        if unit not in ("hour", "day"):
+            raise ValueError("The unit of a slice is hour or day")
+        slice_start = func.date_trunc(unit, func.timezone("UTC", Alert.triggered_at)).label(
+            "slice_start"
+        )
+        statement = (
+            select(slice_start, Rule.code, func.count(Alert.id))
+            .select_from(Alert)
+            .join(Rule, Alert.rule_id == Rule.id)
+            .join(Aircraft, Alert.aircraft_id == Aircraft.id)
+            .where(
+                Alert.deleted_at.is_(None),
+                Alert.triggered_at >= start,
+                Alert.triggered_at <= end,
+                mode.matches(Aircraft.source_id),
+            )
+            .group_by(slice_start, Rule.code)
+            .order_by(slice_start, Rule.code)
+        )
+        slices: dict[datetime, dict[str, int]] = {}
+        for begin, code, count in (await self._session.execute(statement)).all():
+            slices.setdefault(begin.replace(tzinfo=UTC), {})[code] = count
+        return [AlertBucketCount(begin, per_rule) for begin, per_rule in slices.items()]
 
     @staticmethod
     def to_out(row: Row) -> AlertOut:
