@@ -1,0 +1,21 @@
+.stack {
+  display: grid;
+}
+
+.stack > * {
+  grid-area: 1 / 1;
+  transition:
+    opacity 0.35s,
+    transform 0.35s;
+}
+
+/* The text that arrives waits for the one that leaves. */
+.stack > :not(.hidden) {
+  transition-delay: 0.25s;
+}
+
+.hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}

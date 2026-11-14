@@ -1,9 +1,11 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { AuthContext, type AuthContextValue } from "@/providers/AuthContext";
 import PreferencesProvider from "@/providers/PreferencesProvider";
 import { PreferenceStore } from "@/services/PreferenceStore";
+import { fakeSession } from "@/test/auth";
 
 import AppLayout from "./AppLayout";
 
@@ -15,7 +17,7 @@ function memoryStore(): PreferenceStore {
   });
 }
 
-function renderAt(path: string) {
+function renderAt(path: string | { pathname: string; state: unknown }, session: AuthContextValue = fakeSession("anonymous")) {
   const router = createMemoryRouter(
     [
       {
@@ -23,6 +25,7 @@ function renderAt(path: string) {
         children: [
           { path: "/", element: <h1>Landing</h1> },
           { path: "/alerts", element: <h1>Page content</h1> },
+          { path: "/rules", element: <h1>Rules content</h1> },
           { path: "/login", element: <h1>Log in</h1> },
           { path: "/signup", element: <h1>Sign up</h1> },
         ],
@@ -32,7 +35,9 @@ function renderAt(path: string) {
   );
   render(
     <PreferencesProvider store={memoryStore()}>
-      <RouterProvider router={router} />
+      <AuthContext.Provider value={session}>
+        <RouterProvider router={router} />
+      </AuthContext.Provider>
     </PreferencesProvider>,
   );
 }
@@ -104,16 +109,45 @@ describe("AppLayout", () => {
     expect(within(screen.getByRole("contentinfo")).getByText(/projet pédagogique/)).toBeInTheDocument();
   });
 
-  it.each(["/login", "/signup"])("shows the educational notice on %s", (path) => {
-    renderAt(path);
-
-    expect(screen.getByRole("status")).toHaveTextContent("Projet pédagogique");
-  });
-
   it.each(["/", "/alerts"])("does not show the educational notice on %s", (path) => {
     renderAt(path);
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("offers to log in to a visitor, and to log out to a logged in user", () => {
+    renderAt("/alerts");
+    expect(screen.getByRole("link", { name: "Connexion" })).toHaveAttribute("href", "/login");
+    expect(screen.queryByRole("button", { name: "Se déconnecter" })).not.toBeInTheDocument();
+  });
+
+  it("logs the user out and goes back to the home page", async () => {
+    const logout = vi.fn().mockResolvedValue(undefined);
+    renderAt("/alerts", fakeSession("authenticated", "USER", { logout }));
+    expect(screen.queryByRole("link", { name: "Connexion" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Se déconnecter" }));
+
+    expect(logout).toHaveBeenCalledOnce();
+    expect(await screen.findByRole("heading", { name: "Landing" })).toBeInTheDocument();
+  });
+
+  it("welcomes a new account once, then lets the visitor close the notice", async () => {
+    renderAt({ pathname: "/alerts", state: { welcome: true } }, fakeSession("authenticated", "USER"));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Bienvenue sur AeroSafe");
+    fireEvent.click(screen.getByRole("button", { name: "Fermer" }));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("does not welcome again once the mark has been removed from the history", async () => {
+    renderAt({ pathname: "/alerts", state: { welcome: true } }, fakeSession("authenticated", "USER"));
+    await screen.findByRole("status");
+
+    fireEvent.click(screen.getByRole("link", { name: "Règles" }));
+    fireEvent.click(screen.getByRole("link", { name: "Alertes" }));
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
   it("keeps the landing page in the dark theme, and only that page", () => {

@@ -1,0 +1,115 @@
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  min-height: 60vh;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.loading p {
+  margin: 0;
+}
+
+.eye {
+  width: 190px;
+  height: 130px;
+  overflow: visible;
+}
+
+/* The four strokes of the eye are drawn one after the other, then the whole fades and starts again. */
+.ink {
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: ink 3.6s ease-in-out infinite;
+}
+
+.second {
+  animation-delay: 0.25s;
+}
+
+.third {
+  animation-delay: 0.5s;
+}
+
+.fourth {
+  animation-delay: 0.7s;
+}
+
+@keyframes ink {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  38%,
+  82% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+.pupil {
+  animation: pupil 3.6s ease-in-out infinite;
+}
+
+@keyframes pupil {
+  0%,
+  22% {
+    opacity: 0;
+  }
+  42%,
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.iris {
+  fill: none;
+  stroke: var(--color-data);
+  stroke-width: 1.6;
+}
+
+.grid {
+  fill: none;
+  stroke: var(--color-data);
+  stroke-width: 0.8;
+  opacity: 0.45;
+}
+
+.sweep {
+  fill: var(--color-data);
+  transform-origin: 60px 40px;
+  animation: turn 1.5s linear infinite;
+}
+
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Reduced motion: the finished eye, without movement. */
+@media (prefers-reduced-motion: reduce) {
+  .ink,
+  .pupil,
+  .sweep {
+    animation: none;
+  }
+
+  .ink {
+    stroke-dashoffset: 0;
+  }
+}

@@ -1,10 +1,19 @@
 # User guide
 
-The application is partly built. Searching for an aircraft, the aircraft record, the flight trajectory, the alerts and the rules work and are described below. Logging in, signing up, the accounts and the dashboard (apart from its live overview, the figures and the map) are not built yet, and their instructions stay `TBD` (see [team work split](team-split.md#interface)). This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions are added as each part is developed.
+The application is partly built. Searching for an aircraft, the aircraft record, the flight trajectory, the alerts and the rules work and are described below. The accounts and the dashboard (apart from its live overview, the figures and the map) are not built yet, and their instructions stay `TBD` (see [team work split](team-split.md#interface)). This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions are added as each part is developed.
 
 > **Disclaimer:** AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally. This limitation is also shown in the application (§VII.3).
 
 Access to the application requires authentication. Each account has one role, User or Supervisor, which determines the features available.
+
+### Signing up and logging in
+
+1. Open the application. Only the home page is public: any other address takes you to the log in screen, and brings you back to the page you asked for once you are logged in.
+2. To create an account, choose **Inscription** (or **Sign up**), give an e-mail address and a password of 12 characters at least, and confirm. The gauge under the password shows how far you are from the 12 characters. You are logged in at once and the account has the User role.
+3. To log in, choose **Connexion** (or **Log in**), give your e-mail address and your password, and confirm. After five failed attempts in a row the account is locked for 15 minutes.
+4. The session stays open when you reload the page. To close it, use **Se déconnecter** (or **Log out**) in the bar.
+
+The Supervisor pages (alerts, rules, accounts) show an "access restricted" page to a User.
 
 Coverage of air traffic depends on the OpenSky Network receiver network and is not uniform across regions.
 

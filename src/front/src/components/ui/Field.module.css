@@ -9,16 +9,55 @@
   font-weight: 500;
 }
 
+.control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .input {
+  width: 100%;
   min-height: 2.5rem;
   padding: var(--space-2) var(--space-3);
   background: var(--color-raised);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 24%, transparent);
 }
 
 .input[aria-invalid="true"] {
   border-color: var(--color-danger);
+}
+
+.withIcon {
+  padding-left: 2.5rem;
+}
+
+.withTrailing {
+  padding-right: 2.75rem;
+}
+
+.icon {
+  position: absolute;
+  left: var(--space-3);
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.trailing {
+  position: absolute;
+  right: var(--space-1);
+  display: flex;
 }
 
 .hint {
