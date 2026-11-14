@@ -1,0 +1,71 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.shape {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.high {
+  color: var(--color-danger);
+}
+
+.high .shape {
+  fill: currentcolor;
+}
+
+.medium {
+  color: var(--color-warning);
+}
+
+.medium .shape {
+  fill: currentcolor;
+}
+
+.low {
+  color: var(--color-brand);
+}
+
+.low .shape {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2.2;
+}
+
+.none {
+  color: var(--color-text-muted);
+}
+
+.none .shape {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* The word stays in the colour of the text: only the shape is coloured. */
+.word {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.badge {
+  padding: 0.125rem var(--space-2);
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+}
+
+.badge .word {
+  color: currentcolor;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
