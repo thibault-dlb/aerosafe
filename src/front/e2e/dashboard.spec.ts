@@ -159,3 +159,25 @@ test("the map is drawn without any tile, and an aircraft is followed from the se
   await expect(card).toHaveCount(0);
   expect(outside).toEqual([]);
 });
+
+test("an alert of the map centres its aircraft, then opens it in the alerts", async ({ page }) => {
+  await openSession(page, "SUPERVISOR");
+  await mockDashboard(page);
+  // The alerts page reads the alert asked for, then the list of its aircraft.
+  await page.route("**/api/v1/alerts/01E2EALERT", (route) => route.fulfill({ json: ALERT }));
+  await page.route("**/api/v1/alerts?**", (route) => route.fulfill({ json: { items: [ALERT], total: 1 } }));
+  await page.route("**/api/v1/rules**", (route) => route.fulfill({ json: [] }));
+
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Centrer la carte sur F-GKXA (alerte R1)" }).click();
+
+  const card = page.getByRole("region", { name: "Aéronef suivi" });
+  await expect(card.getByRole("heading", { name: "F-GKXA" })).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard$/);
+
+  await page.getByRole("button", { name: "Ouvrir l'alerte R1 de F-GKXA dans les alertes" }).click();
+
+  await expect(page).toHaveURL(/\/alerts\?alert=01E2EALERT$/);
+  await expect(page.getByRole("region", { name: "Détail de l'alerte" })).toBeVisible();
+  await expect(page.getByRole("row", { selected: true })).toBeVisible();
+});

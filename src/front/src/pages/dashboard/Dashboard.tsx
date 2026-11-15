@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import ActiveAlerts from "@/components/dashboard/ActiveAlerts";
 import AlertChart from "@/components/dashboard/AlertChart";
@@ -31,6 +32,8 @@ export const REFRESH_MS = 30_000;
 export const REPLAY_REFRESH_MS = 5_000;
 /** Time between two readings of the aircraft in the live mode. */
 export const AIRCRAFT_REFRESH_MS = 30_000;
+/** A click on an alert zooms in to this level if the map is further out, so its aircraft can be centred. */
+export const ALERT_FOCUS_ZOOM = 7;
 
 export interface DashboardProps {
   /** Where the figures come from. Tests give their own. */
@@ -49,6 +52,7 @@ export default function Dashboard({ service, alertService, collectionService }: 
   const { user } = useAuth();
   const replay = useReplay();
   const toast = useToast();
+  const navigate = useNavigate();
   const supervisor = user?.isSupervisor === true;
   const api = useMemo(() => service ?? new DashboardService(), [service]);
   const alerts = useMemo(() => alertService ?? new AlertService(), [alertService]);
@@ -67,6 +71,8 @@ export default function Dashboard({ service, alertService, collectionService }: 
   const [history, setHistory] = useState<FlightPoint[]>([]);
   const [alertsOpen, setAlertsOpen] = useState(() => !window.matchMedia?.("(max-width: 720px)").matches);
   const [fullscreen, setFullscreen] = useState(false);
+  // The alert last clicked: a second click on it, once its aircraft is centred, opens it in the alerts.
+  const [focusedAlertId, setFocusedAlertId] = useState<string | null>(null);
   const stage = useRef<HTMLElement>(null);
   const map = useRef<TrafficMapHandle>(null);
   const replaying = mode === "replay";
@@ -191,6 +197,28 @@ export default function Dashboard({ service, alertService, collectionService }: 
     [aircraft, track, stopTracking],
   );
 
+  /**
+   * A click on an alert: the first one centres the map on its aircraft, the second one (the aircraft is
+   * still the one followed) opens the alert in the alerts page. Only the Supervisor has that page; an
+   * alert whose aircraft is not on the map goes there at once.
+   */
+  const selectAlert = useCallback(
+    (alert: Alert) => {
+      const centred = focusedAlertId === alert.id && trackedId === alert.aircraftId;
+      const item = aircraft?.find((candidate) => candidate.id === alert.aircraftId);
+      if (centred || !item) {
+        if (supervisor) navigate(`/alerts?alert=${encodeURIComponent(alert.id)}`);
+        return;
+      }
+      setFocusedAlertId(alert.id);
+      void track(item);
+      map.current?.zoomAtLeast(ALERT_FOCUS_ZOOM);
+    },
+    [aircraft, focusedAlertId, navigate, supervisor, track, trackedId],
+  );
+  const centredAlertId =
+    dashboard?.latestAlerts.find((alert) => alert.id === focusedAlertId && alert.aircraftId === trackedId)?.id ?? null;
+
   useEffect(() => {
     const onChange = () => setFullscreen(document.fullscreenElement === stage.current && stage.current !== null);
     document.addEventListener("fullscreenchange", onChange);
@@ -296,6 +324,8 @@ export default function Dashboard({ service, alertService, collectionService }: 
                     onProcess={supervisor ? (alert) => void process(alert) : undefined}
                     processingId={processingId}
                     linkToAlerts={supervisor}
+                    onSelect={selectAlert}
+                    selectedId={centredAlertId}
                   />
                 )}
               </div>

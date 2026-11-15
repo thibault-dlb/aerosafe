@@ -24,7 +24,7 @@ Notation: `now` is the time of the collection that has just run, not the time th
 | --- | --- | --- |
 | R1 | `now − lastContactAt` of the latest observation | value > 300 s |
 | R2 | `now − positionAt` of the latest observation | value > 600 s |
-| R3 | `abs(p2.altitude − p1.altitude) / Δt` | value > 30 m/s, with `10 s ≤ Δt ≤ 300 s` |
+| R3 | `(p2.altitude − p1.altitude) / Δt`, signed: positive in a climb, negative in a descent | `abs(value)` > 30 m/s, with `10 s ≤ Δt ≤ 300 s` |
 | R4 | `abs(p2.speed − p1.speed) / Δt` | value > 2 m/s², with `10 s ≤ Δt ≤ 300 s` |
 | R5 | `shortest_angle(p2.heading, p1.heading) / Δt`, where `shortest_angle` is in 0 to 180° | value > 5 °/s, with `10 s ≤ Δt ≤ 300 s` and speed above 50 m/s |
 

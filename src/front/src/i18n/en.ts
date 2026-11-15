@@ -139,6 +139,8 @@ export const en: Record<TranslationKey, string> = {
   "dashboard.alerts.empty.title": "No active alert",
   "dashboard.alerts.empty.body": "The traffic followed triggers no rule at the moment.",
   "dashboard.alerts.all": "See the {count} active alerts",
+  "dashboard.alerts.focus": "Centre the map on {aircraft} (alert {rule})",
+  "dashboard.alerts.open": "Open alert {rule} of {aircraft} in the alerts",
   "dashboard.chart.title": "Alerts per rule",
   "dashboard.chart.period": "Period",
   "dashboard.chart.period.24h": "24 h",

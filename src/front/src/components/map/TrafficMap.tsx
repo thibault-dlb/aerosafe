@@ -16,6 +16,8 @@ export interface TrafficMapHandle {
   recenter: () => void;
   /** Zooms in (positive) or out (negative), by levels. */
   zoomBy: (levels: number) => void;
+  /** Zooms in to this level if the map is zoomed out further; the followed aircraft stays at the centre. */
+  zoomAtLeast: (zoom: number) => void;
 }
 
 export interface TrafficMapProps {
@@ -108,6 +110,10 @@ export default function TrafficMap({
       describe: (id) => layer.current?.describe(id) ?? null,
       recenter: () => fit(latest.current.bounds),
       zoomBy: (levels) => service.current?.leaflet.zoomIn(levels, { animate: false }),
+      zoomAtLeast: (zoom) => {
+        const leaflet = service.current?.leaflet;
+        if (leaflet && leaflet.getZoom() < zoom) leaflet.setZoom(zoom, { animate: false });
+      },
     }),
     [],
   );

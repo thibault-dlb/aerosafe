@@ -1,5 +1,5 @@
-import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { Alert } from "@/models/Alert";
 import { renderInApp } from "@/test/app";
@@ -22,6 +22,36 @@ describe("ActiveAlerts", () => {
 
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Voir les 12 alertes actives" })).toHaveAttribute("href", "/alerts");
+  });
+});
+
+describe("ActiveAlerts rows that can be clicked", () => {
+  it("names what a click does, and highlights the row of the alert centred", () => {
+    const { rerender } = renderInApp(<ActiveAlerts alerts={[ALERT]} total={1} onSelect={() => undefined} selectedId={null} />);
+    expect(screen.getByRole("button", { name: "Centrer la carte sur 3c6444 (alerte R1)" })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /R1/ })).toHaveAttribute("aria-selected", "false");
+
+    rerender(<ActiveAlerts alerts={[ALERT]} total={1} onSelect={() => undefined} selectedId="01A" linkToAlerts />);
+
+    expect(screen.getByRole("button", { name: "Ouvrir l'alerte R1 de 3c6444 dans les alertes" })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /R1/ })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("calls back with the alert, from the button and from the row", () => {
+    const onSelect = vi.fn();
+    renderInApp(<ActiveAlerts alerts={[ALERT]} total={1} onSelect={onSelect} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Centrer la carte/ }));
+    fireEvent.click(screen.getByText("3c6444"));
+
+    expect(onSelect).toHaveBeenCalledTimes(2);
+    expect(onSelect).toHaveBeenCalledWith(ALERT);
+  });
+
+  it("leaves the rows alone without a callback", () => {
+    renderInApp(<ActiveAlerts alerts={[ALERT]} total={1} />);
+
+    expect(screen.queryByRole("button", { name: /Centrer la carte/ })).not.toBeInTheDocument();
   });
 });
 

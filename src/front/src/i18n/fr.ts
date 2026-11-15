@@ -137,6 +137,8 @@ export const fr = {
   "dashboard.alerts.empty.title": "Aucune alerte active",
   "dashboard.alerts.empty.body": "Le trafic suivi ne déclenche aucune règle en ce moment.",
   "dashboard.alerts.all": "Voir les {count} alertes actives",
+  "dashboard.alerts.focus": "Centrer la carte sur {aircraft} (alerte {rule})",
+  "dashboard.alerts.open": "Ouvrir l'alerte {rule} de {aircraft} dans les alertes",
   "dashboard.chart.title": "Alertes par règle",
   "dashboard.chart.period": "Période",
   "dashboard.chart.period.24h": "24 h",

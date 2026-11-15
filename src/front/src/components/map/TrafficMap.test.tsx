@@ -59,6 +59,17 @@ describe("TrafficMap", () => {
     }).not.toThrow();
   });
 
+  it("zooms in at least to a level, and never zooms out to reach it", () => {
+    const { handle } = map();
+    const leaflet = document.querySelector(".leaflet-container") as HTMLElement | null;
+    expect(leaflet).not.toBeNull();
+
+    expect(() => {
+      handle.current?.zoomAtLeast(7);
+      handle.current?.zoomAtLeast(3);
+    }).not.toThrow();
+  });
+
   it("takes new reports, a new trail and a new zone without being rebuilt", () => {
     const { rerender, container, props } = map();
     const holder = container.firstElementChild;
