@@ -286,7 +286,7 @@ export const fr = {
 
   "footer.disclaimer":
     "AeroSafe est un projet pédagogique. Ce n'est pas un système certifié de surveillance ou de gestion du trafic aérien et il ne doit pas servir à un usage opérationnel.",
-  "footer.data": "Données : The OpenSky Network. Fond de carte : © contributeurs OpenStreetMap.",
+  "footer.data": "Données : The OpenSky Network. Fond de carte : Natural Earth et OurAirports.",
 
   // Shared interface elements.
   "criticality.high": "Haute",

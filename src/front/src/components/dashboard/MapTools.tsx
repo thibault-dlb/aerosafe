@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useId, useMemo, useState } from "react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 
 import { usePreferences } from "@/hooks/usePreferences";
 import type { Aircraft } from "@/models/Aircraft";
@@ -81,7 +81,7 @@ export function FindAircraft({ aircraft, onFind }: FindAircraftProps) {
       .slice(0, SUGGESTIONS);
   }, [aircraft, wanted]);
 
-  function submit(event: FormEvent) {
+  function submit(event: { preventDefault: () => void }) {
     event.preventDefault();
     const found = aircraft.find((item) => item.displayName.toLowerCase() === wanted || item.icao24 === wanted);
     if (found) {
@@ -106,6 +106,10 @@ export function FindAircraft({ aircraft, onFind }: FindAircraftProps) {
         onChange={(event) => {
           setText(event.target.value);
           setMissing(false);
+        }}
+        // Some browsers (WebKit) let the list of suggestions swallow Enter before the form sees it.
+        onKeyDown={(event) => {
+          if (event.key === "Enter") submit(event);
         }}
         placeholder={t("dashboard.map.find")}
         aria-label={t("dashboard.map.find")}

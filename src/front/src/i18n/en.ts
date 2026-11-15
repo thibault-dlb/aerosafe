@@ -288,7 +288,7 @@ export const en: Record<TranslationKey, string> = {
 
   "footer.disclaimer":
     "AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally.",
-  "footer.data": "Data: The OpenSky Network. Map: © OpenStreetMap contributors.",
+  "footer.data": "Data: The OpenSky Network. Map: Natural Earth and OurAirports.",
 
   // Shared interface elements.
   "criticality.high": "High",
