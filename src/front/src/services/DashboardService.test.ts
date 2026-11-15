@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { Aircraft } from "@/models/Aircraft";
+import { Aircraft, Observation } from "@/models/Aircraft";
 import type { AircraftService } from "@/services/AircraftService";
 import type { ApiClient } from "@/services/ApiClient";
 import { DataModeService } from "@/services/DataModeService";
@@ -47,7 +47,19 @@ describe("DashboardService", () => {
     await new DashboardService({} as ApiClient, modes(true), aircraft).trackedAircraft();
 
     expect(live).toEqual([placed]);
-    expect(search).toHaveBeenNthCalledWith(1, { area: DashboardService.AREA, limit: 200 });
-    expect(search).toHaveBeenNthCalledWith(2, { area: DashboardService.FRANCE_AREA, limit: 200 });
+    expect(search).toHaveBeenNthCalledWith(1, { area: DashboardService.AREA, limit: 2000 });
+    expect(search).toHaveBeenNthCalledWith(2, { area: DashboardService.HISTORICAL_AREA, limit: 2000 });
+  });
+
+  it("reads the whole flight of an aircraft", async () => {
+    const at = new Date("2026-11-14T10:00:00Z");
+    const observations = [new Observation(at, at, 48.8, 2.3, 9000, 200, 90, false, "F1")];
+    const observationsOf = vi.fn().mockResolvedValue(observations);
+    const service = new DashboardService({} as ApiClient, modes(false), { observations: observationsOf } as unknown as AircraftService);
+
+    const points = await service.flightOf("01A");
+
+    expect(observationsOf).toHaveBeenCalledWith("01A", { limit: 5000 });
+    expect(points).toEqual([{ at: at.getTime(), lat: 48.8, lon: 2.3, altitude: 9000 }]);
   });
 });

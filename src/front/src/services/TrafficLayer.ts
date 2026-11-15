@@ -5,7 +5,7 @@ import type { BasemapLayer } from "@/services/BasemapLayer";
 import { DeadReckoning, type Motion } from "@/services/DeadReckoning";
 import { type MapColors, MapTheme } from "@/services/MapTheme";
 import { type MapView, Mercator } from "@/services/Mercator";
-import { TrafficSprites } from "@/services/TrafficSprites";
+import { type SpriteSet, TrafficSprites } from "@/services/TrafficSprites";
 
 /** One aircraft on the map: its latest report, how it moves from there, and where the last frame drew it. */
 interface Mover {
@@ -17,6 +17,8 @@ interface Mover {
   shiftAt: number;
   color: string;
   alertColor: string | null;
+  /** The heading as a step of the sprites. */
+  step: number;
   /** Screen position of the last frame. */
   x: number;
   y: number;
@@ -143,6 +145,7 @@ export class TrafficLayer {
           shiftAt: real,
           color: "",
           alertColor: null,
+          step: 0,
           x: 0,
           y: 0,
           wx: 0,
@@ -285,9 +288,15 @@ export class TrafficLayer {
       context.closePath();
     }
     context.stroke();
+    const sets = new Map<string, SpriteSet>();
     for (const mover of this.movers.values()) {
       if (!mover.visible || mover.data.onGround === true) continue;
-      const sprite = this.sprites.plane(mover.color, colors.outline, mover.data.heading, planeScale, ratio);
+      let set = sets.get(mover.color);
+      if (!set) {
+        set = this.sprites.set(mover.color, colors.outline, planeScale, ratio);
+        sets.set(mover.color, set);
+      }
+      const sprite = set.get(mover.step);
       if (!sprite) continue;
       context.globalAlpha = mover.silent ? 0.4 : 1;
       context.drawImage(sprite.image, mover.x - sprite.box / 2, mover.y - sprite.box / 2, sprite.box, sprite.box);
@@ -402,6 +411,7 @@ export class TrafficLayer {
   private paint(mover: Mover): void {
     mover.color = this.theme.markerColor({ altitude: mover.data.altitude, criticality: mover.data.criticality }, this.colors);
     mover.alertColor = this.theme.alertColor(mover.data.criticality, this.colors);
+    mover.step = TrafficSprites.step(mover.data.heading);
   }
 
   private readonly onClick = (event: L.LeafletMouseEvent): void => {

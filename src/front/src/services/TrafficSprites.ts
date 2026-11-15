@@ -6,6 +6,22 @@ export interface Sprite {
   box: number;
 }
 
+/** The sprites of one colour, one size and one pixel ratio, for each heading step; drawn when first asked for. */
+export class SpriteSet {
+  private readonly sprites: (Sprite | null | undefined)[] = [];
+
+  constructor(private readonly make: (step: number) => Sprite | null) {}
+
+  get(step: number): Sprite | null {
+    let sprite = this.sprites[step];
+    if (sprite === undefined) {
+      sprite = this.make(step);
+      this.sprites[step] = sprite;
+    }
+    return sprite;
+  }
+}
+
 /**
  * The silhouettes of the aircraft, drawn once for each colour, size and heading (in steps of five
  * degrees) into small canvases. A frame then only copies them, which is what lets the map move
@@ -17,8 +33,9 @@ export class TrafficSprites {
   /** Half the width of the silhouette, in its own units. */
   static readonly EXTENT = 14;
 
-  private readonly cache = new Map<string, Sprite>();
+  private readonly sets = new Map<string, SpriteSet>();
   private path: Path2D | null = null;
+  private drawn = 0;
 
   constructor(private readonly create: () => HTMLCanvasElement = () => document.createElement("canvas")) {}
 
@@ -35,16 +52,28 @@ export class TrafficSprites {
     return Math.round(raw * 20) / 20;
   }
 
+  /** The number of sprites drawn so far. */
   get size(): number {
-    return this.cache.size;
+    return this.drawn;
+  }
+
+  /** The sprites of a colour at a size: ask it for a heading step, once for each aircraft of a frame. */
+  set(color: string, outline: string, scale: number, ratio: number): SpriteSet {
+    const key = `${color}|${outline}|${scale}|${ratio}`;
+    let set = this.sets.get(key);
+    if (!set) {
+      set = new SpriteSet((step) => this.draw(color, outline, step, scale, ratio));
+      this.sets.set(key, set);
+    }
+    return set;
   }
 
   /** The sprite of an aircraft, or null where there is no canvas (a test). Its centre is the aircraft. */
   plane(color: string, outline: string, heading: number | null, scale: number, ratio: number): Sprite | null {
-    const step = TrafficSprites.step(heading);
-    const key = `${color}|${outline}|${step}|${scale}|${ratio}`;
-    const known = this.cache.get(key);
-    if (known) return known;
+    return this.set(color, outline, scale, ratio).get(TrafficSprites.step(heading));
+  }
+
+  private draw(color: string, outline: string, step: number, scale: number, ratio: number): Sprite | null {
     const canvas = this.create();
     const box = Math.ceil(TrafficSprites.EXTENT * 2 * scale + 4);
     canvas.width = Math.ceil(box * ratio);
@@ -62,8 +91,7 @@ export class TrafficSprites {
     context.stroke(this.path);
     context.fillStyle = color;
     context.fill(this.path);
-    const sprite = { image: canvas, box };
-    this.cache.set(key, sprite);
-    return sprite;
+    this.drawn += 1;
+    return { image: canvas, box };
   }
 }

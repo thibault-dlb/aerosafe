@@ -17,11 +17,15 @@ const T0 = new Date("2026-11-14T10:00:00Z");
 const ALERT = new Alert("01A", "R1", T0, "R1 delay", "01AIRCRAFT", "3c6444", null, "Délai", 420, 300, "s", "HIGH");
 const AIRCRAFT = new Aircraft("01AIRCRAFT", "3c6444", "F-GKXA", null, null, T0, 48.8, 2.3, 9000, 90, false);
 const COLLECTION = new CollectionSummary(true, false, false, T0, 3900, [new CollectionRun(T0, "SUCCESS")]);
-const DASHBOARD = new DashboardData(4, 9, 17, [ALERT], COLLECTION);
+const DASHBOARD = new DashboardData(4, 9, 17, [ALERT], COLLECTION, [ALERT]);
 const STATISTICS = new DashboardStatistics("24h", "hour", 3, [new StatisticsSlice(T0, 3, { R1: 3 })]);
 
-function services(overrides: Partial<Record<"load" | "statistics" | "trackedAircraft", unknown>> = {}) {
+function services(overrides: Partial<Record<"load" | "statistics" | "trackedAircraft" | "flightOf", unknown>> = {}) {
   return {
+    flightOf: vi.fn().mockResolvedValue([
+      { at: T0.getTime() - 600_000, lat: 48.7, lon: 2.1, altitude: 8000 },
+      { at: T0.getTime(), lat: 48.8, lon: 2.3, altitude: 9000 },
+    ]),
     load: vi.fn().mockResolvedValue(DASHBOARD),
     statistics: vi.fn().mockResolvedValue(STATISTICS),
     trackedAircraft: vi.fn().mockResolvedValue([AIRCRAFT]),
@@ -138,5 +142,64 @@ describe("Dashboard", () => {
 
     expect(await screen.findByText(/n'ont pas pu être chargées/)).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Alertes actives" })).not.toBeInTheDocument();
+  });
+
+  it("follows an aircraft named in the search box, with its flight and its alert", async () => {
+    const service = renderDashboard("USER");
+    const search = await screen.findByRole("combobox", { name: "Suivre un aéronef" });
+
+    fireEvent.change(search, { target: { value: "f-gkxa" } });
+    fireEvent.submit(search);
+
+    const card = await screen.findByRole("region", { name: "Aéronef suivi" });
+    expect(card).toHaveTextContent("F-GKXA");
+    expect(card).toHaveTextContent("R1");
+    expect(card.querySelector("svg[role='img']")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Ouvrir la fiche" })).toHaveAttribute("href", "/aircraft/01AIRCRAFT");
+    expect(service.flightOf).toHaveBeenCalledWith("01AIRCRAFT");
+  });
+
+  it("stops following when the card is closed", async () => {
+    renderDashboard("USER");
+    const search = await screen.findByRole("combobox", { name: "Suivre un aéronef" });
+    fireEvent.change(search, { target: { value: "F-GKXA" } });
+    fireEvent.submit(search);
+    await screen.findByRole("region", { name: "Aéronef suivi" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Ne plus suivre" }));
+
+    expect(screen.queryByRole("region", { name: "Aéronef suivi" })).not.toBeInTheDocument();
+  });
+
+  it("toggles the follow of the aircraft from its card", async () => {
+    renderDashboard("USER");
+    const search = await screen.findByRole("combobox", { name: "Suivre un aéronef" });
+    fireEvent.change(search, { target: { value: "F-GKXA" } });
+    fireEvent.submit(search);
+    const follow = await screen.findByRole("button", { name: "Suivi" });
+
+    fireEvent.click(follow);
+
+    expect(screen.getByRole("button", { name: "Suivre" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("still follows an aircraft when its flight cannot be read", async () => {
+    renderDashboard("USER", services({ flightOf: vi.fn().mockRejectedValue(new ApiError(500)) }));
+    const search = await screen.findByRole("combobox", { name: "Suivre un aéronef" });
+    fireEvent.change(search, { target: { value: "3c6444" } });
+    fireEvent.submit(search);
+
+    expect(await screen.findByRole("region", { name: "Aéronef suivi" })).toBeInTheDocument();
+  });
+
+  it("folds and unfolds the alerts over the map", async () => {
+    renderDashboard("USER");
+    await screen.findByRole("region", { name: "Alertes actives" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Replier les alertes" }));
+    expect(screen.queryByRole("region", { name: "Alertes actives" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Alertes actives (4)" }));
+    expect(screen.getByRole("region", { name: "Alertes actives" })).toBeInTheDocument();
   });
 });

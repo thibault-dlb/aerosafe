@@ -33,7 +33,7 @@ function recorder() {
   const context = new Proxy(
     {},
     {
-      get: (_target, name: string) => (..._args: unknown[]) => {
+      get: (_target, name: string) => () => {
         calls[name] = (calls[name] ?? 0) + 1;
       },
       set: () => true,

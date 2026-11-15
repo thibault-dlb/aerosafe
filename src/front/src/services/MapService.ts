@@ -41,6 +41,12 @@ export const ATTRIBUTION =
 export const DEFAULT_CENTER: L.LatLngTuple = [48.7, 2.5];
 export const DEFAULT_ZOOM = 8;
 
+/** What the base map draws: western Europe (`scripts/build_basemap.py`). The view never leaves it. */
+export const MAP_FRAME: L.LatLngBoundsLiteral = [
+  [39.5, -9],
+  [54, 13],
+];
+
 function toLatLng(position: MapPosition): L.LatLngTuple {
   return [position.latitude, position.longitude];
 }
@@ -90,6 +96,8 @@ export class MapService {
       wheelPxPerZoomLevel: 90,
       maxZoom: 13,
       minZoom: 4,
+      maxBounds: MAP_FRAME,
+      maxBoundsViscosity: 1,
     });
     this.map.attributionControl.setPrefix(false);
     this.map.attributionControl.addAttribution(ATTRIBUTION);
@@ -111,14 +119,29 @@ export class MapService {
     // The side bar folding, a rotated phone or a resized window change the room the map has:
     // without this Leaflet keeps drawing for the old size and leaves a blank strip.
     if (typeof ResizeObserver === "function") {
-      this.sizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
+      this.sizeObserver = new ResizeObserver(() => {
+        this.map?.invalidateSize();
+        this.limitZoomOut();
+      });
       this.sizeObserver.observe(container);
     }
+  }
+
+  /** Zooming out stops where the map would show more than the base map draws. */
+  private limitZoomOut(): void {
+    const map = this.map;
+    if (!map || map.getSize().x === 0 || map.getSize().y === 0) return;
+    map.setMinZoom(map.getBoundsZoom(MAP_FRAME, true));
   }
 
   /** The Leaflet map, for the layers that draw on it themselves (the traffic of the dashboard). */
   get leaflet(): L.Map {
     return this.requireMap();
+  }
+
+  /** The base map layer, which the traffic layer keeps in step with its own frames. */
+  get basemapLayer(): BasemapLayer | null {
+    return this.basemap;
   }
 
   /** Outlines the zone of the collection on the base map, or removes it. */
