@@ -43,8 +43,8 @@ export const DEFAULT_ZOOM = 8;
 
 /** What the base map draws: western Europe (`scripts/build_basemap.py`). The view never leaves it. */
 export const MAP_FRAME: L.LatLngBoundsLiteral = [
-  [39.5, -9],
-  [54, 13],
+  [36, -13],
+  [57, 18],
 ];
 
 function toLatLng(position: MapPosition): L.LatLngTuple {

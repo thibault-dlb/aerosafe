@@ -42,8 +42,9 @@ SOURCES = {
 MASK = Path("src/api/services/historical/areas/france_100km.csv")
 OUTPUT = Path("src/front/src/assets/map")
 CELL_DEGREES = 0.01
-# Western Europe: what a map of the French airspace can show.
-WEST, SOUTH, EAST, NORTH = -9.0, 39.5, 13.0, 54.0
+# Western Europe: what a map of the French airspace can show. Wide enough to zoom out until the
+# whole area of the historical data (France plus 100 km) fits a wide screen with room to spare.
+WEST, SOUTH, EAST, NORTH = -13.0, 36.0, 18.0, 57.0
 Point = tuple[float, float]
 
 
