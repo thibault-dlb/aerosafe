@@ -109,8 +109,8 @@
   top: var(--space-3);
   right: var(--space-3);
   bottom: 1.75rem;
-  align-items: flex-start;
-  flex-direction: row-reverse;
+  align-items: flex-end;
+  flex-direction: column;
   gap: var(--space-2);
 }
 
@@ -192,6 +192,32 @@
     left: var(--space-3);
     width: auto;
     max-height: 45%;
+  }
+}
+
+/*
+ * Beside a desktop screen the right side is one column: the button that folds the alerts, the
+ * map buttons under it, then the alerts when they are open. The dock stops being a box of its
+ * own so that its two children take their place in the column.
+ */
+@media (min-width: 721px) {
+  .alertDock {
+    display: contents;
+  }
+
+  .alertToggle {
+    order: 0;
+  }
+
+  .tools {
+    order: 1;
+  }
+
+  .alertDock > section {
+    order: 2;
+    width: min(24rem, calc(100vw - 6rem));
+    min-height: 0;
+    overflow-y: auto;
   }
 }
 
