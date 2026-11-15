@@ -118,7 +118,7 @@ test("the log in screen stays dark when the system asks for the light theme", as
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/login");
 
-  const background = await page.evaluate(() => getComputedStyle(document.querySelector("[class*='screen']") as Element).backgroundColor);
+  const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
   expect(background).toBe("rgb(28, 17, 11)");
 });
