@@ -58,6 +58,14 @@ export class BasemapLayer {
     this.schedule();
   }
 
+  /** Draws now what is waiting to be drawn, so a layer drawn in the same frame is in step with the map. */
+  flush(): void {
+    if (this.frame === 0) return;
+    cancelAnimationFrame(this.frame);
+    this.frame = 0;
+    this.draw();
+  }
+
   destroy(): void {
     this.destroyed = true;
     cancelAnimationFrame(this.frame);

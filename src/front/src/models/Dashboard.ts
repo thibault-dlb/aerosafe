@@ -15,6 +15,8 @@ export interface CollectionSummaryJson {
 export interface DashboardJson {
   counters: { active_alerts: number; unprocessed_alerts: number; alerts_24h: number };
   active_alerts: AlertJson[];
+  /** For each aircraft with an active alert, its most critical one. */
+  alerted_aircraft?: AlertJson[];
   collection: CollectionSummaryJson;
 }
 
@@ -71,6 +73,8 @@ export class Dashboard {
     readonly alertsLast24h: number,
     readonly latestAlerts: Alert[],
     readonly collection: CollectionSummary,
+    /** For each aircraft with an active alert, its most critical one: the map colours them. */
+    readonly alertedAircraft: Alert[] = [],
   ) {}
 
   static fromJson(json: DashboardJson): Dashboard {
@@ -80,6 +84,7 @@ export class Dashboard {
       json.counters.alerts_24h,
       json.active_alerts.map((alert) => Alert.fromJson(alert)),
       CollectionSummary.fromJson(json.collection),
+      (json.alerted_aircraft ?? []).map((alert) => Alert.fromJson(alert)),
     );
   }
 }
