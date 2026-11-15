@@ -88,6 +88,18 @@ describe("AlertDetail", () => {
     expect(document.querySelector("u")).toBeNull();
   });
 
+  it("keeps the minus sign of a descent, and compares its size with the threshold", () => {
+    const { container } = renderWithPreferences(
+      <MemoryRouter>
+        <AlertDetail alert={alert({ observed: -42 })} onClose={() => undefined} onProcess={() => undefined} />
+      </MemoryRouter>,
+    );
+
+    const value = screen.getByText("-42 m/s");
+    expect(value.className).toMatch(/over/);
+    expect(container.querySelector("u")?.previousElementSibling?.getAttribute("style")).toMatch(/width: 83\.3/);
+  });
+
   it("does not flag a value that stays under its threshold", () => {
     show(alert({ observed: 10 }));
 
