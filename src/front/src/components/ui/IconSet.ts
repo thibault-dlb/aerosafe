@@ -25,8 +25,6 @@ export type IconName =
   | "collapse"
   | "expand"
   | "search"
-  | "sun"
-  | "moon"
   | "live"
   | "replay"
   | "radar"
@@ -110,11 +108,6 @@ export class IconSet {
     collapse: [path("m11.5 6-6 6 6 6M18.5 6l-6 6 6 6")],
     expand: [path("m12.5 6 6 6-6 6M5.5 6l6 6-6 6")],
     search: [circle(11, 11, 6.5), path("m16 16 4.5 4.5")],
-    sun: [
-      circle(12, 12, 3.8),
-      path("M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"),
-    ],
-    moon: [path("M20.3 14.6A8.6 8.6 0 1 1 9.4 3.7a7 7 0 0 0 10.9 10.9Z")],
     live: [
       circle(12, 12, 2, true),
       path("M8.3 8.3a5.2 5.2 0 0 0 0 7.4M15.7 8.3a5.2 5.2 0 0 1 0 7.4M5.3 5.3a9.5 9.5 0 0 0 0 13.4M18.7 5.3a9.5 9.5 0 0 1 0 13.4"),

@@ -6,7 +6,7 @@ export type UnitSystem = "metric" | "aeronautical";
 export const UNIT_SYSTEMS: readonly UnitSystem[] = ["metric", "aeronautical"];
 
 /**
- * The unit system chosen by the user, remembered like the language and the theme.
+ * The unit system chosen by the user, remembered like the language.
  * Only the display changes: the API, the rules and their thresholds stay metric.
  */
 export class UnitService {

@@ -4,7 +4,6 @@ import type { TranslationKey } from "@/i18n/fr";
 
 import DataModeSwitch from "./DataModeSwitch";
 import LanguageSwitch from "./LanguageSwitch";
-import ThemeSwitch from "./ThemeSwitch";
 import styles from "./TopBar.module.css";
 
 export interface TopBarProps {
@@ -16,7 +15,7 @@ export interface TopBarProps {
   onMenu: () => void;
 }
 
-/** The thin bar over the pages: where we are, the data source, the language and the theme. */
+/** The thin bar over the pages: where we are, the data source and the language. */
 export default function TopBar({ title, menuControls, menuOpen, onMenu }: TopBarProps) {
   const { t } = useTranslation();
   return (
@@ -35,7 +34,6 @@ export default function TopBar({ title, menuControls, menuOpen, onMenu }: TopBar
       <div className={styles.controls}>
         <DataModeSwitch />
         <LanguageSwitch />
-        <ThemeSwitch />
       </div>
     </header>
   );

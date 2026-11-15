@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
 import { usePreferences } from "@/hooks/usePreferences";
-import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "@/hooks/useTranslation";
 import { PreferenceStore } from "@/services/PreferenceStore";
 
@@ -25,34 +24,30 @@ function wrapperWith(store: PreferenceStore) {
 
 function Probe() {
   const { t, language, setLanguage } = useTranslation();
-  const { theme, setTheme } = useTheme();
   return (
     <>
-      <p>{`${language}/${theme}`}</p>
+      <p>{language}</p>
       <p>{t("nav.alerts")}</p>
       <button onClick={() => setLanguage("en")}>english</button>
-      <button onClick={() => setTheme("light")}>light</button>
     </>
   );
 }
 
 describe("PreferencesProvider", () => {
-  it("starts in French with the dark theme", () => {
+  it("starts in French", () => {
     render(<Probe />, { wrapper: wrapperWith(memoryStore()) });
 
-    expect(screen.getByText("fr/dark")).toBeInTheDocument();
+    expect(screen.getByText("fr")).toBeInTheDocument();
     expect(screen.getByText("Alertes")).toBeInTheDocument();
   });
 
-  it("switches the language and the theme", () => {
+  it("switches the language", () => {
     render(<Probe />, { wrapper: wrapperWith(memoryStore()) });
 
     fireEvent.click(screen.getByText("english"));
-    fireEvent.click(screen.getByText("light"));
 
-    expect(screen.getByText("en/light")).toBeInTheDocument();
+    expect(screen.getByText("en")).toBeInTheDocument();
     expect(screen.getByText("Alerts")).toBeInTheDocument();
-    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     expect(document.documentElement.lang).toBe("en");
   });
 
@@ -64,7 +59,7 @@ describe("PreferencesProvider", () => {
 
     render(<Probe />, { wrapper: wrapperWith(store) });
 
-    expect(screen.getByText("en/dark")).toBeInTheDocument();
+    expect(screen.getByText("en")).toBeInTheDocument();
   });
 
   it("switches the units and keeps the choice for the next visit", () => {

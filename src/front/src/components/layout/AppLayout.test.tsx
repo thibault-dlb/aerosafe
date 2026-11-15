@@ -74,13 +74,10 @@ describe("AppLayout", () => {
     expect(screen.getByRole("button", { name: "Français" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("switches the theme", () => {
+  it("offers no choice of theme", () => {
     renderAt("/alerts");
 
-    fireEvent.click(screen.getByRole("button", { name: "Passer au thème clair" }));
-
-    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
-    expect(screen.getByRole("button", { name: "Passer au thème sombre" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /thème/ })).not.toBeInTheDocument();
   });
 
   it("offers to skip the navigation and shows the disclaimer", () => {
@@ -109,16 +106,6 @@ describe("AppLayout", () => {
     expect(screen.getByRole("button", { name: "Direct" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Rejeu" }));
     expect(screen.getByRole("button", { name: "Rejeu" })).toHaveAttribute("aria-pressed", "true");
-  });
-
-  it("keeps the landing page in the dark theme, and only that page", () => {
-    renderAt("/");
-    expect(document.querySelector(".darkScope")).not.toBeNull();
-  });
-
-  it("leaves the other pages in the theme of the visitor", () => {
-    renderAt("/alerts");
-    expect(document.querySelector(".darkScope")).toBeNull();
   });
 
   it("makes the bar solid once the landing page has scrolled", () => {

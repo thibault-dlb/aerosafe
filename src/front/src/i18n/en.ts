@@ -17,11 +17,6 @@ export const en: Record<TranslationKey, string> = {
   "language.fr": "Français",
   "language.en": "English",
 
-  "theme.label": "Theme",
-  "theme.dark": "Dark",
-  "theme.light": "Light",
-  "theme.toLight": "Switch to the light theme",
-  "theme.toDark": "Switch to the dark theme",
 
   "layout.skipToContent": "Skip to the content",
 

@@ -9,7 +9,7 @@ export const DATA_MODES: readonly DataMode[] = ["live", "replay"];
  * The data mode chosen by the user, and the way it reaches the API: in the replay, the requests
  * that read aircraft, flights and alerts carry `source=replay`.
  *
- * The choice is remembered like the language and the theme. It is also kept in memory, shared by
+ * The choice is remembered like the language and the units. It is also kept in memory, shared by
  * every instance, so the services that call the API follow it even when the browser storage is
  * blocked and nothing can be remembered.
  */

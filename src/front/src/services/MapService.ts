@@ -58,7 +58,7 @@ function toArea(bounds: L.LatLngBounds): MapArea {
 /**
  * Draws aircraft and trajectories with Leaflet. Leaflet is used directly, without
  * `react-leaflet`, whose licence is not open source (D-01). The colours come from the
- * `--map-*` tokens through `MapTheme`, and are redrawn when the theme changes.
+ * `--map-*` tokens through `MapTheme`. The application has one theme, so they are read once.
  */
 export class MapService {
   private map: L.Map | null = null;
@@ -66,9 +66,6 @@ export class MapService {
   private readonly trajectoryLayer = L.layerGroup();
   private readonly areaLayer = L.layerGroup();
   private basemap: BasemapLayer | null = null;
-  private themeObserver: MutationObserver | null = null;
-  /** Without a choice of theme, the style sheet follows the system: watch it too. */
-  private systemTheme: MediaQueryList | null = null;
   private sizeObserver: ResizeObserver | null = null;
   private aircraft: MapPosition[] = [];
   private segments: MapPosition[][] = [];
@@ -107,15 +104,6 @@ export class MapService {
     this.aircraftLayer.addTo(this.map);
     this.trajectoryLayer.addTo(this.map);
 
-    this.themeObserver = new MutationObserver(() => this.redraw());
-    this.themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-    if (typeof window.matchMedia === "function") {
-      this.systemTheme = window.matchMedia("(prefers-color-scheme: light)");
-      this.systemTheme.addEventListener("change", this.redraw);
-    }
     // The side bar folding, a rotated phone or a resized window change the room the map has:
     // without this Leaflet keeps drawing for the old size and leaves a blank strip.
     if (typeof ResizeObserver === "function") {
@@ -239,10 +227,6 @@ export class MapService {
   /** Removes the map and frees its resources. Safe to call more than once. */
   destroy(): void {
     this.stopAreaSelection();
-    this.themeObserver?.disconnect();
-    this.themeObserver = null;
-    this.systemTheme?.removeEventListener("change", this.redraw);
-    this.systemTheme = null;
     this.sizeObserver?.disconnect();
     this.sizeObserver = null;
     this.basemap?.destroy();
@@ -331,14 +315,6 @@ export class MapService {
       );
     }
   }
-
-  /** Draws again with the colours of the theme in use, without moving the view. */
-  private readonly redraw = (): void => {
-    this.basemap?.setColors(this.theme.colors());
-    this.drawAircraft();
-    this.drawSegments();
-    this.drawArea();
-  };
 
   /**
    * Moves the view to show `positions`. Without animation: the aircraft and the trajectory of a

@@ -200,14 +200,13 @@ describe("AppShell", () => {
     expect(await screen.findByRole("heading", { name: "Landing" })).toBeInTheDocument();
   });
 
-  it("shows the language, the theme and the data source in the top bar", () => {
+  it("shows the language and the data source in the top bar, and no choice of theme", () => {
     renderShell();
     const bar = within(screen.getByRole("banner"));
 
     expect(bar.getByRole("group", { name: "Source des données" })).toBeInTheDocument();
     expect(bar.getByRole("group", { name: "Langue" })).toBeInTheDocument();
-    fireEvent.click(bar.getByRole("button", { name: "Passer au thème clair" }));
-    expect(bar.getByRole("button", { name: "Passer au thème sombre" })).toBeInTheDocument();
+    expect(bar.queryByRole("button", { name: /thème/ })).not.toBeInTheDocument();
   });
 
   it("shows the replay bar once the visitor chooses the replay", async () => {

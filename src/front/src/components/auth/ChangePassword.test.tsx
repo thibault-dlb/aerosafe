@@ -22,12 +22,6 @@ describe("ChangePassword", () => {
     expect(screen.getByText("jane.doe@example.fr")).toBeInTheDocument();
   });
 
-  it("is always dark, whatever the theme", () => {
-    const { container } = renderScreen();
-
-    expect(container.firstElementChild).toHaveClass("darkScope");
-  });
-
   it("replaces the password with the form of the account page", async () => {
     const changePassword = vi.fn().mockResolvedValue(new User("01HZ", "jane.doe@example.fr", "USER", true));
     renderScreen({ changePassword });

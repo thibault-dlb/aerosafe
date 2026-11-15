@@ -15,11 +15,6 @@ export const fr = {
   "language.fr": "Français",
   "language.en": "English",
 
-  "theme.label": "Thème",
-  "theme.dark": "Sombre",
-  "theme.light": "Clair",
-  "theme.toLight": "Passer au thème clair",
-  "theme.toDark": "Passer au thème sombre",
 
   "layout.skipToContent": "Aller au contenu",
 

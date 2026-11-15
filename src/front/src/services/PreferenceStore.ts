@@ -2,7 +2,7 @@
 export type StorageLike = Pick<Storage, "getItem" | "setItem">;
 
 /**
- * Remembers the user's choices (language, theme) in the browser.
+ * Remembers the user's choices (language, units, data mode) in the browser.
  * The storage can be missing or throw (private window, blocked site data): the store then
  * keeps working without remembering anything.
  */

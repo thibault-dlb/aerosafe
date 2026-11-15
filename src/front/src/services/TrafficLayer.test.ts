@@ -220,8 +220,6 @@ describe("TrafficLayer", () => {
   });
 
   it("colours an aircraft with an alert after its criticality", () => {
-    const colors = { ...new MapTheme().colors(), alertHigh: "#ff0000" };
-    layer.setColors(colors);
     layer.update([aircraft("a", { criticality: "HIGH" })]);
     const { context, calls } = recorder();
 

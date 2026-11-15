@@ -4,7 +4,6 @@
   min-height: 70vh;
 }
 
-/* The radar screen is dark whatever the theme, like the other radar screens. */
 .lost {
   display: grid;
   grid-template-columns: 1.1fr 1fr;

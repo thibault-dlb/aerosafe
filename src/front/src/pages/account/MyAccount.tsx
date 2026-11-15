@@ -13,14 +13,12 @@ import { UNIT_SYSTEMS } from "@/services/UnitService";
 
 import styles from "./MyAccount.module.css";
 
-const THEMES = ["dark", "light"] as const;
-
 /**
  * The account of the visitor, for any role: who they are, a new password, the preferences kept in
- * this browser (language, theme, units) and the deletion of the account.
+ * this browser (language, units) and the deletion of the account.
  */
 export default function MyAccount() {
-  const { t, theme, setTheme, units, setUnits } = usePreferences();
+  const { t, units, setUnits } = usePreferences();
   const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
 
@@ -58,18 +56,6 @@ export default function MyAccount() {
           <div className={styles.pref}>
             <span className={styles.label}>{t("language.label")}</span>
             <LanguageSwitch />
-          </div>
-          <div className={styles.pref} role="group" aria-label={t("theme.label")}>
-            <span className={styles.label} aria-hidden="true">
-              {t("theme.label")}
-            </span>
-            <div className={styles.choices}>
-              {THEMES.map((choice) => (
-                <Chip key={choice} pressed={theme === choice} onClick={() => setTheme(choice)}>
-                  {t(choice === "dark" ? "theme.dark" : "theme.light")}
-                </Chip>
-              ))}
-            </div>
           </div>
           <div className={styles.pref} role="group" aria-label={t("account.prefs.units")}>
             <span className={styles.label} aria-hidden="true">

@@ -48,8 +48,8 @@ describe("Icon", () => {
     expect(container.querySelector("circle")?.getAttribute("class")).toMatch(/solid/);
   });
 
-  it("offers the 44 icons of the design", () => {
-    expect(IconSet.names()).toHaveLength(44);
+  it("offers the 42 icons of the design", () => {
+    expect(IconSet.names()).toHaveLength(42);
     expect(IconSet.names()).toEqual(
       expect.arrayContaining(["dashboard", "eyeOff", "capsLock", "replay", "ruleR1", "ruleR5", "anonymous", "table"]),
     );
