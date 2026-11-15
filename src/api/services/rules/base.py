@@ -68,7 +68,7 @@ class BusinessRule(ABC):
         value = self.observe(snapshot, now)
         if value is None:
             return None
-        triggered = value > threshold
+        triggered = self.exceeds(value, threshold)
         return RuleOutcome(
             observed_value=round(value, 3),
             triggered=triggered,
@@ -78,6 +78,10 @@ class BusinessRule(ABC):
     @abstractmethod
     def observe(self, snapshot: AircraftSnapshot, now: datetime) -> float | None:
         """Compute the observed value, or `None` when the data does not allow it."""
+
+    def exceeds(self, value: float, threshold: float) -> bool:
+        """Whether the observed value is beyond the threshold. By default, above it."""
+        return value > threshold
 
     def message(
         self, snapshot: AircraftSnapshot, value: float, threshold: float, triggered: bool

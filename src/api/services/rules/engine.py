@@ -92,7 +92,7 @@ class RulesEngine:
                     created += 1
                     # NF-08: every trigger is logged with what explains it.
                     logger.info(
-                        "Rule {} triggered for {}: {} {} > {} {}",
+                        "Rule {} triggered for {}: {} {} beyond the threshold of {} {}",
                         model.code,
                         snapshot.icao24,
                         outcome.observed_value,
