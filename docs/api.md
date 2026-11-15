@@ -97,7 +97,7 @@ Query parameters of `GET /aircraft`. Every criterion is optional and they are co
 | `registration` | Part of the registration, case ignored |
 | `airline` | Part of the airline name or code, case ignored |
 | `south`, `west`, `north`, `east` | Area in degrees (WGS 84), all four or none. It applies to the latest known position of each aircraft |
-| `limit` | 1 to 200, default 50 |
+| `limit` | 1 to 2 000, default 50. The dashboard map asks for 2 000: it draws every aircraft of the area |
 
 Aircraft (search result and record):
 
@@ -113,11 +113,12 @@ Aircraft (search result and record):
   "longitude": 2.35,
   "altitude": 10972.8,
   "heading": 284.0,
-  "on_ground": false
+  "on_ground": false,
+  "speed": 231.5
 }
 ```
 
-`model`, `airline` and `registration` are `null` when unknown; the last contact and the position are `null` when the aircraft never sent any. `altitude` (in metres), `heading` (degrees clockwise from north) and `on_ground` are those of the latest observation, and are `null` when OpenSky did not send them or the aircraft was never observed. The map uses `heading` to turn the marker and `on_ground` to draw a grounded aircraft as a diamond.
+`model`, `airline` and `registration` are `null` when unknown; the last contact and the position are `null` when the aircraft never sent any. `altitude` (in metres), `heading` (degrees clockwise from north), `speed` (ground speed, in metres per second) and `on_ground` are those of the latest observation, and are `null` when OpenSky did not send them or the aircraft was never observed. The map uses `heading` to turn the marker, `on_ground` to draw a grounded aircraft as a diamond, and `heading` with `speed` to carry the aircraft forward between two reports and to draw its line of the next 15 minutes.
 
 `GET /aircraft/{aircraft_id}/observations` takes `start` and `end` (ISO 8601, inclusive, both optional; `start` must not be after `end`) and `limit` (1 to 5 000, default 500). It returns the latest `limit` observations of the period, in chronological order:
 
@@ -277,7 +278,16 @@ The clock stops at the end of the data. It is stored in `PARAMETRE_REJEU` (a sta
 
 ### Dashboard (`/api/v1/dashboard`)
 
-`TBD`.
+Work package `feat/dashboard` (BF-11, UC-04, team decision A-04). **Every account** reads the dashboard, a User as well as a Supervisor: 401 without a token, 403 while the password is a provisional one. It changes nothing; the actions behind it (processing an alert, pausing the collection) stay the Supervisor's, on their own routes. The service reads through `AlertService` and `CollectionStateStore`, never the tables. With `source=replay` the alerts are those of the replayed traffic up to the simulated instant, and a replay that was never started has no alert; the collection state is the real one in both modes.
+
+| Method and path | Query | Success | Errors |
+| --- | --- | --- | --- |
+| `GET /dashboard` | `source` (`live` or `replay`) | 200, `{"counters": {"active_alerts", "unprocessed_alerts", "alerts_24h"}, "active_alerts": [alert], "alerted_aircraft": [alert], "collection": {...}}`. `active_alerts` holds the 5 latest alerts whose situation lasts (same body as in [Alerts](#alerts)); `alerted_aircraft` holds, for each aircraft with an active alert (up to 500 alerts read), its most critical one: the map colours these aircraft and the card of the followed aircraft shows its alert; `alerts_24h` counts the 24 hours before now, or before the simulated instant | 401 |
+| `GET /dashboard/statistics` | `period` (`24h` default, `7d`, `30d`), `source` | 200, `{"period", "unit", "start", "end", "total", "slices": [{"start", "total", "per_rule": {"R1": 2}}]}`. 24 slices of one hour for `24h`, 7 or 30 of one day otherwise, the last one being the current hour or day (UTC). The slices without alert are present, with a total of 0 | 401, 422 unknown period |
+
+`collection` is a summary the User may read: `{"enabled", "paused", "running", "last_success_at", "remaining_credits", "recent_runs": [{"started_at", "status"}]}`, the 12 latest runs, newest first. It carries no error text; the Supervisor's `GET /collection/status` has the detail.
+
+The map of the dashboard is not part of this answer: it reads the aircraft of the area with `GET /aircraft`.
 
 ### Collection (`/api/v1/collection`)
 

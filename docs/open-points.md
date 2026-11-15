@@ -58,6 +58,8 @@ Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go bey
 | Dashboard | Active alerts, tracked aircraft, alert statistics, collection state. Flight statistics: duration and distance, altitude and speed, number of observations | A-04 |
 | Scope | Every requirement of the specifications is to be developed, including flight statistics (BF-08), alert configuration (UC-05) and account management (UC-06) | C-01, C-04 |
 | Account deletion | A user can request it; the account is anonymised, never deleted, following the database guide | C-05 |
+| Dashboard for a User | The dashboard is open to every account in read only: the figures, the active alerts, the chart and the state of the collection (without error text). Alerts, rules and accounts stay the Supervisor's. Added on 2026-11-15, to confirm with the teacher | A-02, A-04 |
+| Position of an aircraft between two reports | The map moves each aircraft from its last report at its heading and ground speed, for 90 seconds at most, and draws a line of its next 15 minutes at the same heading and speed. This is an estimate, labelled as such on the card of the followed aircraft; it is not stored and no rule reads it. Added on 2026-11-15, to confirm with the teacher | A-04 |
 | Accounts created by a Supervisor | Besides self sign-up, a Supervisor creates an account (UC-06); the application generates a provisional password, shown once, that the owner must replace at the first login. A Supervisor cannot change their own role or state, or anonymise themselves, from the list, and the last active Supervisor stays. Added on 2026-11-14, to confirm with the teacher | C-02 |
 | AI module | Shown in the diagrams as optional, with an anomaly score | Bonus |
 

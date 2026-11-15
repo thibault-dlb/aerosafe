@@ -108,3 +108,22 @@ async def test_statistics_count_the_alerts_of_the_period(session: AsyncSession) 
     assert (
         await service.statistics(NOW + timedelta(seconds=1), NOW + timedelta(hours=1))
     ).total == 0
+
+
+async def test_statistics_by_slice_group_per_hour_and_per_day(session: AsyncSession) -> None:
+    service = AlertService(session)
+    hour = NOW.replace(minute=0)
+    before = await service.statistics_by_slice(hour, NOW, "hour")
+
+    await raise_alerts(session)
+
+    after = await service.statistics_by_slice(hour, NOW, "hour")
+    assert [item.start for item in after] == [hour]
+    previous = before[0].per_rule if before else {}
+    assert after[0].per_rule["R1"] == previous.get("R1", 0) + 1
+    assert after[0].per_rule["R3"] == previous.get("R3", 0) + 1
+    [day] = await service.statistics_by_slice(hour, NOW, "day")
+    assert day.start == NOW.replace(hour=0)
+    assert (await service.statistics_by_slice(NOW + timedelta(seconds=1), NOW, "hour")) == []
+    with pytest.raises(ValueError):
+        await service.statistics_by_slice(hour, NOW, "week")

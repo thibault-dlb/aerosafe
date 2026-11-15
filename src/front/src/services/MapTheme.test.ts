@@ -7,14 +7,24 @@ const COLORS = { ...MapTheme.FALLBACK, low: "#111111", mid: "#222222", high: "#3
 describe("MapTheme", () => {
   it("reads the colours from the tokens of the page", () => {
     const root = document.createElement("div");
-    root.style.setProperty("--map-aircraft-low", "#aa0000");
-    root.style.setProperty("--map-aircraft-mid", "#00aa00");
-    root.style.setProperty("--map-aircraft-high", "#0000aa");
-    root.style.setProperty("--map-selected", "#aaaa00");
-    root.style.setProperty("--map-bg", "#010101");
-    root.style.setProperty("--color-danger", "#ff0001");
-    root.style.setProperty("--color-warning", "#ff0002");
-    root.style.setProperty("--color-brand", "#ff0003");
+    const tokens: Record<string, string> = {
+      "--basemap-aircraft-low": "#aa0000",
+      "--basemap-aircraft-mid": "#00aa00",
+      "--basemap-aircraft-high": "#0000aa",
+      "--basemap-selected": "#aaaa00",
+      "--basemap-bg": "#010101",
+      "--basemap-alert-high": "#ff0001",
+      "--basemap-alert-medium": "#ff0002",
+      "--basemap-alert-low": "#ff0003",
+      "--basemap-land": "#020202",
+      "--basemap-urban": "#030303",
+      "--basemap-border": "#040404",
+      "--basemap-water": "#050505",
+      "--basemap-grid": "#060606",
+      "--basemap-rings": "#070707",
+      "--basemap-text": "#080808",
+    };
+    for (const [name, value] of Object.entries(tokens)) root.style.setProperty(name, value);
     document.body.appendChild(root);
 
     expect(new MapTheme(root).colors()).toEqual({
@@ -26,6 +36,13 @@ describe("MapTheme", () => {
       alertHigh: "#ff0001",
       alertMedium: "#ff0002",
       alertLow: "#ff0003",
+      land: "#020202",
+      urban: "#030303",
+      border: "#040404",
+      water: "#050505",
+      grid: "#060606",
+      rings: "#070707",
+      text: "#080808",
     });
     root.remove();
   });

@@ -1,17 +1,328 @@
-import LiveOverview from "@/components/overview/LiveOverview";
-import type { LiveOverviewService } from "@/services/LiveOverviewService";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import ActiveAlerts from "@/components/dashboard/ActiveAlerts";
+import AlertChart from "@/components/dashboard/AlertChart";
+import CollectionPanel from "@/components/dashboard/CollectionPanel";
+import CounterRow from "@/components/dashboard/CounterRow";
+import styles from "@/components/dashboard/Dashboard.module.css";
+import { FindAircraft, MapTools } from "@/components/dashboard/MapTools";
+import TrackedAircraft from "@/components/dashboard/TrackedAircraft";
+import TrafficMap, { type TrafficMapHandle } from "@/components/map/TrafficMap";
+import Notice from "@/components/ui/Notice";
+import { useAuth } from "@/hooks/useAuth";
+import { usePreferences } from "@/hooks/usePreferences";
+import { useReplay } from "@/hooks/useReplay";
+import { useToast } from "@/hooks/useToast";
+import type { Aircraft } from "@/models/Aircraft";
+import type { Alert } from "@/models/Alert";
+import type { Dashboard as DashboardData, DashboardStatistics, StatisticsPeriod } from "@/models/Dashboard";
+import { type FlightPoint, TrafficAircraftFactory } from "@/models/Traffic";
+import { AlertService } from "@/services/AlertService";
+import { CollectionService } from "@/services/CollectionService";
+import { DashboardService } from "@/services/DashboardService";
+import { ErrorMessages } from "@/services/ErrorMessages";
+import { FlightHistory } from "@/services/FlightHistory";
+import { ReplayTime } from "@/services/ReplayTime";
+import { AircraftPolling } from "@/services/AircraftPolling";
+
+/** Time between two refreshes of the figures: the Île-de-France collection period. */
+export const REFRESH_MS = 30_000;
+/** In the replay the traffic moves with the simulated clock: the figures are read more often. */
+export const REPLAY_REFRESH_MS = 5_000;
+/** Time between two readings of the aircraft in the live mode. */
+export const AIRCRAFT_REFRESH_MS = 30_000;
 
 export interface DashboardProps {
-  /** Where the live figures come from. Tests give their own. */
-  overview?: LiveOverviewService;
+  /** Where the figures come from. Tests give their own. */
+  service?: DashboardService;
+  alertService?: AlertService;
+  collectionService?: CollectionService;
 }
 
-/** Supervision dashboard: the live overview and the map come first, the rest of the page follows. */
-export default function Dashboard({ overview }: DashboardProps) {
+/**
+ * The dashboard, open to every account: a map of the whole traffic filling the screen, with the figures,
+ * the latest active alerts and the aircraft that is followed floating over it; under it the chart of
+ * alerts and the state of the collection. Only the Supervisor gets the buttons that act.
+ */
+export default function Dashboard({ service, alertService, collectionService }: DashboardProps) {
+  const { t, language, mode } = usePreferences();
+  const { user } = useAuth();
+  const replay = useReplay();
+  const toast = useToast();
+  const supervisor = user?.isSupervisor === true;
+  const api = useMemo(() => service ?? new DashboardService(), [service]);
+  const alerts = useMemo(() => alertService ?? new AlertService(), [alertService]);
+  const collection = useMemo(() => collectionService ?? new CollectionService(), [collectionService]);
+
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [aircraft, setAircraft] = useState<Aircraft[] | null>(null);
+  const [statistics, setStatistics] = useState<DashboardStatistics | null>(null);
+  const [period, setPeriod] = useState<StatisticsPeriod>("24h");
+  const [failed, setFailed] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [trackedId, setTrackedId] = useState<string | null>(null);
+  const [trackedAircraft, setTrackedAircraft] = useState<Aircraft | null>(null);
+  const [following, setFollowing] = useState(false);
+  const [history, setHistory] = useState<FlightPoint[]>([]);
+  const [alertsOpen, setAlertsOpen] = useState(() => !window.matchMedia?.("(max-width: 720px)").matches);
+  const [fullscreen, setFullscreen] = useState(false);
+  const stage = useRef<HTMLElement>(null);
+  const map = useRef<TrafficMapHandle>(null);
+  const replaying = mode === "replay";
+  const refreshMs = replaying ? REPLAY_REFRESH_MS : REFRESH_MS;
+  const speed = replay?.state?.speed ?? 1;
+  const aircraftMs = replaying ? AircraftPolling.replay(speed) : AIRCRAFT_REFRESH_MS;
+
+  // The latest replay, read by the clock of the map, which runs outside React.
+  const replayRef = useRef(replay);
+  replayRef.current = replay;
+  const clock = useCallback(() => (replayRef.current?.state?.now()?.getTime() ?? Date.now()), []);
+  const trackedRef = useRef<string | null>(null);
+  trackedRef.current = trackedId;
+
+  const refresh = useCallback(async () => {
+    const [overview, chart] = await Promise.allSettled([api.load(), api.statistics(period)]);
+    if (overview.status === "fulfilled") setDashboard(overview.value);
+    if (chart.status === "fulfilled") setStatistics(chart.value);
+    return [overview, chart].some((part) => part.status === "rejected");
+  }, [api, period]);
+
+  const refreshAircraft = useCallback(async () => {
+    try {
+      setAircraft(await api.trackedAircraft());
+      return false;
+    } catch {
+      return true;
+    }
+  }, [api]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function tick() {
+      const problem = await refresh();
+      if (!cancelled) setFailed(problem);
+      if (!cancelled) timer = setTimeout(() => void tick(), refreshMs);
+    }
+
+    void tick();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [refresh, refreshMs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function tick() {
+      const problem = await refreshAircraft();
+      if (!cancelled && problem) setFailed(true);
+      if (!cancelled) timer = setTimeout(() => void tick(), aircraftMs);
+    }
+
+    void tick();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [refreshAircraft, aircraftMs]);
+
+  const stopTracking = useCallback(() => {
+    setTrackedId(null);
+    setTrackedAircraft(null);
+    setFollowing(false);
+    setHistory([]);
+  }, []);
+
+  // The aircraft of the live mode are not those of the replay.
+  useEffect(() => {
+    setAircraft(null);
+    stopTracking();
+  }, [mode, stopTracking]);
+
+  const track = useCallback(
+    async (item: Aircraft) => {
+      setTrackedId(item.id);
+      setTrackedAircraft(item);
+      setFollowing(true);
+      setHistory([]);
+      try {
+        const points = await api.flightOf(item.id);
+        if (trackedRef.current === item.id) setHistory(points);
+      } catch {
+        // The card still works without the flight: the line behind the aircraft grows from now on.
+      }
+    },
+    [api],
+  );
+
+  // The followed aircraft: its identity stays current, and each new report adds a point to its flight.
+  useEffect(() => {
+    if (trackedId === null || aircraft === null) return;
+    const found = aircraft.find((item) => item.id === trackedId);
+    if (!found) return;
+    setTrackedAircraft(found);
+    if (found.latitude !== null && found.longitude !== null && found.lastContactAt) {
+      const point = { at: found.lastContactAt.getTime(), lat: found.latitude, lon: found.longitude, altitude: found.altitude };
+      setHistory((points) => FlightHistory.append(points, point));
+    }
+  }, [aircraft, trackedId]);
+
+  const traffic = useMemo(
+    () => TrafficAircraftFactory.from(aircraft ?? [], dashboard?.alertedAircraft ?? []),
+    [aircraft, dashboard],
+  );
+  const alertOf = useMemo(() => {
+    const found = new Map<string, Alert>();
+    for (const alert of dashboard?.alertedAircraft ?? []) found.set(alert.aircraftId, alert);
+    return found;
+  }, [dashboard]);
+
+  const pick = useCallback(
+    (id: string | null) => {
+      const item = id === null ? undefined : aircraft?.find((candidate) => candidate.id === id);
+      if (item) void track(item);
+      else stopTracking();
+    },
+    [aircraft, track, stopTracking],
+  );
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(document.fullscreenElement === stage.current && stage.current !== null);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void stage.current?.requestFullscreen?.();
+  }
+
+  async function process(alert: Alert) {
+    setProcessingId(alert.id);
+    try {
+      await alerts.process(alert.id);
+      toast.notify({ message: t("alerts.toast.processed", { rule: alert.ruleCode, aircraft: alert.aircraftName }) });
+      await refresh();
+    } catch (failure) {
+      toast.notify({ message: t(ErrorMessages.SUPERVISOR.key(failure)), tone: "error" });
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function act(action: () => Promise<void>, done: "paused" | "resumed" | "ran") {
+    setBusy(true);
+    try {
+      await action();
+      toast.notify({ message: t(`dashboard.collection.toast.${done}`) });
+      await refresh();
+    } catch (failure) {
+      toast.notify({ message: t(ErrorMessages.COLLECTION.key(failure)), tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const instant = replay?.now ?? null;
+  let mapTitle = t("overview.live.title");
+  if (replaying) {
+    mapTitle = instant
+      ? t("overview.replay.title", { time: ReplayTime.short(instant, language) })
+      : t("overview.replay.waiting");
+  }
+  const bounds = replaying ? DashboardService.HISTORICAL_AREA : DashboardService.AREA;
+  const zone = replaying ? "outline" : DashboardService.AREA;
+  const tracked = trackedAircraft && trackedId ? trackedAircraft : null;
+
   return (
-    <main>
-      <h1>Dashboard</h1>
-      <LiveOverview service={overview} large />
+    <main className={styles.page}>
+      <div className={styles.titleRow}>
+        <h1 className={styles.title}>{t("nav.dashboard")}</h1>
+        <h2 className={styles.mapTitle}>{mapTitle}</h2>
+      </div>
+      {failed && <Notice variant="warning">{t("dashboard.error")}</Notice>}
+      {dashboard ? (
+        <>
+          <section ref={stage} className={styles.stage} aria-label={mapTitle}>
+            <TrafficMap
+              ref={map}
+              aircraft={traffic}
+              clock={clock}
+              bounds={bounds}
+              zone={zone}
+              trackedId={trackedId}
+              following={following}
+              trail={history}
+              onPick={pick}
+              onUserMove={() => setFollowing(false)}
+              label={t("dashboard.map.label", { count: traffic.length })}
+            />
+            <div className={styles.counterBar}>
+              <CounterRow
+                aircraft={aircraft ? aircraft.length : null}
+                active={dashboard.activeAlerts}
+                unprocessed={dashboard.unprocessedAlerts}
+                last24h={dashboard.alertsLast24h}
+              />
+            </div>
+            <div className={styles.left}>
+              <FindAircraft aircraft={aircraft ?? []} onFind={(item) => void track(item)} />
+              {tracked && (
+                <TrackedAircraft
+                  aircraft={tracked}
+                  describe={(id) => map.current?.describe(id) ?? null}
+                  alert={alertOf.get(tracked.id) ?? null}
+                  history={history}
+                  following={following}
+                  onFollow={setFollowing}
+                  onClose={stopTracking}
+                />
+              )}
+            </div>
+            <div className={styles.right}>
+              <div className={styles.alertDock} data-covered={tracked ? "true" : undefined}>
+                <button type="button" className={styles.alertToggle} aria-expanded={alertsOpen} onClick={() => setAlertsOpen((open) => !open)}>
+                  {alertsOpen ? t("dashboard.map.alerts.hide") : t("dashboard.map.alerts.show", { count: dashboard.activeAlerts })}
+                </button>
+                {alertsOpen && (
+                  <ActiveAlerts
+                    alerts={dashboard.latestAlerts}
+                    total={dashboard.activeAlerts}
+                    onProcess={supervisor ? (alert) => void process(alert) : undefined}
+                    processingId={processingId}
+                    linkToAlerts={supervisor}
+                  />
+                )}
+              </div>
+              <div className={styles.tools}>
+                <MapTools
+                  fullscreen={fullscreen}
+                  onRecenter={() => map.current?.recenter()}
+                  onFullscreen={toggleFullscreen}
+                  onZoom={(levels) => map.current?.zoomBy(levels)}
+                />
+              </div>
+            </div>
+          </section>
+          <div className={styles.below}>
+            <AlertChart statistics={statistics} period={period} onPeriod={setPeriod} />
+            <CollectionPanel
+              collection={dashboard.collection}
+              busy={busy}
+              onPause={supervisor ? () => void act(() => collection.pause(), "paused") : undefined}
+              onResume={supervisor ? () => void act(() => collection.resume(), "resumed") : undefined}
+              onRun={supervisor ? () => void act(() => collection.runNow(), "ran") : undefined}
+            />
+          </div>
+        </>
+      ) : (
+        !failed && <p role="status">{t("overview.live.loading")}</p>
+      )}
     </main>
   );
 }

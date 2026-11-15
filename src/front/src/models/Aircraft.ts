@@ -14,6 +14,8 @@ export interface AircraftJson {
   heading?: number | null;
   /** Whether the latest observation is on the ground. */
   on_ground?: boolean | null;
+  /** Ground speed of the latest observation, in metres per second. */
+  speed?: number | null;
 }
 
 /** JSON of one observation: the flight parameters at one time. */
@@ -76,6 +78,8 @@ export class Aircraft {
     readonly altitude: number | null = null,
     readonly heading: number | null = null,
     readonly onGround: boolean | null = null,
+    /** Ground speed of the latest observation, in metres per second. */
+    readonly speed: number | null = null,
   ) {}
 
   static fromJson(json: AircraftJson): Aircraft {
@@ -91,6 +95,7 @@ export class Aircraft {
       json.altitude,
       json.heading ?? null,
       json.on_ground ?? null,
+      json.speed ?? null,
     );
   }
 

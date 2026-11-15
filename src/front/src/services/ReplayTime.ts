@@ -25,6 +25,15 @@ export class ReplayTime {
     return moment.toISOString().slice(0, 16);
   }
 
+  /**
+   * The first value of an `<input type="datetime-local">` that is not before `moment`: the field
+   * has no seconds, so a start at 00:47:54 is offered as 00:48, never as 00:47 (which the API refuses).
+   */
+  static firstInput(moment: Date): string {
+    const wholeMinute = moment.getTime() % 60_000 === 0;
+    return ReplayTime.toInput(wholeMinute ? moment : new Date(moment.getTime() + 60_000));
+  }
+
   /** The instant an `<input type="datetime-local">` holds, read as UTC; null if it is empty. */
   static fromInput(value: string): Date | null {
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) {

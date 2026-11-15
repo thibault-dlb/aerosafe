@@ -27,6 +27,13 @@ export class ErrorMessages {
     409: "error.supervisor.conflict",
   });
 
+  /** The collection buttons of the dashboard: it may be off, already running or limited by OpenSky. */
+  static readonly COLLECTION = new ErrorMessages({
+    401: "error.supervisor.login",
+    403: "error.supervisor.forbidden",
+    409: "dashboard.collection.error.conflict",
+  });
+
   /** The account list: changing, deactivating or anonymising an account. */
   static readonly ACCOUNTS = new ErrorMessages({
     403: "accounts.error.own",

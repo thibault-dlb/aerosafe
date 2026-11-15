@@ -1,6 +1,6 @@
 # User guide
 
-The application is partly built. Searching for an aircraft, the aircraft record, the flight trajectory, the alerts and the rules work and are described below. The accounts, the account page and the way a Supervisor creates accounts work too. The dashboard (apart from its live overview, the figures and the map) is not built yet, and its instructions stay `TBD` (see [team work split](team-split.md#interface)). This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions are added as each part is developed.
+The application is partly built. Searching for an aircraft, the aircraft record, the flight trajectory, the alerts and the rules work and are described below. The accounts, the account page and the way a Supervisor creates accounts work too. The dashboard works too, for every role; the flight statistics are not built yet (see [team work split](team-split.md#interface)). This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions are added as each part is developed.
 
 > **Disclaimer:** AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally. This limitation is also shown in the application (§VII.3).
 
@@ -62,7 +62,7 @@ The flight page starts with a banner: the callsign, the aircraft, the route (an 
 
 When observations are missing for more than 5 minutes, the trajectory is partial: a warning lists the missing segments, the map does not join the points on either side of a gap, and the profiles are cut and shaded there. The distance leaves those segments out.
 
-The map shows OpenStreetMap tiles. The aircraft data comes from the OpenSky Network, credited on the map.
+The map is a dark radar-style map drawn by the application, with the airports and their ICAO codes. The aircraft data comes from the OpenSky Network, credited on the map next to the map data.
 
 ## Supervisor
 
@@ -70,7 +70,7 @@ The Supervisor can also search for and view aircraft (UC-01). Only the dashboard
 
 | Task | Use case | Instructions |
 | --- | --- | --- |
-| Open the supervision dashboard | UC-04 | `TBD` |
+| Open the supervision dashboard | UC-04 | See [Dashboard](#dashboard) |
 | Filter and sort alerts by rule, period or aircraft | UC-04 | See [Alerts](#alerts) |
 | View the details of an alert and mark it as processed | UC-04 | See [Alerts](#alerts) |
 | View and adjust the thresholds of a rule | UC-05 | See [Rules](#rules) |
@@ -105,6 +105,19 @@ If an alert is not relevant, the details offer a link to adjust the threshold of
 2. Change the threshold, the criticality or the switch of a rule. The card gets a gold border and a **Enregistrer** button appears; select it to save. A negative or empty threshold is refused under its field. A notification confirms the save.
 
 The change applies at the next evaluation, within one collection period. Alerts already raised keep the threshold in force when they were triggered. Every change is recorded with its author in the audit log. Thresholds are always entered in metric units, whatever the units chosen for the display.
+
+### Dashboard
+
+**Tableau de bord** (*Dashboard*) is the first page of the side bar, open to every role. It follows the choice between live data and the replay in the top bar. The figures refresh by themselves (every 30 seconds live, every 5 seconds in the replay); the aircraft are read every 30 seconds live and every one or two seconds in the replay.
+
+- **The four figures**: aircraft followed on the map, active alerts (the situation lasts), alerts to process, alerts of the last 24 hours.
+- **The map** fills the screen and the other blocks float over it. It shows every aircraft of the area, turned along their heading (a diamond on the ground), moving smoothly between two reports: **their position between two reports is an estimate** at their last heading and speed. An aircraft with an active alert takes its criticality colour and pulses. In front of each aircraft a thin line shows where it will be in the next 15 minutes if it keeps its heading and speed. An aircraft not heard for 90 seconds stops, fades and loses its line. The replay outlines the area of the imported data (France plus 100 km) and the live mode the Île-de-France collection area; range rings every 50 NM are drawn around Paris. The map never moves by itself: **Recentrer sur la zone** shows the whole area again, the buttons beside it go full screen and zoom, and **Alertes actives** folds the panel.
+- **Following an aircraft**: click an aircraft, a row of the alerts, or type its registration or ICAO24 in **Suivre un aéronef**. The map keeps it at the centre until you move the map (the **Suivi** button follows it again), a dotted line behind it shows **everything known of its flight**, and its card shows, updated twice a second, its altitude, ground speed, heading, the time since its last contact, its estimated position, its active alert, and the profile of its altitude over the whole flight, in the units chosen in the preferences. **Ouvrir la fiche** opens its record. On a phone the card takes the bottom of the map.
+- **Alertes actives** (*Active alerts*): the latest ones, as a table. A Supervisor marks an alert as processed with **Traiter** and opens **Voir les N alertes actives** to reach the alerts page. A User reads the same table, without these two controls.
+- **Alertes par règle** (*Alerts per rule*): bars stacked by rule, one per hour over 24 hours, one per day over 7 or 30 days. Each rule keeps its colour and its letter in the legend. **Afficher les données** (*Show the data*) opens the same figures as a table.
+- **Collecte OpenSky** (*OpenSky collection*): the state (active, running, paused, disabled), the last successful run, the credits left and the latest cycles (green for a run that collected, red for one that did not). A Supervisor also gets **Mettre en pause** / **Reprendre** (*Pause* / *Resume*) and **Lancer maintenant** (*Run now*, which uses OpenSky credits); a notification confirms the action. A User reads the state only.
+
+A part that cannot be loaded shows a warning and the others stay. In the replay, a replay that was not started shows no alert.
 
 ## Dashboard content
 

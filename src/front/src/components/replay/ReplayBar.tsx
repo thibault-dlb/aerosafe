@@ -26,7 +26,7 @@ export default function ReplayBar() {
 
   function onStart(event: FormEvent) {
     event.preventDefault();
-    const moment = ReplayTime.fromInput(startAt || (state?.start ? ReplayTime.toInput(state.start) : ""));
+    const moment = ReplayTime.fromInput(startAt || (state?.start ? ReplayTime.firstInput(state.start) : ""));
     if (moment !== null) {
       void replay?.start(moment, state?.speed ?? 1);
     }
@@ -75,8 +75,8 @@ export default function ReplayBar() {
               {t("replay.startAt")}
               <input
                 type="datetime-local"
-                value={startAt || (state.start ? ReplayTime.toInput(state.start) : "")}
-                min={state.start ? ReplayTime.toInput(state.start) : undefined}
+                value={startAt || (state.start ? ReplayTime.firstInput(state.start) : "")}
+                min={state.start ? ReplayTime.firstInput(state.start) : undefined}
                 max={state.end ? ReplayTime.toInput(state.end) : undefined}
                 onChange={(event) => setStartAt(event.target.value)}
               />

@@ -25,7 +25,18 @@ export async function emptyData(page: Page) {
   await page.route("**/api/v1/aircraft**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/v1/alerts**", (route) => route.fulfill({ json: { items: [], total: 0 } }));
   await page.route("**/api/v1/rules**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/dashboard**", (route) =>
+    route.fulfill({ json: new URL(route.request().url()).pathname.endsWith("/statistics") ? EMPTY_STATISTICS : EMPTY_DASHBOARD }),
+  );
 }
+
+const EMPTY_DASHBOARD = {
+  counters: { active_alerts: 0, unprocessed_alerts: 0, alerts_24h: 0 },
+  active_alerts: [],
+  collection: { enabled: true, paused: false, running: false, last_success_at: null, remaining_credits: null, recent_runs: [] },
+};
+
+const EMPTY_STATISTICS = { period: "24h", unit: "hour", start: "2026-11-14T00:00:00Z", end: "2026-11-14T10:00:00Z", total: 0, slices: [] };
 
 /** An e-mail address no other test run has used. */
 export function freshEmail(): string {

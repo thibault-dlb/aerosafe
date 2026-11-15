@@ -1,0 +1,331 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.mapTitle {
+  margin: 0;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.below {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .below {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The map fills the stage; everything else floats over it and lets the map take the mouse elsewhere. */
+.stage {
+  position: relative;
+  height: clamp(30rem, calc(100dvh - 9rem), 64rem);
+  overflow: hidden;
+  background: var(--basemap-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.stage:fullscreen {
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+}
+
+.counterBar,
+.left,
+.right {
+  position: absolute;
+  z-index: 500;
+  display: flex;
+  pointer-events: none;
+}
+
+.counterBar > *,
+.left > *,
+.right > * {
+  pointer-events: auto;
+}
+
+.counterBar {
+  top: var(--space-3);
+  left: var(--space-3);
+  right: 15.5rem;
+  overflow-x: auto;
+}
+
+.counterBar .counters {
+  grid-template-columns: repeat(4, minmax(7.5rem, 1fr));
+  min-width: 32rem;
+}
+
+.counterBar dl {
+  padding: var(--space-2) var(--space-3);
+}
+
+.counterBar dd {
+  font-size: var(--text-lg);
+}
+
+.left {
+  top: 5.5rem;
+  bottom: 1.75rem;
+  left: var(--space-3);
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.right {
+  top: var(--space-3);
+  right: var(--space-3);
+  bottom: 1.75rem;
+  align-items: flex-start;
+  flex-direction: row-reverse;
+  gap: var(--space-2);
+}
+
+.alertDock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  max-height: 100%;
+  overflow-y: auto;
+  width: min(24rem, calc(100vw - 6rem));
+}
+
+.alertToggle {
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.alertToggle:hover,
+.alertToggle:focus-visible {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.tools {
+  display: flex;
+}
+
+.alertDock > section {
+  width: 100%;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 35%);
+}
+
+@media (max-width: 720px) {
+  .stage {
+    height: clamp(34rem, calc(100dvh - 7rem), 60rem);
+  }
+
+  .counterBar {
+    right: var(--space-3);
+  }
+
+  .left {
+    right: var(--space-3);
+    top: 5.5rem;
+  }
+
+  .left > * {
+    max-width: 100%;
+  }
+
+  /* The followed aircraft takes the bottom of the screen: the alerts step aside while it is shown. */
+  .alertDock[data-covered="true"] {
+    display: none;
+  }
+
+  /* On a phone the right side covers the stage: the buttons stay at the top, the alerts sit at the bottom. */
+  .right {
+    inset: 0;
+    bottom: 0;
+    flex-direction: column;
+  }
+
+  .tools {
+    position: absolute;
+    top: 8.5rem;
+    right: var(--space-3);
+  }
+
+  .alertDock {
+    position: absolute;
+    right: var(--space-3);
+    bottom: var(--space-3);
+    left: var(--space-3);
+    width: auto;
+    max-height: 45%;
+  }
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.head h3 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.periods {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.more {
+  display: inline-block;
+  margin-top: var(--space-3);
+  color: var(--color-link);
+  font-size: var(--text-sm);
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.axis {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.tick {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.bar {
+  stroke: var(--color-surface);
+  stroke-width: 1;
+}
+
+.rule1 { fill: var(--rule-1); }
+.rule2 { fill: var(--rule-2); }
+.rule3 { fill: var(--rule-3); }
+.rule4 { fill: var(--rule-4); }
+.rule5 { fill: var(--rule-5); }
+.ruleOther { fill: var(--color-text-muted); }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 2px;
+}
+
+.swatch.rule1 { background: var(--rule-1); }
+.swatch.rule2 { background: var(--rule-2); }
+.swatch.rule3 { background: var(--rule-3); }
+.swatch.rule4 { background: var(--rule-4); }
+.swatch.rule5 { background: var(--rule-5); }
+.swatch.ruleOther { background: var(--color-text-muted); }
+
+.data {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.data summary {
+  cursor: pointer;
+  color: var(--color-link);
+}
+
+.state {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.state dt {
+  color: var(--color-text-muted);
+}
+
+.state dd {
+  margin: 0;
+}
+
+.history {
+  display: flex;
+  gap: 3px;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.run {
+  width: 0.6rem;
+  height: 1.25rem;
+  border-radius: 2px;
+  background: var(--color-danger);
+}
+
+.run.ok {
+  background: var(--color-primary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

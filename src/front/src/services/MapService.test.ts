@@ -23,13 +23,29 @@ afterEach(() => {
 });
 
 describe("MapService", () => {
-  it("mounts a Leaflet map with the OpenStreetMap and OpenSky credits", () => {
+  it("mounts a Leaflet map with the credits of the map data and of OpenSky", () => {
     const { container } = mounted();
 
     expect(service.mounted).toBe(true);
     expect(container.classList.contains("leaflet-container")).toBe(true);
-    expect(ATTRIBUTION).toContain("OpenStreetMap");
+    expect(ATTRIBUTION).toContain("Natural Earth");
+    expect(ATTRIBUTION).toContain("OurAirports");
     expect(ATTRIBUTION).toContain("OpenSky");
+  });
+
+  it("puts the drawn base map behind the panes, with no tile", () => {
+    const { container } = mounted();
+
+    expect(container.firstElementChild?.tagName).toBe("CANVAS");
+    expect(container.querySelector(".leaflet-tile-pane img")).toBeNull();
+    expect(service.leaflet.getZoom()).toBe(8);
+  });
+
+  it("outlines a zone and takes it away", () => {
+    mounted();
+
+    expect(() => service.showZone("outline")).not.toThrow();
+    expect(() => service.showZone(null)).not.toThrow();
   });
 
   it("refuses to be mounted twice", () => {

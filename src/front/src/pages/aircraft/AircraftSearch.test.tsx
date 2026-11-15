@@ -191,8 +191,11 @@ describe("AircraftSearch", () => {
       start.mock.lastCall?.[0](AREA);
 
       await waitFor(() => expect(search).toHaveBeenCalledWith({ area: AREA }));
-      expect(screen.getByText("zone 48.1° – 49.0° N · 1.5° – 3.2° E")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Tracer une zone" })).toHaveAttribute("aria-pressed", "false");
+      // The filter shows once the state has settled, which can be a moment after the search starts.
+      expect(await screen.findByText("zone 48.1° – 49.0° N · 1.5° – 3.2° E")).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Tracer une zone" })).toHaveAttribute("aria-pressed", "false"),
+      );
     });
 
     it("combines the text and the area", async () => {

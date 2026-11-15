@@ -18,6 +18,15 @@ export interface MapColors {
   alertMedium: string;
   /** Aircraft with an active alert of low criticality. */
   alertLow: string;
+  /** Land, urban areas, borders, rivers and lakes of the drawn base map. */
+  land: string;
+  urban: string;
+  border: string;
+  water: string;
+  /** Graticule, range rings and their labels, airports. */
+  grid: string;
+  rings: string;
+  text: string;
 }
 
 /** What decides the colour of a marker: its altitude, or the alert it carries. */
@@ -42,21 +51,35 @@ export class MapTheme {
     mid: "#e3b23c",
     high: "#f5d77e",
     selected: "#3dd6c4",
-    outline: "#130e04",
+    outline: "#0b0803",
     alertHigh: "#e5604d",
     alertMedium: "#f28c28",
     alertLow: "#e3b23c",
+    land: "#2a1d09",
+    urban: "#3d2b0e",
+    border: "#6e561d",
+    water: "#1f4a4a",
+    grid: "#3a2c0e",
+    rings: "#7a5d1c",
+    text: "#c2a560",
   };
 
   private static readonly TOKENS: Record<keyof MapColors, string> = {
-    low: "--map-aircraft-low",
-    mid: "--map-aircraft-mid",
-    high: "--map-aircraft-high",
-    selected: "--map-selected",
-    outline: "--map-bg",
-    alertHigh: "--color-danger",
-    alertMedium: "--color-warning",
-    alertLow: "--color-brand",
+    low: "--basemap-aircraft-low",
+    mid: "--basemap-aircraft-mid",
+    high: "--basemap-aircraft-high",
+    selected: "--basemap-selected",
+    outline: "--basemap-bg",
+    alertHigh: "--basemap-alert-high",
+    alertMedium: "--basemap-alert-medium",
+    alertLow: "--basemap-alert-low",
+    land: "--basemap-land",
+    urban: "--basemap-urban",
+    border: "--basemap-border",
+    water: "--basemap-water",
+    grid: "--basemap-grid",
+    rings: "--basemap-rings",
+    text: "--basemap-text",
   };
 
   constructor(private readonly root: HTMLElement = document.documentElement) {}
@@ -75,6 +98,13 @@ export class MapTheme {
       alertHigh: read("alertHigh"),
       alertMedium: read("alertMedium"),
       alertLow: read("alertLow"),
+      land: read("land"),
+      urban: read("urban"),
+      border: read("border"),
+      water: read("water"),
+      grid: read("grid"),
+      rings: read("rings"),
+      text: read("text"),
     };
   }
 
