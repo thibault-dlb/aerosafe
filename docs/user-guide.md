@@ -62,7 +62,7 @@ The flight page starts with a banner: the callsign, the aircraft, the route (an 
 
 When observations are missing for more than 5 minutes, the trajectory is partial: a warning lists the missing segments, the map does not join the points on either side of a gap, and the profiles are cut and shaded there. The distance leaves those segments out.
 
-The map shows OpenStreetMap tiles. The aircraft data comes from the OpenSky Network, credited on the map.
+The map is a dark radar-style map drawn by the application, with the airports and their ICAO codes. The aircraft data comes from the OpenSky Network, credited on the map next to the map data.
 
 ## Supervisor
 
@@ -108,10 +108,11 @@ The change applies at the next evaluation, within one collection period. Alerts 
 
 ### Dashboard
 
-**Tableau de bord** (*Dashboard*) is the first page of the side bar, open to every role. It follows the choice between live data and the replay in the top bar, and refreshes by itself (every 30 seconds live, every 5 seconds in the replay).
+**Tableau de bord** (*Dashboard*) is the first page of the side bar, open to every role. It follows the choice between live data and the replay in the top bar. The figures refresh by themselves (every 30 seconds live, every 5 seconds in the replay); the aircraft are read every 30 seconds live and every one or two seconds in the replay.
 
 - **The four figures**: aircraft followed on the map, active alerts (the situation lasts), alerts to process, alerts of the last 24 hours.
-- **The map**: the aircraft of the area, turned along their heading (a diamond on the ground). An aircraft that has an active alert takes its criticality colour.
+- **The map** fills the screen and the other blocks float over it. It shows every aircraft of the area, turned along their heading (a diamond on the ground), moving smoothly between two reports: **their position between two reports is an estimate** at their last heading and speed. An aircraft with an active alert takes its criticality colour and pulses. In front of each aircraft a thin line shows where it will be in the next 15 minutes if it keeps its heading and speed. An aircraft not heard for 90 seconds stops, fades and loses its line. The replay outlines the area of the imported data (France plus 100 km) and the live mode the Île-de-France collection area; range rings every 50 NM are drawn around Paris. The map never moves by itself: **Recentrer sur la zone** shows the whole area again, the buttons beside it go full screen and zoom, and **Alertes actives** folds the panel.
+- **Following an aircraft**: click an aircraft, a row of the alerts, or type its registration or ICAO24 in **Suivre un aéronef**. The map keeps it at the centre until you move the map (the **Suivi** button follows it again), a dotted line behind it shows **everything known of its flight**, and its card shows, updated twice a second, its altitude, ground speed, heading, the time since its last contact, its estimated position, its active alert, and the profile of its altitude over the whole flight, in the units chosen in the preferences. **Ouvrir la fiche** opens its record. On a phone the card takes the bottom of the map.
 - **Alertes actives** (*Active alerts*): the latest ones, as a table. A Supervisor marks an alert as processed with **Traiter** and opens **Voir les N alertes actives** to reach the alerts page. A User reads the same table, without these two controls.
 - **Alertes par règle** (*Alerts per rule*): bars stacked by rule, one per hour over 24 hours, one per day over 7 or 30 days. Each rule keeps its colour and its letter in the legend. **Afficher les données** (*Show the data*) opens the same figures as a table.
 - **Collecte OpenSky** (*OpenSky collection*): the state (active, running, paused, disabled), the last successful run, the credits left and the latest cycles (green for a run that collected, red for one that did not). A Supervisor also gets **Mettre en pause** / **Reprendre** (*Pause* / *Resume*) and **Lancer maintenant** (*Run now*, which uses OpenSky credits); a notification confirms the action. A User reads the state only.

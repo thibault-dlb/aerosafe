@@ -65,6 +65,8 @@ export class TrafficLayer {
   private trail: Float64Array = new Float64Array(0);
   private frame = 0;
   private lastFrame = 0;
+  /** Milliseconds a frame takes to draw, smoothed: the loop waits longer when the machine is slow. */
+  private cost = 0;
   private destroyed = false;
   private readonly reduced: boolean;
 
@@ -427,9 +429,12 @@ export class TrafficLayer {
     if (this.destroyed) return;
     this.frame = requestAnimationFrame(this.loop);
     // Many aircraft are drawn at 30 frames per second: the eye does not see the difference, the processor does.
-    if (real - this.lastFrame < (this.movers.size > 400 ? 30 : 15)) return;
+    // And a frame that is slow to draw is followed by a wait, so the page stays able to answer a click.
+    const wait = Math.max(this.movers.size > 400 ? 30 : 15, this.cost * 1.5);
+    if (real - this.lastFrame < wait) return;
     this.lastFrame = real;
     this.draw(real);
+    this.cost = this.cost * 0.8 + (performance.now() - real) * 0.2;
   };
 
   private draw(real: number): void {

@@ -243,7 +243,7 @@ export default function Dashboard({ service, alertService, collectionService }: 
     <main className={styles.page}>
       <div className={styles.titleRow}>
         <h1 className={styles.title}>{t("nav.dashboard")}</h1>
-        <p className={styles.mapTitle}>{mapTitle}</p>
+        <h2 className={styles.mapTitle}>{mapTitle}</h2>
       </div>
       {failed && <Notice variant="warning">{t("dashboard.error")}</Notice>}
       {dashboard ? (

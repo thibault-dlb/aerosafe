@@ -114,7 +114,26 @@ Scores from 1 (poor) to 5 (excellent), weighted with the grid. Total out of 5. T
 | Portability and deployment | 10% | 5: bundled in the static build | 5: bundled in the static build | 5: bundled in the static build |
 | **Weighted total** | | **4.60** | 4.30 | 4.10 |
 
-**Why Leaflet:** it covers what AeroSafe needs (aircraft markers, trajectory lines, popups with flight data, BF-07) with the simplest learning curve, which matters most given the deadlines. Map tiles come from OpenStreetMap, whose data is under the ODbL: the credit "OpenStreetMap contributors" must be shown on the map. The public tile servers are not meant for heavy traffic, so they are fine for a demonstration but a tile provider would be needed beyond it.
+**Why Leaflet:** it covers what AeroSafe needs (aircraft markers, trajectory lines, popups with flight data, BF-07) with the simplest learning curve, which matters most given the deadlines. The map draws no tile: see [the base map](#the-base-map) below.
+
+### The base map
+
+The first version used OpenStreetMap tiles. They are a road map, light, and fetched from a public server that is not meant for heavy use; an aviation screen wants the opposite. Decision of 2026-11-15: the map is **drawn by the front end** from small files, on a canvas under the panes of Leaflet (`services/Basemap.ts`, `services/BasemapLayer.ts`).
+
+- **Data**: coasts, borders, rivers, lakes and urban areas from Natural Earth (10 m), airports and runways from OurAirports. Both are in the public domain; the credits "Natural Earth | OurAirports" are still shown, next to OpenSky's. `scripts/build_basemap.py` (run with `uv run scripts/build_basemap.py`) makes `src/front/src/assets/map/basemap.json` (about 650 kB) and `airports.json` (25 kB), loaded when the first map opens. No request leaves the application: the map works offline, which the Cloudflare deployment plan needs.
+- **Zone of the historical data**: the dashed outline in the replay is the union of the cells of the import mask `france_100km.csv` (metropolitan France without Corsica, plus 100 km), so it is exactly what the import keeps, not a rectangle. In the live mode it is the rectangle of the Île-de-France collection.
+- **Radar look**: dark in both themes (the panels around it follow the theme), range rings every 50 NM around Paris, a graticule, the airports with their ICAO code (the medium ones and the runways when zoomed in). No road.
+- **Leaflet stays**, for the gestures, the zoom and the maps of the search, the record and the flight, which keep their markers. Its zoom animation is off (it would scale the panes and leave the canvas behind), the zoom is fractional, and the view is bounded to the area the files cover.
+
+### The traffic of the dashboard
+
+The dashboard draws every aircraft of the area (up to 2 000) and moves them smoothly, which markers (one HTML element each) cannot do. `services/TrafficLayer.ts` is a second canvas above the map with its own loop:
+
+- **Dead reckoning** (`DeadReckoning.ts`): between two reports from the API, an aircraft is carried forward from its last report at its heading and ground speed. A constant heading is a straight line in Web Mercator, so the motion is linear in the unit square and a frame costs one multiplication per aircraft. The clock is the real one live and the simulated one in the replay, so the aircraft go faster with the replay speed and stop when it is paused.
+- **It is an estimate, not an observation**: after 90 seconds (simulated in the replay) without a new report, an aircraft stops, is shown faded and loses its line; the card says how long it has been silent and that the position is estimated. A new report is blended in over one second instead of jumping.
+- **Line of the next 15 minutes** in front of each aircraft that flies, at its heading and speed; none for an aircraft on the ground, without a heading or a speed, or silent.
+- **Cost**: the silhouettes are drawn once for each colour, size and heading (steps of 5 degrees) and copied on each frame; the lines are one stroke for each colour; the loop draws at 30 frames per second above 400 aircraft and waits longer if a frame is slow. In a browser without a GPU, 2 000 aircraft run at about 20 frames per second and 900 at about 30, where the first version with one path for each aircraft ran at 12.
+- **Following an aircraft** (a click, a line of the alerts, or the search box for the keyboard): the map keeps it at the centre until the user moves the map; its card is read twice a second; the dotted line behind it is **everything known of its flight** (the observations of the flight of its latest observation, up to 5 000, plus each new report) and the profile shows its altitude over the same flight.
 
 **Trade-off:** no 3D view. If a 3D trajectory view is wanted later, MapLibre GL JS is the fallback.
 

@@ -21,9 +21,37 @@ const ALERT = {
   processed_at: null,
 };
 
+const AIRCRAFT = {
+  id: "01E2EAIRCRAFT",
+  icao24: "3c6444",
+  registration: "F-GKXA",
+  model: "Airbus A320",
+  airline: "Air France",
+  last_contact_at: NOW,
+  latitude: 48.8,
+  longitude: 2.3,
+  altitude: 9000,
+  heading: 90,
+  on_ground: false,
+  speed: 230,
+};
+
+const OBSERVATIONS = [0, 1, 2, 3].map((index) => ({
+  last_contact_at: new Date(Date.now() - (4 - index) * 600_000).toISOString(),
+  position_at: new Date(Date.now() - (4 - index) * 600_000).toISOString(),
+  latitude: 48.7 + index * 0.03,
+  longitude: 2.0 + index * 0.1,
+  altitude: 3000 + index * 2000,
+  speed: 220,
+  heading: 80,
+  on_ground: false,
+  flight_id: "01E2EFLIGHT",
+}));
+
 const DASHBOARD = {
   counters: { active_alerts: 4, unprocessed_alerts: 9, alerts_24h: 17 },
   active_alerts: [ALERT],
+  alerted_aircraft: [ALERT],
   collection: {
     enabled: true,
     paused: false,
@@ -49,6 +77,8 @@ function statistics(period: string) {
 
 async function mockDashboard(page: import("@playwright/test").Page) {
   await emptyData(page);
+  await page.route("**/api/v1/aircraft?**", (route) => route.fulfill({ json: [AIRCRAFT] }));
+  await page.route("**/api/v1/aircraft/*/observations**", (route) => route.fulfill({ json: OBSERVATIONS }));
   await page.route("**/api/v1/dashboard**", (route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/statistics")) return route.fulfill({ json: statistics(url.searchParams.get("period") ?? "24h") });
@@ -94,4 +124,36 @@ test("a User reads the same dashboard, with no button that acts", async ({ page 
   await expect(page.getByRole("button", { name: "Lancer maintenant" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Marquer l'alerte/ })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /alertes actives/ })).toHaveCount(0);
+});
+
+test("the map is drawn without any tile, and an aircraft is followed from the search box", async ({ page }) => {
+  const outside: string[] = [];
+  page.on("request", (request) => {
+    if (!request.url().startsWith("http://localhost")) outside.push(request.url());
+  });
+  await openSession(page, "USER");
+  await mockDashboard(page);
+
+  await page.goto("/dashboard");
+
+  const map = page.getByRole("img", { name: /Carte du trafic/ });
+  await expect(map).toBeVisible();
+  await expect(map.locator("canvas")).toHaveCount(2);
+  await expect(page.getByText("Aéronefs suivis")).toBeVisible();
+
+  const search = page.getByRole("combobox", { name: "Suivre un aéronef" });
+  await search.fill("F-GKXA");
+  await search.press("Enter");
+
+  const card = page.getByRole("region", { name: "Aéronef suivi" });
+  await expect(card).toBeVisible();
+  await expect(card.getByRole("heading", { name: "F-GKXA" })).toBeVisible();
+  await expect(card.getByText("R1")).toBeVisible();
+  await expect(card.getByRole("img", { name: /Profil d'altitude du vol : 4 points/ })).toBeVisible();
+  await expect(card.getByRole("link", { name: "Ouvrir la fiche" })).toHaveAttribute("href", "/aircraft/01E2EAIRCRAFT");
+
+  await page.getByRole("button", { name: "Recentrer sur la zone" }).click();
+  await card.getByRole("button", { name: "Ne plus suivre" }).click();
+  await expect(card).toHaveCount(0);
+  expect(outside).toEqual([]);
 });
