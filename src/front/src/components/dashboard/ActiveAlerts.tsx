@@ -5,6 +5,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import Panel from "@/components/ui/Panel";
 import { usePreferences } from "@/hooks/usePreferences";
 import type { Alert } from "@/models/Alert";
+import { Formatter } from "@/services/Formatter";
 
 import styles from "./Dashboard.module.css";
 
@@ -17,10 +18,22 @@ export interface ActiveAlertsProps {
   processingId?: string | null;
   /** Only the Supervisor has the alerts page to open. */
   linkToAlerts?: boolean;
+  /** A click on a row: the page centres the map on its aircraft, then opens the alert. */
+  onSelect?: (alert: Alert) => void;
+  /** The alert whose aircraft the map is centred on: its row is highlighted. */
+  selectedId?: string | null;
 }
 
 /** The latest alerts whose situation lasts. */
-export default function ActiveAlerts({ alerts, total, onProcess, processingId, linkToAlerts = false }: ActiveAlertsProps) {
+export default function ActiveAlerts({
+  alerts,
+  total,
+  onProcess,
+  processingId,
+  linkToAlerts = false,
+  onSelect,
+  selectedId = null,
+}: ActiveAlertsProps) {
   const { t } = usePreferences();
   return (
     <Panel title={t("dashboard.alerts.title")}>
@@ -29,7 +42,20 @@ export default function ActiveAlerts({ alerts, total, onProcess, processingId, l
           {t("dashboard.alerts.empty.body")}
         </EmptyState>
       ) : (
-        <AlertTable alerts={alerts} compact onProcess={onProcess} processingId={processingId} />
+        <AlertTable
+          alerts={alerts}
+          compact
+          onProcess={onProcess}
+          processingId={processingId}
+          onSelect={onSelect}
+          selectedId={selectedId}
+          selectLabel={(alert, selected) =>
+            t(selected && linkToAlerts ? "dashboard.alerts.open" : "dashboard.alerts.focus", {
+              rule: alert.ruleCode,
+              aircraft: alert.aircraftName || Formatter.MISSING,
+            })
+          }
+        />
       )}
       {linkToAlerts && (
         <Link className={styles.more} to="/alerts">

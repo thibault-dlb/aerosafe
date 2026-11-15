@@ -36,7 +36,7 @@ export interface FlightDetailJson extends FlightSummaryJson {
   statistics: FlightStatisticsJson;
 }
 
-/** Indicators of a flight (BF-08). Altitudes in metres, speeds in m/s. */
+/** Indicators of a flight (BF-08). Altitudes in metres, speeds in m/s (the API's unit: the display converts). */
 export class FlightStatistics {
   constructor(
     readonly observationCount: number,

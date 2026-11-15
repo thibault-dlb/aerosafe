@@ -15,7 +15,7 @@ export default function ChangePassword() {
   const { user, logout } = useAuth();
 
   return (
-    <div className={`${styles.screen} darkScope`}>
+    <div className={styles.screen}>
       <main className={styles.card}>
         <img className={styles.logo} src={logoUrl} alt="" width={40} height={40} />
         <h1 className={styles.title}>{t("account.provisional.title")}</h1>

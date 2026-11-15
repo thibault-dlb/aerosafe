@@ -39,16 +39,19 @@ const RULES = ["R1", "R3", "R6"].map((code) => new Rule(code, code, 1, "s", null
 function renderWith(
   search: AlertService["search"],
   process: AlertService["process"] = async (id) => alert(id, TRIGGERED),
+  options: { path?: string; get?: AlertService["get"] } = {},
 ) {
   const service = {
     search: vi.fn(search),
     process: vi.fn(process),
+    get: vi.fn(options.get ?? (async (id: string) => alert(id))),
   } as unknown as AlertService;
   const ruleService = { list: vi.fn(async () => RULES) } as unknown as RuleService;
-  renderInApp(<Alerts service={service} ruleService={ruleService} />);
+  renderInApp(<Alerts service={service} ruleService={ruleService} />, { path: options.path });
   return {
     search: service.search as ReturnType<typeof vi.fn>,
     process: service.process as ReturnType<typeof vi.fn>,
+    get: service.get as ReturnType<typeof vi.fn>,
   };
 }
 
@@ -361,5 +364,46 @@ describe("Alerts", () => {
     renderWith(() => new Promise(() => undefined));
 
     expect(screen.getByText("Chargement des alertes…")).toBeInTheDocument();
+  });
+});
+
+describe("an alert brought forward from the dashboard", () => {
+  const PATH = "/alerts?alert=A2";
+
+  it("opens its details, and narrows the list to its aircraft whatever the situation", async () => {
+    const { get, search } = renderWith(async () => new AlertPage([alert("A1"), alert("A2")], 2), undefined, { path: PATH });
+
+    const details = await screen.findByRole("region", { name: "Détail de l'alerte" });
+
+    expect(get).toHaveBeenCalledWith("A2");
+    expect(details).toHaveTextContent("R1 · Contact perdu");
+    await waitFor(() =>
+      expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ icao24: "3c6444", status: undefined, offset: 0 })),
+    );
+    expect(screen.getByLabelText("Adresse ICAO24")).toHaveValue("3c6444");
+    expect(screen.getAllByRole("row").filter((row) => row.getAttribute("aria-selected") === "true")).toHaveLength(1);
+  });
+
+  it("does nothing special without the mark in the address", async () => {
+    const { get } = renderWith(async () => new AlertPage([alert("A1")], 1));
+
+    await screen.findByRole("button", { name: DETAILS });
+
+    expect(get).not.toHaveBeenCalled();
+    expect(screen.queryByRole("region", { name: "Détail de l'alerte" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the list when the alert cannot be read, and says so", async () => {
+    renderWith(async () => new AlertPage([alert("A1")], 1), undefined, {
+      path: PATH,
+      get: async () => {
+        throw new ApiError(404);
+      },
+    });
+
+    await screen.findByRole("button", { name: DETAILS });
+
+    expect(screen.queryByRole("region", { name: "Détail de l'alerte" })).not.toBeInTheDocument();
+    expect(await screen.findByText("Cet élément n'existe plus.")).toBeInTheDocument();
   });
 });

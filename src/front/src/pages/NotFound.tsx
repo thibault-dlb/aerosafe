@@ -23,7 +23,7 @@ export default function NotFound() {
 
   return (
     <main className={styles.page}>
-      <div className={`${styles.lost} darkScope`}>
+      <div className={styles.lost}>
         <svg className={styles.scope} viewBox="0 0 400 400" role="img" aria-label={t("notFound.label")}>
           <circle className={styles.rim} cx={200} cy={200} r={190} />
           <circle className={styles.ring} cx={200} cy={200} r={47} />

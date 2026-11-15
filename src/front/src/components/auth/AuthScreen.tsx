@@ -32,7 +32,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <div className={`${styles.screen} darkScope ${mode === "signup" ? styles.signup : ""}`}>
+    <div className={`${styles.screen} ${mode === "signup" ? styles.signup : ""}`}>
       <div className={styles.radarPane}>
         <div className={styles.radarMask}>
           <RadarScene />

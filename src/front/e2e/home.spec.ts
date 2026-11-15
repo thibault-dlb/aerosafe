@@ -30,23 +30,12 @@ test("the home page is in French and switches to English, and the choice is kept
   await expect(page.getByRole("link", { name: "Dashboard" }).first()).toBeVisible();
 });
 
-test("the theme follows the system until the user chooses", async ({ page }) => {
+test("there is no choice of theme, even when the system asks for the light one", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
 
-  await expect(page.getByRole("button", { name: "Passer au thème sombre" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /thème/ })).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.*/);
-});
-
-test("the theme switches between dark and light", async ({ page }) => {
-  await page.emulateMedia({ colorScheme: "dark" });
-  await page.goto("/");
-
-  await page.getByRole("button", { name: "Passer au thème clair" }).click();
-
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await page.getByRole("button", { name: "Passer au thème sombre" }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
 test("the home page does not scroll sideways on a phone", async ({ page }) => {
@@ -95,17 +84,17 @@ test("the top bar is clear over the scene and turns solid once the page scrolls"
   await expect(bar).toHaveClass(/barSolid/);
 });
 
-test("the landing page stays dark even when the system asks for the light theme", async ({ page }) => {
+test("the pages stay dark even when the system asks for the light theme", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const dark = await page.evaluate(() => getComputedStyle(document.querySelector(".darkScope")!).backgroundColor);
-  expect(dark).toBe("rgb(28, 17, 11)");
+  const landing = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(landing).toBe("rgb(28, 17, 11)");
 
   await openSession(page);
   await emptyData(page);
   await page.goto("/dashboard");
-  const light = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  expect(light).toBe("rgb(251, 245, 230)");
+  const app = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(app).toBe("rgb(28, 17, 11)");
 });
 
 test("the sections under the scene tell what the application does and lead to its pages", async ({ page }) => {

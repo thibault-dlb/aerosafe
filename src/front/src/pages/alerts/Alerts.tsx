@@ -1,4 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import AlertDetail from "@/components/alerts/AlertDetail";
 import AlertTable from "@/components/alerts/AlertTable";
@@ -53,10 +54,18 @@ export interface AlertsProps {
   ruleService?: RuleService;
 }
 
-/** UC-04: view, filter and sort alerts, open their details and mark them as processed. */
+/**
+ * UC-04: view, filter and sort alerts, open their details and mark them as processed.
+ * With `?alert=<id>` (the dashboard sends the Supervisor here from an alert of its map) the alert
+ * opens at once: its details show, and the list is narrowed to the alerts of its aircraft, all
+ * situations included, so its row is there and highlighted.
+ */
 export default function Alerts({ service, ruleService }: AlertsProps) {
   const { t } = usePreferences();
   const toast = useToast();
+  // Read once on arrival: the alert to bring forward, if the visitor came from the dashboard.
+  const [params] = useSearchParams();
+  const [target] = useState(() => params.get("alert"));
   const api = useMemo(() => service ?? new AlertService(), [service]);
   const rulesApi = useMemo(() => ruleService ?? new RuleService(), [ruleService]);
   // Read from the API, so a rule added to REGLE shows up without changing this page (NF-06).
@@ -121,6 +130,30 @@ export default function Alerts({ service, ruleService }: AlertsProps) {
       cancelled = true;
     };
   }, [rulesApi]);
+
+  useEffect(() => {
+    if (!target) return;
+    let cancelled = false;
+    api.get(target).then(
+      (found) => {
+        if (cancelled) return;
+        const criteria: Criteria = { ...AlertCriteria.DEFAULT, status: "", icao24: found.icao24 };
+        setApplied(criteria);
+        setMore(moreFiltersOf(criteria));
+        setShowMore(found.icao24 !== "");
+        setOffset(0);
+        setSelected(found);
+      },
+      (failure) => {
+        if (!cancelled) toast.notify({ message: t(ErrorMessages.SUPERVISOR.key(failure)), tone: "error" });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+    // Only on arrival: the alert asked for is brought forward once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, target]);
 
   // On a narrow page the details open under the list: bring them into view.
   useEffect(() => {

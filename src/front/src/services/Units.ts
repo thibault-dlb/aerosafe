@@ -9,6 +9,7 @@ export interface Measure {
 /** Conversions from the metric values of the API to the unit system chosen for the display. */
 export class Units {
   static readonly FEET_PER_METRE = 3.280839895;
+  static readonly KILOMETRES_PER_HOUR_PER_METRE_PER_SECOND = 3.6;
   static readonly KNOTS_PER_METRE_PER_SECOND = 1.943844492;
   static readonly NAUTICAL_MILES_PER_KILOMETRE = 0.539956803;
   static readonly FEET_PER_MINUTE_PER_METRE_PER_SECOND = 196.850394;
@@ -20,10 +21,10 @@ export class Units {
       : { value: metres * Units.FEET_PER_METRE, unit: "ft" };
   }
 
-  /** A ground speed, from metres per second. */
+  /** A ground speed, from metres per second: kilometres per hour, or knots. */
   static speed(metresPerSecond: number, system: UnitSystem): Measure {
     return system === "metric"
-      ? { value: metresPerSecond, unit: "m/s" }
+      ? { value: metresPerSecond * Units.KILOMETRES_PER_HOUR_PER_METRE_PER_SECOND, unit: "km/h" }
       : { value: metresPerSecond * Units.KNOTS_PER_METRE_PER_SECOND, unit: "kt" };
   }
 

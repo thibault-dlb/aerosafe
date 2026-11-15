@@ -12,7 +12,7 @@ import type { MapView } from "@/services/Mercator";
 export class BasemapLayer {
   private readonly canvas = document.createElement("canvas");
   private basemap: Basemap | null = null;
-  private colors: MapColors;
+  private readonly colors: MapColors;
   private zone: Zone = null;
   private frame = 0;
   private destroyed = false;
@@ -50,11 +50,6 @@ export class BasemapLayer {
   /** The zone of the collection to outline, or none. */
   setZone(zone: Zone): void {
     this.zone = zone;
-    this.schedule();
-  }
-
-  setColors(colors: MapColors): void {
-    this.colors = colors;
     this.schedule();
   }
 

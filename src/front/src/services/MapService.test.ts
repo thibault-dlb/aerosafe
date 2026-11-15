@@ -274,62 +274,6 @@ describe("MapService", () => {
     });
   });
 
-  it("draws again with the new colours when the theme changes", async () => {
-    const colors = { ...MapTheme.FALLBACK, low: "#111111", mid: "#222222", high: "#333333", selected: "#444444" };
-    const theme = new MapTheme();
-    const read = vi.spyOn(theme, "colors").mockReturnValue(colors);
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    service = new MapService(theme);
-    service.mount(container);
-    service.showAircraft([PARIS]);
-    expect(service.aircraftColors).toEqual(["#222222"]);
-
-    read.mockReturnValue({ ...colors, mid: "#abcdef" });
-    document.documentElement.setAttribute("data-theme", "light");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(service.aircraftColors).toEqual(["#abcdef"]);
-    document.documentElement.removeAttribute("data-theme");
-  });
-
-  it("draws again when the system theme changes", () => {
-    let changed: (() => void) | undefined;
-    const media = {
-      addEventListener: (_: string, listener: () => void) => (changed = listener),
-      removeEventListener: vi.fn(),
-    };
-    vi.stubGlobal("matchMedia", () => media);
-    const theme = new MapTheme();
-    const colors = { ...MapTheme.FALLBACK, low: "#111111", mid: "#222222", high: "#333333", selected: "#444444" };
-    const read = vi.spyOn(theme, "colors").mockReturnValue(colors);
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    service = new MapService(theme);
-    service.mount(container);
-    service.showAircraft([PARIS]);
-
-    read.mockReturnValue({ ...colors, mid: "#abcdef" });
-    changed?.();
-
-    expect(service.aircraftColors).toEqual(["#abcdef"]);
-    service.destroy();
-    expect(media.removeEventListener).toHaveBeenCalledWith("change", changed);
-    vi.unstubAllGlobals();
-  });
-
-  it("stops watching the theme once destroyed", async () => {
-    mounted();
-    service.showAircraft([PARIS]);
-    service.destroy();
-
-    document.documentElement.setAttribute("data-theme", "light");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(service.counts.aircraft).toBe(1);
-    document.documentElement.removeAttribute("data-theme");
-  });
-
   it("can be destroyed more than once", () => {
     mounted();
 

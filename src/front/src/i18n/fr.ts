@@ -15,11 +15,6 @@ export const fr = {
   "language.fr": "Français",
   "language.en": "English",
 
-  "theme.label": "Thème",
-  "theme.dark": "Sombre",
-  "theme.light": "Clair",
-  "theme.toLight": "Passer au thème clair",
-  "theme.toDark": "Passer au thème sombre",
 
   "layout.skipToContent": "Aller au contenu",
 
@@ -29,6 +24,8 @@ export const fr = {
 
   "replay.bar": "Rejeu du trafic historique",
   "replay.time": "Instant simulé",
+  "replay.idle": "Non démarré",
+  "replay.settings": "Régler le rejeu",
   "replay.loading": "Chargement de l'horloge de rejeu…",
   "replay.unavailable": "Aucune donnée de rejeu n'est importée dans la base.",
   "replay.notStarted": "Le rejeu n'a pas démarré. Un superviseur peut le lancer à l'instant de son choix.",
@@ -140,6 +137,8 @@ export const fr = {
   "dashboard.alerts.empty.title": "Aucune alerte active",
   "dashboard.alerts.empty.body": "Le trafic suivi ne déclenche aucune règle en ce moment.",
   "dashboard.alerts.all": "Voir les {count} alertes actives",
+  "dashboard.alerts.focus": "Centrer la carte sur {aircraft} (alerte {rule})",
+  "dashboard.alerts.open": "Ouvrir l'alerte {rule} de {aircraft} dans les alertes",
   "dashboard.chart.title": "Alertes par règle",
   "dashboard.chart.period": "Période",
   "dashboard.chart.period.24h": "24 h",
@@ -514,7 +513,7 @@ export const fr = {
   "account.prefs.title": "Préférences",
   "account.prefs.hint": "Mémorisées dans ce navigateur.",
   "account.prefs.units": "Unités",
-  "account.prefs.units.metric": "Métriques (m, m/s, km)",
+  "account.prefs.units.metric": "Métriques (m, km/h, km)",
   "account.prefs.units.aeronautical": "Aéronautiques (ft, kt, NM)",
   "account.prefs.units.hint": "Altitudes, vitesses et distances affichées. Les seuils des règles restent en unités métriques.",
   "account.delete.title": "Supprimer mon compte",

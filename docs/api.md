@@ -241,10 +241,10 @@ An alert:
   "rule_description": "Variation importante d'altitude",
   "triggered_at": "2026-11-09T10:00:00Z",
   "episode_ended_at": null,
-  "observed_value": 40.0,
+  "observed_value": -40.0,
   "threshold": 30.0,
   "unit": "m/s",
-  "message": "R3 vertical rate for 3c6444: 40.0 m/s above the threshold of 30 m/s",
+  "message": "R3 vertical rate for 3c6444: -40.0 m/s beyond the threshold of ±30 m/s",
   "criticality": "HIGH",
   "processed_at": null
 }

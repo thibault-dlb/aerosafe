@@ -145,11 +145,11 @@ Map rules:
 
 In the mock-up, the trace centred on the aircraft and the beam also apply to A, B, C and D, in their "data" colour. Only E has gold rings.
 
-## 3. The two retained themes
+## 3. The retained theme
 
-- Dark theme, default: E · Golden radar.
-- Light theme: B · Papyrus.
-- The home page is always in the dark theme, whatever the choice, because its scene is drawn for it. It is the `darkScope` class, which redefines the dark tokens for one part of the page; the choice of the visitor still applies to every other page.
+- Dark theme: E · Golden radar. **It is the only theme of the application.**
+- Decision of 2026-11-15: the light theme (B · Papyrus) and its switch were dropped. The map, the home page and the radar screens are drawn for the dark theme. The papyrus palette below is kept as a trace of the design work, and is no longer implemented.
+- The `darkScope` class that kept the home page dark under a light theme no longer exists.
 
 Token mapping between the two themes (same token names, different values):
 

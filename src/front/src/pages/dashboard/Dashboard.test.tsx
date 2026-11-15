@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { Aircraft } from "@/models/Aircraft";
@@ -43,6 +44,25 @@ function renderDashboard(
   });
   return service;
 }
+
+/** Shows where the router is, so a test can see a page send the visitor elsewhere. */
+function Where() {
+  const { pathname, search } = useLocation();
+  return <p data-testid="where">{pathname + search}</p>;
+}
+
+function renderWithLocation(role: string, service: DashboardService = services()) {
+  renderInApp(
+    <>
+      <Dashboard service={service} />
+      <Where />
+    </>,
+    { session: fakeSession("authenticated", role) },
+  );
+}
+
+const CENTRE = "Centrer la carte sur 3c6444 (alerte R1)";
+const OPEN = "Ouvrir l'alerte R1 de 3c6444 dans les alertes";
 
 describe("Dashboard", () => {
   it("shows the figures, the active alerts, the chart and the collection", async () => {
@@ -201,5 +221,54 @@ describe("Dashboard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Alertes actives (4)" }));
     expect(screen.getByRole("region", { name: "Alertes actives" })).toBeInTheDocument();
+  });
+  describe("when an alert of the map is clicked", () => {
+    it("centres the map on its aircraft first, then opens the alert in the alerts for a Supervisor", async () => {
+      renderWithLocation("SUPERVISOR");
+
+      fireEvent.click(await screen.findByRole("button", { name: CENTRE }));
+
+      const card = await screen.findByRole("region", { name: "Aéronef suivi" });
+      expect(card).toHaveTextContent("F-GKXA");
+      expect(screen.getByTestId("where")).toHaveTextContent(/^\/$/);
+      const row = screen.getByRole("button", { name: OPEN }).closest("tr");
+      expect(row).toHaveAttribute("aria-selected", "true");
+
+      fireEvent.click(screen.getByRole("button", { name: OPEN }));
+
+      expect(screen.getByTestId("where")).toHaveTextContent("/alerts?alert=01A");
+    });
+
+    it("only centres the map for a User, who has no alerts page", async () => {
+      renderWithLocation("USER");
+
+      fireEvent.click(await screen.findByRole("button", { name: CENTRE }));
+      await screen.findByRole("region", { name: "Aéronef suivi" });
+      fireEvent.click(screen.getByRole("button", { name: CENTRE }));
+
+      expect(screen.getByTestId("where")).toHaveTextContent(/^\/$/);
+      expect(screen.getByRole("region", { name: "Aéronef suivi" })).toBeInTheDocument();
+    });
+
+    it("centres again, instead of opening the alert, once the aircraft is no longer followed", async () => {
+      renderWithLocation("SUPERVISOR");
+      fireEvent.click(await screen.findByRole("button", { name: CENTRE }));
+      await screen.findByRole("region", { name: "Aéronef suivi" });
+      fireEvent.click(screen.getByRole("button", { name: "Ne plus suivre" }));
+
+      fireEvent.click(screen.getByRole("button", { name: CENTRE }));
+
+      expect(await screen.findByRole("region", { name: "Aéronef suivi" })).toBeInTheDocument();
+      expect(screen.getByTestId("where")).toHaveTextContent(/^\/$/);
+    });
+
+    it("goes straight to the alerts when its aircraft is not on the map, for a Supervisor", async () => {
+      renderWithLocation("SUPERVISOR", services({ trackedAircraft: vi.fn().mockResolvedValue([]) }));
+
+      fireEvent.click(await screen.findByRole("button", { name: CENTRE }));
+
+      expect(screen.getByTestId("where")).toHaveTextContent("/alerts?alert=01A");
+      expect(screen.queryByRole("region", { name: "Aéronef suivi" })).not.toBeInTheDocument();
+    });
   });
 });

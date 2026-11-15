@@ -44,6 +44,7 @@ class TestAltitudeRateRule:
         assert outcome.triggered
         assert outcome.observed_value == 40
         assert outcome.message.startswith("R3 ")
+        assert "+40.0 m/s beyond the threshold of ±30 m/s" in outcome.message
 
     def test_does_not_trigger_on_a_normal_climb(self) -> None:
         outcome = self.rule.check(pair(30, altitude=10300.0), 30, NOW)
@@ -52,11 +53,21 @@ class TestAltitudeRateRule:
         assert not outcome.triggered
         assert outcome.observed_value == 10
 
-    def test_triggers_on_a_steep_descent(self) -> None:
+    def test_triggers_on_a_steep_descent_and_keeps_its_minus_sign(self) -> None:
         outcome = self.rule.check(pair(30, altitude=8800.0), 30, NOW)
 
         assert outcome is not None
         assert outcome.triggered
+        assert outcome.observed_value == -40
+        assert "-40.0 m/s beyond the threshold of ±30 m/s" in outcome.message
+
+    def test_does_not_trigger_on_a_gentle_descent(self) -> None:
+        outcome = self.rule.check(pair(30, altitude=9700.0), 30, NOW)
+
+        assert outcome is not None
+        assert not outcome.triggered
+        assert outcome.observed_value == -10
+        assert "within the threshold" in outcome.message
 
     @pytest.mark.parametrize("gap", [5, 600])
     def test_ignores_a_gap_outside_the_window(self, gap: int) -> None:

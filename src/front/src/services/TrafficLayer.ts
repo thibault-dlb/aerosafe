@@ -59,7 +59,7 @@ export class TrafficLayer {
   private readonly sprites = new TrafficSprites();
   private readonly movers = new Map<string, Mover>();
   private readonly lines = new Map<string, number[]>();
-  private colors: MapColors;
+  private readonly colors: MapColors;
   private trackedId: string | null = null;
   private following = false;
   private trail: Float64Array = new Float64Array(0);
@@ -110,12 +110,6 @@ export class TrafficLayer {
     this.map.off("dragstart", this.onDragStart);
     this.canvas.remove();
     this.movers.clear();
-  }
-
-  /** The colours of the theme in use. */
-  setColors(colors: MapColors): void {
-    this.colors = colors;
-    for (const mover of this.movers.values()) this.paint(mover);
   }
 
   /**

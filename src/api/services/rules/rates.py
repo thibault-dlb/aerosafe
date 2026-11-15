@@ -33,11 +33,19 @@ class RateRule(BusinessRule):
 
     @abstractmethod
     def change(self, previous: StateSample, current: StateSample) -> float | None:
-        """Absolute change of the measured quantity, or `None` when a value is missing."""
+        """Change of the measured quantity, or `None` when a value is missing.
+
+        Absolute, unless the rule has a direction worth showing (see `AltitudeRateRule`).
+        """
 
 
 class AltitudeRateRule(RateRule):
-    """R3: a large change in altitude, as a vertical rate."""
+    """R3: a large change in altitude, as a vertical rate.
+
+    The rate is signed, positive in a climb and negative in a descent, so the alert says which
+    way the aircraft went. The rule triggers on its size: a descent of 40 m/s and a climb of
+    40 m/s both pass a threshold of 30 m/s.
+    """
 
     code = "R3"
     unit = "m/s"
@@ -46,7 +54,19 @@ class AltitudeRateRule(RateRule):
     def change(self, previous: StateSample, current: StateSample) -> float | None:
         if previous.altitude is None or current.altitude is None:
             return None
-        return abs(current.altitude - previous.altitude)
+        return current.altitude - previous.altitude
+
+    def exceeds(self, value: float, threshold: float) -> bool:
+        return abs(value) > threshold
+
+    def message(
+        self, snapshot: AircraftSnapshot, value: float, threshold: float, triggered: bool
+    ) -> str:
+        comparison = "beyond" if triggered else "within"
+        return (
+            f"{self.code} {self.label} for {snapshot.icao24}: "
+            f"{value:+.1f} {self.unit} {comparison} the threshold of ±{threshold:g} {self.unit}"
+        )
 
 
 class SpeedRateRule(RateRule):

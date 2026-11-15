@@ -1,0 +1,178 @@
+/*
+ * The replay player floats at the bottom of the page, over the content. It stays under the bars,
+ * the drawer and the dialogs, and over the map: in full screen it is drawn inside the map's element.
+ */
+.player {
+  position: fixed;
+  bottom: var(--space-4);
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: calc(100vw - 2 * var(--gutter));
+  transform: translateX(-50%);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+
+.player > * {
+  pointer-events: auto;
+}
+
+:fullscreen > .player {
+  z-index: 600;
+}
+
+.player p {
+  margin: 0;
+}
+
+.pill,
+.panel,
+.message {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 45%);
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+  border-radius: 999px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.message {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+.message[role="alert"] {
+  border-color: var(--color-danger);
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  color: var(--color-text-muted);
+}
+
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.field input {
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+}
+
+.button,
+.speeds button,
+.settings {
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.button:hover,
+.speeds button:hover,
+.settings:hover,
+.settings:focus-visible,
+.settings[aria-expanded="true"] {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.button:disabled {
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  cursor: not-allowed;
+}
+
+.settings {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.speeds {
+  display: inline-flex;
+}
+
+.speeds button {
+  border-radius: 0;
+  margin-left: -1px;
+}
+
+.speeds button:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  margin-left: 0;
+}
+
+.speeds button:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.speeds button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--color-selection) 18%, transparent);
+}
+
+.period {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 720px) {
+  .player {
+    right: var(--gutter);
+    bottom: var(--space-3);
+    left: var(--gutter);
+    max-width: none;
+    transform: none;
+  }
+
+  .pill,
+  .panel,
+  .message {
+    max-width: 100%;
+  }
+}

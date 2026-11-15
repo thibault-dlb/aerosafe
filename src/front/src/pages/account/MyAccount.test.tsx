@@ -37,7 +37,7 @@ describe("MyAccount", () => {
 
   it("chooses the unit system, and says the thresholds stay metric", () => {
     renderPage("USER", { "aerosafe.units": "metric" });
-    const metric = screen.getByRole("button", { name: "Métriques (m, m/s, km)" });
+    const metric = screen.getByRole("button", { name: "Métriques (m, km/h, km)" });
     const aeronautical = screen.getByRole("button", { name: "Aéronautiques (ft, kt, NM)" });
     expect(metric).toHaveAttribute("aria-pressed", "true");
     expect(aeronautical).toHaveAttribute("aria-pressed", "false");
@@ -49,14 +49,10 @@ describe("MyAccount", () => {
     expect(screen.getByText(/seuils des règles restent en unités métriques/)).toBeInTheDocument();
   });
 
-  it("chooses the theme", () => {
+  it("offers no choice of theme, the application is dark", () => {
     renderPage();
-    const light = screen.getByRole("button", { name: "Clair" });
 
-    fireEvent.click(light);
-
-    expect(light).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Sombre" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("group", { name: "Thème" })).not.toBeInTheDocument();
   });
 
   it("chooses the language, and the page follows", () => {

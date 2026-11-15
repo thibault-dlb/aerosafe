@@ -17,11 +17,6 @@ export const en: Record<TranslationKey, string> = {
   "language.fr": "Français",
   "language.en": "English",
 
-  "theme.label": "Theme",
-  "theme.dark": "Dark",
-  "theme.light": "Light",
-  "theme.toLight": "Switch to the light theme",
-  "theme.toDark": "Switch to the dark theme",
 
   "layout.skipToContent": "Skip to the content",
 
@@ -31,6 +26,8 @@ export const en: Record<TranslationKey, string> = {
 
   "replay.bar": "Historical traffic replay",
   "replay.time": "Simulated time",
+  "replay.idle": "Not started",
+  "replay.settings": "Set up the replay",
   "replay.loading": "Loading the replay clock…",
   "replay.unavailable": "No replay data is imported in the database.",
   "replay.notStarted": "The replay has not started. A supervisor can start it at any time they choose.",
@@ -142,6 +139,8 @@ export const en: Record<TranslationKey, string> = {
   "dashboard.alerts.empty.title": "No active alert",
   "dashboard.alerts.empty.body": "The traffic followed triggers no rule at the moment.",
   "dashboard.alerts.all": "See the {count} active alerts",
+  "dashboard.alerts.focus": "Centre the map on {aircraft} (alert {rule})",
+  "dashboard.alerts.open": "Open alert {rule} of {aircraft} in the alerts",
   "dashboard.chart.title": "Alerts per rule",
   "dashboard.chart.period": "Period",
   "dashboard.chart.period.24h": "24 h",
@@ -516,7 +515,7 @@ export const en: Record<TranslationKey, string> = {
   "account.prefs.title": "Preferences",
   "account.prefs.hint": "Remembered in this browser.",
   "account.prefs.units": "Units",
-  "account.prefs.units.metric": "Metric (m, m/s, km)",
+  "account.prefs.units.metric": "Metric (m, km/h, km)",
   "account.prefs.units.aeronautical": "Aeronautical (ft, kt, NM)",
   "account.prefs.units.hint": "Altitudes, speeds and distances shown. The thresholds of the rules stay in metric units.",
   "account.delete.title": "Delete my account",

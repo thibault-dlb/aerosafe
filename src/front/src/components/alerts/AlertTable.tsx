@@ -28,6 +28,8 @@ export interface AlertTableProps {
   processingId?: string | null;
   /** Identifier of the alert whose details are open: its row is highlighted. */
   selectedId?: string | null;
+  /** Names what a click on the row does for screen readers; by default it opens the details. */
+  selectLabel?: (alert: Alert, selected: boolean) => string;
   /** How the list is sorted. With `onSort`, the headers of the sortable columns are buttons. */
   sorting?: AlertSorting;
   onSort?: (key: AlertSort) => void;
@@ -81,6 +83,7 @@ export default function AlertTable({
   onProcess,
   processingId = null,
   selectedId = null,
+  selectLabel,
   sorting,
   onSort,
   compact = false,
@@ -126,7 +129,7 @@ export default function AlertTable({
                   <button
                     type="button"
                     className={styles.rule}
-                    aria-label={t("alerts.detailsLabel", { rule: alert.ruleCode, aircraft })}
+                    aria-label={selectLabel ? selectLabel(alert, selected) : t("alerts.detailsLabel", { rule: alert.ruleCode, aircraft })}
                     onClick={(event) => {
                       event.stopPropagation();
                       onSelect(alert);

@@ -45,7 +45,7 @@ describe("TrackedAircraft", () => {
     expect(screen.getByRole("heading", { name: "F-GKXA" })).toBeInTheDocument();
     expect(screen.getByText("3C6444 · Airbus A320 · Air France")).toBeInTheDocument();
     expect(screen.getByText("9000 m")).toBeInTheDocument();
-    expect(screen.getByText("230 m/s")).toBeInTheDocument();
+    expect(screen.getByText("828 km/h")).toBeInTheDocument();
     expect(screen.getByText("007°")).toBeInTheDocument();
     expect(screen.getByText("il y a 12 s")).toBeInTheDocument();
     expect(screen.getByText("48.8534° N 2.3488° E")).toBeInTheDocument();

@@ -29,11 +29,13 @@ const GAUGE_HEADROOM = 1.2;
 export default function AlertDetail({ alert, onClose, onProcess, processing = false }: AlertDetailProps) {
   const { t, units } = usePreferences();
   const { observedValue, threshold, unit } = alert;
+  // A descent has a negative vertical rate: the gauge compares its size with the threshold.
+  const size = observedValue === null ? null : Math.abs(observedValue);
   const gauge =
-    observedValue !== null && threshold !== null && Math.max(observedValue, threshold) > 0
+    size !== null && threshold !== null && Math.max(size, threshold) > 0
       ? {
-          scale: Math.max(observedValue, threshold) * GAUGE_HEADROOM,
-          over: observedValue > threshold,
+          scale: Math.max(size, threshold) * GAUGE_HEADROOM,
+          over: size > threshold,
         }
       : null;
 
@@ -82,9 +84,9 @@ export default function AlertDetail({ alert, onClose, onProcess, processing = fa
               {t("alerts.detail.threshold", { value: Formatter.ruleValue(threshold, unit, units) })}
             </span>
           </div>
-          {gauge && observedValue !== null && threshold !== null && (
+          {gauge && size !== null && threshold !== null && (
             <div className={styles.gauge} aria-hidden="true">
-              <i className={gauge.over ? styles.fillOver : styles.fill} style={{ width: `${(observedValue / gauge.scale) * 100}%` }} />
+              <i className={gauge.over ? styles.fillOver : styles.fill} style={{ width: `${(size / gauge.scale) * 100}%` }} />
               <u style={{ left: `${(threshold / gauge.scale) * 100}%` }} />
             </div>
           )}
