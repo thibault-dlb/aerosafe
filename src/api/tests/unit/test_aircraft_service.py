@@ -43,6 +43,7 @@ def row(**values) -> FakeRow:
         "longitude": 2.35,
         "altitude": Decimal("10972.80"),
         "heading": Decimal("284.00"),
+        "speed": Decimal("231.50"),
         "on_ground": False,
     }
     columns.update(values)
@@ -131,6 +132,7 @@ async def test_search_maps_each_row_to_a_summary() -> None:
     assert summary.altitude == 10972.8
     assert summary.heading == 284.0
     assert summary.on_ground is False
+    assert summary.speed == 231.5
 
 
 async def test_an_aircraft_never_observed_has_no_position() -> None:
@@ -143,6 +145,7 @@ async def test_an_aircraft_never_observed_has_no_position() -> None:
                     longitude=None,
                     altitude=None,
                     heading=None,
+                    speed=None,
                     on_ground=None,
                 )
             ]
