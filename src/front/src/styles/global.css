@@ -10,6 +10,36 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* The scroll bars wear the colours of the page, on the page and in every panel that scrolls. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* Browsers that do not read `scrollbar-color` get the same look from the WebKit pseudo-elements. */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 0.625rem;
+    height: 0.625rem;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-muted);
+    background-clip: padding-box;
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-bg);
