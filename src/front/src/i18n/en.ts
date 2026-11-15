@@ -26,6 +26,8 @@ export const en: Record<TranslationKey, string> = {
 
   "replay.bar": "Historical traffic replay",
   "replay.time": "Simulated time",
+  "replay.idle": "Not started",
+  "replay.settings": "Set up the replay",
   "replay.loading": "Loading the replay clock…",
   "replay.unavailable": "No replay data is imported in the database.",
   "replay.notStarted": "The replay has not started. A supervisor can start it at any time they choose.",

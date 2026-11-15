@@ -35,7 +35,9 @@ async function mockClock(page: Page) {
 }
 
 test("the replay is off until the user chooses it, and the choice is kept", async ({ page }) => {
-  await page.goto("/");
+  await openSession(page);
+  await mockClock(page);
+  await page.goto("/aircraft");
   await expect(page.getByRole("button", { name: "Direct" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("region", { name: "Rejeu du trafic historique" })).toHaveCount(0);
 
@@ -47,20 +49,23 @@ test("the replay is off until the user chooses it, and the choice is kept", asyn
   await expect(page.getByRole("region", { name: "Rejeu du trafic historique" })).toBeVisible();
 });
 
-test("a visitor who is not logged in is invited to log in to see the replay", async ({ page }) => {
-  await page.goto("/");
+test("the player says so when the clock cannot be read", async ({ page }) => {
+  await openSession(page);
+  await page.route("**/api/v1/replay**", (route) => route.fulfill({ status: 500, json: { detail: "broken" } }));
+  await page.goto("/aircraft");
 
   await page.getByRole("button", { name: "Rejeu" }).click();
 
-  const bar = page.getByRole("region", { name: "Rejeu du trafic historique" });
-  await expect(bar.getByRole("alert")).toHaveText("Connectez-vous pour voir le rejeu.");
+  const player = page.getByRole("region", { name: "Rejeu du trafic historique" });
+  await expect(player.getByRole("alert")).toContainText("L'horloge de rejeu est injoignable");
 });
 
-test("the replay bar shows the simulated time, and pauses and resumes the clock", async ({
+test("the replay player shows the simulated time, and pauses and resumes the clock", async ({
   page,
 }) => {
+  await openSession(page);
   await mockClock(page);
-  await page.goto("/");
+  await page.goto("/aircraft");
   await page.getByRole("button", { name: "Rejeu" }).click();
   const bar = page.getByRole("region", { name: "Rejeu du trafic historique" });
 
@@ -75,8 +80,9 @@ test("the replay bar shows the simulated time, and pauses and resumes the clock"
 });
 
 test("the speed of the replay can be changed", async ({ page }) => {
+  await openSession(page);
   await mockClock(page);
-  await page.goto("/");
+  await page.goto("/aircraft");
   await page.getByRole("button", { name: "Rejeu" }).click();
   const speeds = page.getByRole("group", { name: "Vitesse" });
   await expect(speeds.getByRole("button", { name: "×10" })).toHaveAttribute("aria-pressed", "true");
@@ -87,9 +93,10 @@ test("the speed of the replay can be changed", async ({ page }) => {
   await expect(speeds.getByRole("button", { name: "×10" })).toHaveAttribute("aria-pressed", "false");
 });
 
-test("going back to the live data hides the replay bar", async ({ page }) => {
+test("going back to the live data hides the replay player", async ({ page }) => {
+  await openSession(page);
   await mockClock(page);
-  await page.goto("/");
+  await page.goto("/aircraft");
   await page.getByRole("button", { name: "Rejeu" }).click();
   await expect(page.getByRole("region", { name: "Rejeu du trafic historique" })).toBeVisible();
 
@@ -116,10 +123,11 @@ test("the replay requests carry the source, and the live ones do not", async ({ 
   await expect.poll(() => sources.at(-1)).toBeNull();
 });
 
-test("the replay bar does not make the page scroll sideways on a phone", async ({ page }) => {
+test("the replay player does not make the page scroll sideways on a phone", async ({ page }) => {
+  await openSession(page);
   await mockClock(page);
   await page.setViewportSize({ width: 390, height: 800 });
-  await page.goto("/");
+  await page.goto("/aircraft");
 
   await page.getByRole("button", { name: "Rejeu" }).click();
   await expect(page.getByRole("region", { name: "Rejeu du trafic historique" })).toBeVisible();
@@ -128,4 +136,35 @@ test("the replay bar does not make the page scroll sideways on a phone", async (
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("the replay player floats at the bottom of the page, and opens the choice of the start", async ({ page }) => {
+  await openSession(page);
+  await mockClock(page);
+  await page.goto("/aircraft");
+  const top = await page.getByRole("heading", { level: 1 }).boundingBox();
+
+  await page.getByRole("button", { name: "Rejeu" }).click();
+  const player = page.getByRole("region", { name: "Rejeu du trafic historique" });
+  await expect(player.locator("time")).toBeVisible();
+
+  // The page does not move down to make room: the player floats over its bottom edge.
+  expect(await page.getByRole("heading", { level: 1 }).boundingBox()).toEqual(top);
+  const box = await player.getByRole("group", { name: "Vitesse" }).boundingBox();
+  const view = page.viewportSize();
+  expect(box!.y).toBeGreaterThan(view!.height - 120);
+
+  await expect(player.getByLabel("Démarrer à (UTC)")).toHaveCount(0);
+  await player.getByRole("button", { name: "Régler le rejeu" }).click();
+  await expect(player.getByLabel("Démarrer à (UTC)")).toBeVisible();
+  await expect(player.getByText(/Période disponible/)).toBeVisible();
+});
+
+test("the home page has no replay: no player, no choice of data source", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("aerosafe.mode", "replay"));
+  await page.goto("/");
+
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Source des données" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Rejeu du trafic historique" })).toHaveCount(0);
 });

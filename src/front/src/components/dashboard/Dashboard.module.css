@@ -47,6 +47,7 @@
 /* The map fills the stage; everything else floats over it and lets the map take the mouse elsewhere. */
 .stage {
   position: relative;
+  isolation: isolate;
   height: clamp(30rem, calc(100dvh - 9rem), 64rem);
   overflow: hidden;
   background: var(--basemap-bg);

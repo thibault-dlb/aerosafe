@@ -24,6 +24,8 @@ export const fr = {
 
   "replay.bar": "Rejeu du trafic historique",
   "replay.time": "Instant simulé",
+  "replay.idle": "Non démarré",
+  "replay.settings": "Régler le rejeu",
   "replay.loading": "Chargement de l'horloge de rejeu…",
   "replay.unavailable": "Aucune donnée de rejeu n'est importée dans la base.",
   "replay.notStarted": "Le rejeu n'a pas démarré. Un superviseur peut le lancer à l'instant de son choix.",

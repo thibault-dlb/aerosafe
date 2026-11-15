@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useEffect } from "react";
 import { createMemoryRouter, type InitialEntry, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -30,6 +31,15 @@ function memoryStore(): PreferenceStore {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => void values.set(key, value),
   });
+}
+
+const mounted = vi.fn();
+
+function Probe() {
+  useEffect(() => {
+    mounted();
+  }, []);
+  return <h1>Probe page</h1>;
 }
 
 function stubAlerts(total = 3) {
@@ -73,6 +83,7 @@ function renderShell({
           { path: "/alerts", element: <h1>Alerts page</h1> },
           { path: "/rules", element: <h1>Rules page</h1> },
           { path: "/account", element: <h1>Account page</h1> },
+          { path: "/probe", element: <Probe /> },
         ],
       },
     ],
@@ -216,6 +227,38 @@ describe("AppShell", () => {
     fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Rejeu" }));
 
     expect(await screen.findByRole("region", { name: "Rejeu du trafic historique" })).toBeInTheDocument();
+  });
+
+  it("hides the replay player when the visitor goes back to the live data", async () => {
+    renderShell();
+    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Rejeu" }));
+    await screen.findByRole("region", { name: "Rejeu du trafic historique" });
+
+    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Direct" }));
+
+    expect(screen.queryByRole("region", { name: "Rejeu du trafic historique" })).not.toBeInTheDocument();
+  });
+
+  it("puts the replay player at the bottom of the page, not in the top bar", async () => {
+    renderShell();
+    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Rejeu" }));
+
+    const player = await screen.findByRole("region", { name: "Rejeu du trafic historique" });
+
+    expect(screen.getByRole("banner")).not.toContainElement(player);
+    expect(await within(player).findByText(/15:00:00 UTC/)).toBeInTheDocument();
+  });
+
+  it("loads the page again when the mode changes, so it shows the data of the new mode", () => {
+    mounted.mockClear();
+    renderShell({ path: "/probe" });
+    expect(mounted).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Rejeu" }));
+    expect(mounted).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Direct" }));
+    expect(mounted).toHaveBeenCalledTimes(3);
   });
 
   it("welcomes a new account once, then lets the visitor close the notice", async () => {

@@ -93,19 +93,26 @@ describe("AppLayout", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
+  it("offers no data source and no replay, whatever mode was chosen", () => {
+    new DataModeService(memoryStore()).set("replay");
+    renderAt("/");
+
+    expect(screen.queryByRole("group", { name: "Source des données" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Rejeu du trafic historique" })).not.toBeInTheDocument();
+  });
+
+  it("floats the top bar over the landing page in every mode", () => {
+    new DataModeService(memoryStore()).set("replay");
+    renderAt("/");
+
+    expect(screen.getByRole("banner").className).toMatch(/overlay/);
+  });
+
   it("offers a logged in user to open the application instead of logging in", () => {
     renderAt("/", fakeSession("authenticated", "USER"));
 
     expect(screen.queryByRole("link", { name: "Connexion" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ouvrir l'application" })).toHaveAttribute("href", "/dashboard");
-  });
-
-  it("lets the visitor choose the data source", () => {
-    renderAt("/");
-
-    expect(screen.getByRole("button", { name: "Direct" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "Rejeu" }));
-    expect(screen.getByRole("button", { name: "Rejeu" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("makes the bar solid once the landing page has scrolled", () => {

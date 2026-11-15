@@ -69,6 +69,11 @@
   margin: 0 0 var(--space-1);
 }
 
+/* The replay player floats over the bottom of the page: leave it room. */
+.footerClearsPlayer {
+  padding-bottom: 4.5rem;
+}
+
 .backdrop {
   position: fixed;
   inset: 0;

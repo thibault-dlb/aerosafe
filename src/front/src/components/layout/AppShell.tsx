@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import ReplayBar from "@/components/replay/ReplayBar";
+import ReplayPlayer from "@/components/replay/ReplayPlayer";
 import Icon from "@/components/ui/Icon";
 import Notice from "@/components/ui/Notice";
 import { useActiveAlertCount } from "@/hooks/useActiveAlertCount";
@@ -32,7 +32,7 @@ export interface AppShellProps {
 /**
  * The frame of every page of the application once logged in: the side bar with the pages the
  * role gives access to and the account, the thin top bar, the page, and the educational notice.
- * On a phone the side bar becomes a drawer.
+ * In the replay, a small player floats at the bottom. On a phone the side bar becomes a drawer.
  */
 export default function AppShell({ preferences, alerts }: AppShellProps) {
   const { t } = useTranslation();
@@ -101,8 +101,6 @@ export default function AppShell({ preferences, alerts }: AppShellProps) {
             menuOpen={drawerOpen}
             onMenu={() => setDrawerOpen((open) => !open)}
           />
-          {mode === "replay" && <ReplayBar />}
-
           {welcome && (
             <Notice className={styles.welcome}>
               <span>{t("auth.welcome")}</span>
@@ -117,7 +115,10 @@ export default function AppShell({ preferences, alerts }: AppShellProps) {
             <Outlet />
           </div>
 
-          <footer className={styles.footer}>
+          {/* The replay player floats over the bottom of the page: the footer keeps clear of it. */}
+          {mode === "replay" && <ReplayPlayer />}
+
+          <footer className={mode === "replay" ? `${styles.footer} ${styles.footerClearsPlayer}` : styles.footer}>
             <p>{t("footer.disclaimer")}</p>
             <p>{t("footer.data")}</p>
           </footer>
