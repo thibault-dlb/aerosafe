@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -35,6 +36,7 @@ SUPERVISOR = CurrentUser(id=7, public_id="01JC0000000000000000000U01", role=Role
 
 class FakeDashboard(DashboardService):
     def __init__(self) -> None:
+        super().__init__(AsyncMock(), AsyncMock())  # every method is overridden: unused
         self.calls: list[tuple[str, DataMode | None, datetime | None]] = []
 
     async def overview(  # type: ignore[override]

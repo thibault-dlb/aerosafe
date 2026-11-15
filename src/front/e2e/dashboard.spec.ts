@@ -143,6 +143,8 @@ test("the map is drawn without any tile, and an aircraft is followed from the se
 
   const search = page.getByRole("combobox", { name: "Suivre un aéronef" });
   await search.fill("F-GKXA");
+  // The suggestions come from the aircraft read by the page: wait for them, a slow browser answers "not found" before.
+  await expect(page.locator('datalist option[value="F-GKXA"]')).toBeAttached();
   await search.press("Enter");
 
   const card = page.getByRole("region", { name: "Aéronef suivi" });
