@@ -57,7 +57,7 @@ describe("FlightDetail", () => {
     expect(screen.getByText("22.2 km")).toBeInTheDocument();
     expect(screen.getByText("11000 m")).toBeInTheDocument();
     expect(screen.getByText("moyenne 10000 m")).toBeInTheDocument();
-    expect(screen.getByText("moyenne 230 m/s")).toBeInTheDocument();
+    expect(screen.getByText("moyenne 828 km/h")).toBeInTheDocument();
     expect(screen.getByText("En cours")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });

@@ -19,7 +19,7 @@ describe("Formatter", () => {
   it("shows altitudes, speeds and distances in the unit system chosen", () => {
     expect(Formatter.altitude(10400)).toBe("10400 m");
     expect(Formatter.altitude(10400, "aeronautical")).toBe("34121 ft");
-    expect(Formatter.speed(231)).toBe("231 m/s");
+    expect(Formatter.speed(231)).toBe("832 km/h");
     expect(Formatter.speed(231, "aeronautical")).toBe("449 kt");
     expect(Formatter.distance(548.3)).toBe("548.3 km");
     expect(Formatter.distance(548.3, "aeronautical")).toBe("296.1 NM");

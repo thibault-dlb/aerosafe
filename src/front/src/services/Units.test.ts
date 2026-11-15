@@ -5,8 +5,12 @@ import { Units } from "./Units";
 describe("Units", () => {
   it("keeps the metric values as they are", () => {
     expect(Units.altitude(10400, "metric")).toEqual({ value: 10400, unit: "m" });
-    expect(Units.speed(231, "metric")).toEqual({ value: 231, unit: "m/s" });
     expect(Units.distance(548.3, "metric")).toEqual({ value: 548.3, unit: "km" });
+  });
+
+  it("shows a ground speed in kilometres per hour", () => {
+    expect(Units.speed(231, "metric").value).toBeCloseTo(831.6, 1);
+    expect(Units.speed(231, "metric").unit).toBe("km/h");
   });
 
   it("converts to feet, knots and nautical miles", () => {

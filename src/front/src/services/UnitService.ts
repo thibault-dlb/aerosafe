@@ -1,6 +1,6 @@
 import { PreferenceStore } from "@/services/PreferenceStore";
 
-/** Metric (m, m/s, km) or aeronautical (ft, kt, NM) display of altitudes, speeds and distances. */
+/** Metric (m, km/h, km) or aeronautical (ft, kt, NM) display of altitudes, speeds and distances. */
 export type UnitSystem = "metric" | "aeronautical";
 
 export const UNIT_SYSTEMS: readonly UnitSystem[] = ["metric", "aeronautical"];

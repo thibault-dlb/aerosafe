@@ -516,7 +516,7 @@ export const en: Record<TranslationKey, string> = {
   "account.prefs.title": "Preferences",
   "account.prefs.hint": "Remembered in this browser.",
   "account.prefs.units": "Units",
-  "account.prefs.units.metric": "Metric (m, m/s, km)",
+  "account.prefs.units.metric": "Metric (m, km/h, km)",
   "account.prefs.units.aeronautical": "Aeronautical (ft, kt, NM)",
   "account.prefs.units.hint": "Altitudes, speeds and distances shown. The thresholds of the rules stay in metric units.",
   "account.delete.title": "Delete my account",

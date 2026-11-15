@@ -514,7 +514,7 @@ export const fr = {
   "account.prefs.title": "Préférences",
   "account.prefs.hint": "Mémorisées dans ce navigateur.",
   "account.prefs.units": "Unités",
-  "account.prefs.units.metric": "Métriques (m, m/s, km)",
+  "account.prefs.units.metric": "Métriques (m, km/h, km)",
   "account.prefs.units.aeronautical": "Aéronautiques (ft, kt, NM)",
   "account.prefs.units.hint": "Altitudes, vitesses et distances affichées. Les seuils des règles restent en unités métriques.",
   "account.delete.title": "Supprimer mon compte",

@@ -82,7 +82,7 @@ describe("AircraftRecord", () => {
     await screen.findByRole("heading", { level: 1, name: "D-AIBD" });
     const figures = within(screen.getByRole("banner"));
     expect(figures.getByText("10000 m")).toBeInTheDocument();
-    expect(figures.getByText("230 m/s")).toBeInTheDocument();
+    expect(figures.getByText("828 km/h")).toBeInTheDocument();
     expect(figures.getByText("90 °")).toBeInTheDocument();
   });
 

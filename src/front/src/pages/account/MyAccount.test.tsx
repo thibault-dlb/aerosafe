@@ -37,7 +37,7 @@ describe("MyAccount", () => {
 
   it("chooses the unit system, and says the thresholds stay metric", () => {
     renderPage("USER", { "aerosafe.units": "metric" });
-    const metric = screen.getByRole("button", { name: "Métriques (m, m/s, km)" });
+    const metric = screen.getByRole("button", { name: "Métriques (m, km/h, km)" });
     const aeronautical = screen.getByRole("button", { name: "Aéronautiques (ft, kt, NM)" });
     expect(metric).toHaveAttribute("aria-pressed", "true");
     expect(aeronautical).toHaveAttribute("aria-pressed", "false");
