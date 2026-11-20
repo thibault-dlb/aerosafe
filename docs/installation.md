@@ -1,6 +1,6 @@
 # Installation and configuration
 
-Only the project foundations exist so far: an API with a health check, an empty web interface and the container stack. This page will be completed as the application grows.
+The application runs from the container stack (PostGIS, API, front and Nginx gateway). The deployment environment and the troubleshooting section are still `TBD`.
 
 ## Requirements for the procedure
 
@@ -50,6 +50,14 @@ Secrets such as database credentials, API keys and environment variables are nev
 | `DB_HOST`, `DB_PORT` | Where the API finds the database | Yes | `postgres`, `5432` in the template |
 | `DB_USER`, `DB_PASS`, `DB_NAME` | Application database and its user, limited to reading and writing data | Yes | None |
 | `DB_MIGRATION_USER`, `DB_MIGRATION_PASS` | Owner of the application database, used only to run the migrations | Yes | None |
+| `AUTH_JWT_SECRET` | Secret that signs the access tokens: 32 characters at least, and not the value of `.env.example` | Yes | None (the example value is refused) |
+| `AUTH_ACCESS_TOKEN_MINUTES`, `AUTH_REFRESH_TOKEN_DAYS` | Lifetime of the access token and of the refresh token | No | `15`, `7` |
+| `AUTH_COOKIE_SECURE` | `true` behind HTTPS; `false` lets the refresh cookie work over plain HTTP | No | `false` |
+| `AUTH_LOGIN_MAX_FAILURES`, `AUTH_LOGIN_LOCK_MINUTES` | Throttling of failed logins | No | `5`, `15` |
+| `COLLECTION_ENABLED` | Starts the OpenSky collection. Keep `false` unless this instance is the only one to collect with the group account | No | `false` |
+| `COLLECTION_PROFILE` | `ILE_DE_FRANCE` (every 30 s, 1 credit) or `FRANCE` (every 120 s, 3 credits) | No | `ILE_DE_FRANCE` |
+| `COLLECTION_FLIGHT_GAP_MINUTES` | Maximum gap between two observations of the same flight | No | `30` |
+| `OPENSKY_CLIENT_ID`, `OPENSKY_CLIENT_SECRET` | OAuth2 API client of the group account; empty means anonymous access (400 credits a day) | No | Empty |
 | `VITE_API_URL` | Public URL of the API, as seen from the browser | No | `http://localhost:8888/api` |
 
 ## Environments

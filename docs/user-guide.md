@@ -1,6 +1,6 @@
 # User guide
 
-The application is partly built. Searching for an aircraft, the aircraft record, the flight trajectory, the alerts and the rules work and are described below. The accounts, the account page and the way a Supervisor creates accounts work too. The dashboard works too, for every role; the flight statistics are not built yet (see [team work split](team-split.md#interface)). This page lists what each profile will be able to do, according to the project sheet and the specifications. Step-by-step instructions are added as each part is developed.
+The application is built. Searching for an aircraft, the aircraft record, the flight trajectory with its statistics, the alerts, the rules, the accounts, the account page, the way a Supervisor creates accounts, the dashboard (for every role) and the replay work and are described below. Only the optional AI comparison (UC-07) is not built. This page lists what each profile can do, according to the project sheet and the specifications.
 
 > **Disclaimer:** AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally. This limitation is also shown in the application (§VII.3).
 

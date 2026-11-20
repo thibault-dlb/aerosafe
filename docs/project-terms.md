@@ -1,6 +1,6 @@
 # Project terms
 
-English summary of specifications §V and §VII.3. None of it appears in the [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf), which says nothing about intellectual property, confidentiality, regulation or penalties. Treat it as unconfirmed until the supervising teacher states that these terms apply.
+English summary of specifications §V and §VII.3. None of it appears in the [project sheet](../Fiche_projet_AeroSafe_IPSA.pdf), which says nothing about intellectual property, confidentiality, regulation or penalties. Treat it as unconfirmed until the supervising teacher states that these terms apply. The supervising teacher said (reported on 2026-11-20) that only the project sheet is binding, except the delivery details, so these terms stay informative.
 
 The two parties are the sponsor (IPSA, represented by the supervising teacher) and the project group.
 
@@ -8,6 +8,7 @@ The two parties are the sponsor (IPSA, represented by the supervising teacher) a
 
 - The source code, documentation and all deliverables remain the intellectual property of the project group members who wrote them.
 - IPSA has a non-exclusive right to use the deliverables for teaching: evaluation, archiving, and illustration for later cohorts.
+- No open-source licence is needed for the repository, the supervising teacher said (reported on 2026-11-20).
 - Aeronautical data comes from the OpenSky Network and stays subject to its terms of use. The group checks and respects them, especially for any use beyond educational, non-commercial purposes.
 - Third-party libraries and components stay under their own licences. The group keeps the list of [dependencies and licences](dependencies.md) up to date.
 - Any reused external code is declared and attributed. Plagiarism is excluded and is grounds for rejecting a deliverable.
@@ -23,7 +24,7 @@ The two parties are the sponsor (IPSA, represented by the supervising teacher) a
 
 ## Regulatory constraints
 
-- **Data source terms:** use of OpenSky Network data must comply with its published terms, particularly regarding the project's non-commercial, educational nature. Checked on 2026-11-06: educational, non-profit use is allowed; the terms also forbid redistributing the data, require a citation in publications and the deletion of the data at the end of the project. Whether automated collection counts as operational use is still to confirm (V-01). See [OpenSky Network](opensky.md).
+- **Data source terms:** use of OpenSky Network data must comply with its published terms, particularly regarding the project's non-commercial, educational nature. Checked on 2026-11-06: educational, non-profit use is allowed; the terms also forbid redistributing the data, require a citation in publications and the deletion of the data at the end of the project. The supervising teacher said (reported on 2026-11-20) that automated collection needs no licence (V-01). See [OpenSky Network](opensky.md).
 - **Personal data:** account data is processed in line with the GDPR: purpose limited to running the application, data minimisation, secure storage and the ability to delete an account.
 - **Third-party licences:** only libraries whose licence allows educational use and redistribution of the source code are used, and they are documented.
 - **Institution rules:** the project follows IPSA's internal regulations and IT charter, and the rules on academic integrity.

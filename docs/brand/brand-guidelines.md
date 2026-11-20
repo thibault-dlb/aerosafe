@@ -180,7 +180,7 @@ Token mapping between the two themes (same token names, different values):
 
 The five rule colours (`--rule-1` to `--rule-5`) colour the bars of the alert chart of the dashboard. They are separate from the status colours (danger, warning) and from the criticality marks, so a rule is never mistaken for a level. They were checked for colour blindness in both themes (adjacent pairs, lightness band, contrast with the surface); the chart also has a legend and a data table, so the colour is never the only clue.
 
-Planned implementation: tokens defined on `:root` for one theme and redefined for the other under `prefers-color-scheme` and a `data-theme` attribute (dark by default), so that no component uses a literal colour.
+Implementation: tokens defined on `:root` in `src/front/src/styles/tokens.css` for the dark theme only (D-21), so that no component uses a literal colour.
 
 ## 4. Fonts
 

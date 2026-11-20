@@ -148,7 +148,7 @@ The import has no `--step` option yet: it keeps the resolution of the dataset. R
 
 ## Import into PostgreSQL
 
-`src/api/services/historical` loads the daily files into `AERONEF`, `VOL` and `OBSERVATION`. Rules chosen for the replay (D-20, 2026-11-13; to confirm with the supervising teacher like the other team decisions): the area of metropolitan France, every trajectory (listed or not), clipped to the area, at the resolution of the dataset (one point per second, no downsampling), aircraft anonymous.
+`src/api/services/historical` loads the daily files into `AERONEF`, `VOL` and `OBSERVATION`. Rules chosen for the replay (D-20, 2026-11-13; confirmed by the supervising teacher, reported on 2026-11-20): the area of metropolitan France, every trajectory (listed or not), clipped to the area, at the resolution of the dataset (one point per second, no downsampling), aircraft anonymous.
 
 | Topic | Rule |
 | --- | --- |

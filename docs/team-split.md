@@ -20,7 +20,7 @@ The split was made without information on each member's skills. Work packages ca
 | Sacha | `feat/rules-alerts` | Rules engine R1 to R5, alerts, thresholds | BF-09, BF-10, BF-12, BF-13 | UC-03, UC-04, UC-05 |
 | Yassine | `feat/aircraft-lookup` | Search, aircraft record, flight parameters, trajectory, map, flight statistics | BF-04 to BF-08 | UC-01, UC-02 |
 
-The AI module (BF-15, UC-07) is **not assigned**. It is a bonus and only starts once all priority E requirements are met.
+The AI module (BF-15, UC-07) is **not assigned**. It is a bonus and only starts once all priority E requirements are met. The supervising teacher said it counts in the grading (reported on 2026-11-20).
 
 ## File ownership
 
@@ -43,7 +43,7 @@ Tests and documentation follow the same rule:
 
 The split above already gives each member the pages of their work package. This section records where the interface stands and who finishes what, as a team decision made on 2026-11-10 (not a requirement of the project sheet). Thibault takes the design and the home page; the four other members build their own screens and style them with Thibault's design.
 
-### State on 2026-11-10
+### State on 2026-11-15
 
 | Screen | Route | Owner | State |
 | --- | --- | --- | --- |
@@ -54,11 +54,11 @@ The split above already gives each member the pages of their work package. This 
 | Alerts, rules | `/alerts`, `/rules` | Sacha | Built and styled with the shared elements (chips, sortable table, detail panel, notifications; one card for each rule), translated, with their tests; inside the shell, closed to a User. `components/alerts/` and `components/rules/` hold their parts |
 | Aircraft search, aircraft record, flight | `/aircraft`, `/aircraft/:id`, `/flights/:id` | Yassine | Built and styled with the shared elements, translated, with their tests: one search field and an area drawn on the map, an identity banner with figures, a large map with oriented markers, profiles read by pointing. `components/aircraft/` holds the banner and the small marker of the lists |
 
-The front has no stylesheet yet: every page shows plain HTML. The design is decided (D-19, 2026-11-12) and is being built on `feat/interface-design`; it lands before the other pages are styled.
+Every screen above is merged in `develop` (pull requests #26 to #39), styled with the design (D-19, dark theme only since D-21), translated in French and English, and covered by Vitest and Playwright tests. The replay (D-20) is merged too (#25, #28). Nothing is left on the interface.
 
 ### Who does what
 
-| Member | Interface work left |
+| Member | Interface work (all merged on 2026-11-15) |
 | --- | --- |
 | Thibault | The design (global styles, shared base elements, navigation frame, see below) and the home page. Wires the route guard of Louis-Amaury in `AppRoute.tsx` |
 | Louis-Amaury | The logo (design and files), then `AuthProvider`, `useAuth`, `AuthService`, `User` model, the token provider of `ApiClient`, a route guard by role in `components/auth/`, the log in, sign up and accounts pages. The accounts page needs `users.py` first |
