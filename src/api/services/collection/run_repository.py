@@ -4,6 +4,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from core.data_mode import DataMode
 from core.repository import Repository
 from models import CollectionParameter, CollectionRun, CollectionStatus
 from models import CollectionProfile as CollectionProfileRef
@@ -89,8 +90,11 @@ class DatabaseCollectionStateStore:
 
     @staticmethod
     async def _parameter(session: AsyncSession) -> CollectionParameter:
-        # The migrations insert the single row; there is never a second one.
-        return (await session.scalars(select(CollectionParameter))).one()
+        # The migrations insert one row per live source; this collector is the OpenSky one.
+        statement = select(CollectionParameter).where(
+            DataMode.LIVE.matches(CollectionParameter.source_id)
+        )
+        return (await session.scalars(statement)).one()
 
     async def _id_of(
         self,

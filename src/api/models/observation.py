@@ -40,7 +40,8 @@ class Observation(TimestampMixin, Base):
         Index("idx_observation_contact", "DT_DERNIER_CONTACT"),
         Index("idx_observation_position", "GEO_POSITION", postgresql_using="gist"),
         comment=(
-            "Vecteur d'état d'un aéronef reçu d'OpenSky, nettoyé puis stocké par le collecteur."
+            "Vecteur d'état d'un aéronef reçu de sa source "
+            "(OpenSky, adsb.fi ou trafic historique), nettoyé puis stocké."
         ),
     )
 
