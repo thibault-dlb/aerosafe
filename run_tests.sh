@@ -123,7 +123,7 @@ if [[ "$USE_DOCKER" != true ]]; then
     if uvVer=$(uv --version 2>&1); then
         write_ok "UV available: $uvVer"
         write_info "Tests will run from src/api/ with 'uv run pytest'."
-        write_info "No database is needed yet: the tests open no connection."
+        write_info "No database is needed for these two suites. The integration tests (tests/integration) are not run here: use 'uv run pytest' from src/api with a migrated database, or the CI."
     else
         write_fail "Neither Docker nor UV available — cannot run the tests."
         exit 1
@@ -138,10 +138,11 @@ write_info "Root directory  : src/api/tests/"
 write_info ""
 write_info "conftest.py (root)    — client fixture for the HTTP tests"
 write_info "   • Builds an httpx AsyncClient on the FastAPI application (no network)"
-write_info "   • No database fixture yet: the application opens no connection at startup"
+write_info "   • No database fixture: these suites open no connection (database tests are in integration/)"
 write_info ""
-write_info "unit/                 — tests of settings, database wrapper and middleware"
+write_info "unit/                 — unit tests of settings, core, middleware and services (collection, rules, replay, accounts)"
 write_info "api/                  — tests of the HTTP endpoints"
+write_info "integration/          — tests that need PostgreSQL (not run by this script)"
 write_info ""
 
 # ── Core runner function ──────────────────────────────────────────────────────
@@ -224,13 +225,13 @@ invoke_pytest_suite() {
 # ─── Suite 1 : tests unitaires ORM ───────────────────────────────────────────
 
 if [[ "$SUITE" == "all" || "$SUITE" == "unit" ]]; then
-    write_section "Suite 1 / 2 — Unit tests (configuration and core)"
-    write_info "These tests check settings, the database wrapper and the middleware without"
-write_info "going through the HTTP API. They do not need a running database."
+    write_section "Suite 1 / 2 — Unit tests"
+    write_info "These tests check the settings, the core, the middleware and the services (collection,"
+    write_info "rules, replay, historical import, accounts) without the HTTP layer. No database is needed."
 
     invoke_pytest_suite \
-        "Unit tests — configuration and core" \
-        "Checks the building blocks of the application (settings, database wrapper, middleware)." \
+        "Unit tests" \
+        "Checks the settings, the core, the middleware and the services without the HTTP layer." \
         "tests/unit/" \
         "--cov-fail-under=0"
 fi
@@ -240,9 +241,12 @@ fi
 if [[ "$SUITE" == "all" || "$SUITE" == "api" ]]; then
     write_section "Suite 2 / 2 — API tests (HTTP via AsyncClient)"
     write_info "These tests run the complete FastAPI application with an asynchronous HTTP client."
-write_info ""
-write_info "Tested modules:"
-write_info "test_health.py            (2 tests) : liveness probe 200, X-Request-ID header on every response"
+    write_info ""
+    write_info "Tested modules:"
+    write_info "test_*_routes.py          : the routes of aircraft, alerts, auth, collection, dashboard, flights, replay, rules and users"
+    write_info "test_auth_*.py, test_security.py : tokens, roles, login throttling"
+    write_info "test_health.py, test_routing.py  : liveness probe, request id header, routing"
+    write_info "test_unit_*.py            : the service unit tests, run again here through the API application"
 
     invoke_pytest_suite \
         "API tests — HTTP endpoints" \

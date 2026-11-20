@@ -16,7 +16,7 @@ Both unit test suites fail below 80% coverage. The CI tool is GitHub Actions, se
 
 | Command | Where | What it does |
 | --- | --- | --- |
-| `./run_tests.ps1` or `./run_tests.sh` | Repository root | Python test runner with a report per suite (4 workers by default). Options: `-Local` / `--local`, `-Suite unit\|api` / `--suite unit\|api`, `-Verbose` / `--verbose`. Uses the API container when it runs, otherwise uv |
+| `./run_tests.ps1` or `./run_tests.sh` | Repository root | Python test runner with a report per suite (4 workers by default). Runs the `unit` and `api` suites only, not the integration tests. Options: `-Local` / `--local`, `-Suite unit\|api` / `--suite unit\|api`, `-Verbose` / `--verbose`. Uses the API container when it runs, otherwise uv |
 | `uv run pytest` | `src/api` | Python tests with coverage, including the integration tests, which need a migrated database reachable with the `DB_*` settings |
 | `uv run pytest -m "not integration"` | `src/api` | Python tests without the integration tests, so without a database |
 | `uv run ruff check .` | `src/api` | Python linting |
