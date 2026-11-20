@@ -42,7 +42,6 @@ def row(aircraft_id: int, seconds_ago: int, flight_id: int | None, rank: int, **
         "heading": Decimal("90.00"),
         "on_ground": False,
         "aircraft_rank": rank,
-        "flight_rank": rank,
     }
     columns.update(values)
     return SimpleNamespace(**columns)
@@ -66,7 +65,7 @@ class TestRecentQuery:
     def test_the_live_window_keeps_its_length_and_has_no_upper_bound(self) -> None:
         query = compiled(SnapshotReader(AsyncMock()).recent_query(NOW))
 
-        assert '"DT_DERNIER_CONTACT" <=' not in str(query)
+        assert NOW not in query.params.values()
         assert NOW - SILENCE_LIMIT in query.params.values()
 
     def test_a_replay_keeps_every_row_of_the_window_for_the_previous_point(self) -> None:
@@ -152,16 +151,16 @@ class TestReadInAReplay:
         session.execute.assert_awaited_once()
         assert snapshot.latest_with_position is None
 
-    async def test_live_still_takes_the_observation_just_before(self) -> None:
-        session = AsyncMock()
-        recent = [row(1, 0, flight_id=5, rank=1), row(1, 3, flight_id=5, rank=2)]
-        session.execute.side_effect = [result(recent), result([row(1, 0, flight_id=5, rank=1)])]
+    @pytest.mark.parametrize("mode", [DataMode.OPENSKY, DataMode.ADSBFI])
+    def test_live_finds_the_previous_point_ten_seconds_back_in_the_query(
+        self, mode: DataMode
+    ) -> None:
+        live = compiled(SnapshotReader(AsyncMock()).recent_query(NOW, mode))
+        replay = compiled(SnapshotReader(AsyncMock()).recent_query(NOW, DataMode.REPLAY))
 
-        [snapshot] = await SnapshotReader(session).read(NOW)
-
-        assert snapshot.previous is not None
-        assert snapshot.previous.last_contact_at == NOW - timedelta(seconds=3)
-        assert snapshot.latest_with_position is not None
+        assert "JOIN LATERAL" in str(live)
+        assert timedelta(seconds=10) in live.params.values()
+        assert "JOIN LATERAL" not in str(replay)
 
 
 class TestRuleFlags:

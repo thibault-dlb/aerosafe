@@ -122,7 +122,9 @@ class CollectionCycle:
     async def _evaluate(self, collected_at: datetime) -> str | None:
         try:
             async with self._session_factory() as session:
-                await self._engine_factory(session).evaluate(collected_at, self.mode)
+                await self._engine_factory(session).evaluate(
+                    collected_at, self.mode, self._collector.profile.area
+                )
                 await session.commit()
         except Exception as error:
             logger.exception("Rule evaluation failed")

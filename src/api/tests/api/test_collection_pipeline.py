@@ -133,7 +133,7 @@ class Engine:
     def __init__(self, _session: Any) -> None:
         pass
 
-    async def evaluate(self, _now: datetime, _mode: Any) -> None:
+    async def evaluate(self, _now: datetime, _mode: Any, _area: Any = None) -> None:
         return None
 
 

@@ -1,14 +1,21 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Protocol
+
+
+class CoverageZone(Protocol):
+    """The area a live source covers, as the rules need it: how far a point is from its edge."""
+
+    def distance_to_edge_km(self, latitude: float, longitude: float) -> float: ...
 
 
 @dataclass(frozen=True)
 class StateSample:
     """One stored observation of an aircraft, reduced to what the rules read.
 
-    Values are in OpenSky units: metres, metres per second and degrees.
-    A missing value means OpenSky did not send it.
+    Values are in metres, metres per second and degrees, whatever the source.
+    A missing value means the source did not send it.
     """
 
     last_contact_at: datetime
@@ -18,6 +25,8 @@ class StateSample:
     heading: float | None
     on_ground: bool
     flight_id: int | None
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 @dataclass(frozen=True)
@@ -27,6 +36,8 @@ class AircraftSnapshot:
     `previous` is the observation just before `latest` in the same flight, or empty when
     `latest` belongs to no flight or is the first of its flight (D-06).
     `latest_with_position` is the latest observation that has a position, used by R2.
+    `near_edge` says that this position is close to the edge of the area of the source: an
+    aircraft that stops being heard there has probably left the area, so R1 and R2 say nothing.
     """
 
     aircraft_id: int
@@ -34,6 +45,7 @@ class AircraftSnapshot:
     latest: StateSample
     previous: StateSample | None = None
     latest_with_position: StateSample | None = None
+    near_edge: bool = False
 
     @property
     def airborne(self) -> bool:

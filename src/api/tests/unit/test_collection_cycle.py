@@ -96,12 +96,14 @@ class Engine:
         self.error = error
         self.calls: list[datetime] = []
         self.modes: list[DataMode] = []
+        self.areas: list[Any] = []
 
     def __call__(self, _session: Any) -> "Engine":
         return self
 
-    async def evaluate(self, now: datetime, mode: DataMode) -> None:
+    async def evaluate(self, now: datetime, mode: DataMode, area: Any = None) -> None:
         self.calls.append(now)
+        self.areas.append(area)
         self.modes.append(mode)
         if self.error:
             raise self.error
@@ -138,6 +140,7 @@ async def test_a_successful_cycle_collects_then_evaluates_at_the_collection_time
     assert result.evaluation_error is None
     assert engine.calls == [NOW]
     assert engine.modes == [DataMode.OPENSKY]
+    assert engine.areas == [PROFILE.area]
     assert result.source is DataMode.OPENSKY
     assert await store.runs(10) == [result]
     assert await store.last_success() == result
@@ -149,8 +152,8 @@ async def test_the_run_ends_after_the_evaluation() -> None:
             super().__init__()
             self.clock = clock
 
-        async def evaluate(self, now: datetime, mode: DataMode) -> None:
-            await super().evaluate(now, mode)
+        async def evaluate(self, now: datetime, mode: DataMode, area: Any = None) -> None:
+            await super().evaluate(now, mode, area)
             self.clock.now = NOW + timedelta(seconds=7)
 
     clock = Clock()
