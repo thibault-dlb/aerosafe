@@ -10,6 +10,7 @@ import pytest
 from config.adsbfi import AdsbFiSettings
 from config.opensky import OpenSkySettings
 from core.data_mode import DataMode
+from services.collection import scheduler as scheduler_module
 from services.collection.collector import DataCollector
 from services.collection.cycle import CollectionCycle
 from services.collection.flight_grouper import FlightGrouper
@@ -26,6 +27,7 @@ from services.collection.run_state import (
     RunStatus,
 )
 from services.collection.scheduler import (
+    PURGE_JOB_ID,
     CollectionBusy,
     CollectionDisabled,
     CollectionRateLimited,
@@ -483,7 +485,11 @@ async def test_each_enabled_source_gets_its_own_periodic_job() -> None:
     await scheduler.start()
     try:
         assert scheduler._jobs is not None
-        jobs = {job.id: job.trigger.interval.total_seconds() for job in scheduler._jobs.get_jobs()}
+        jobs = {
+            job.id: job.trigger.interval.total_seconds()
+            for job in scheduler._jobs.get_jobs()
+            if job.id.startswith("collection-")
+        }
         assert jobs == {"collection-opensky": 30, "collection-adsbfi": 5}
         cycle = scheduler._collections[DataMode.ADSBFI].cycle
         assert cycle is not None and cycle.mode is DataMode.ADSBFI
@@ -560,3 +566,64 @@ def test_the_replay_is_never_collected() -> None:
     assert not scheduler.is_enabled(DataMode.REPLAY)
     assert not scheduler.is_busy(DataMode.REPLAY)
     assert scheduler.rate_limited_until(DataMode.REPLAY) is None
+
+
+async def test_adsbfi_is_purged_every_hour_when_it_keeps_a_retention() -> None:
+    opensky, adsbfi = both_enabled()
+    scheduler = Scheduler(opensky, adsbfi_settings=adsbfi)
+
+    await scheduler.start()
+    try:
+        assert scheduler._jobs is not None
+        purge = scheduler._jobs.get_job(PURGE_JOB_ID)
+        assert purge is not None and purge.trigger.interval.total_seconds() == 3_600
+    finally:
+        await scheduler.stop()
+
+
+async def test_no_purge_without_retention_or_without_adsbfi() -> None:
+    keep_all = AdsbFiSettings(
+        _env_file=None, COLLECTION_ADSBFI_ENABLED=True, ADSBFI_RETENTION_DAYS=0
+    )
+    for scheduler in (
+        Scheduler(enabled_settings(), adsbfi_settings=keep_all),
+        Scheduler(enabled_settings()),
+    ):
+        await scheduler.start()
+        try:
+            assert scheduler._jobs is not None
+            assert scheduler._jobs.get_job(PURGE_JOB_ID) is None
+        finally:
+            await scheduler.stop()
+
+
+async def test_a_failed_purge_never_stops_the_scheduler() -> None:
+    purger = AsyncMock()
+    purger.run.side_effect = RuntimeError("database down")
+    scheduler = Scheduler(enabled_settings(), purger=purger)
+
+    await scheduler._purge()
+
+    purger.run.assert_awaited_once()
+
+
+async def test_the_purger_is_built_from_the_retention() -> None:
+    adsbfi = AdsbFiSettings(_env_file=None, ADSBFI_RETENTION_DAYS=3)
+    scheduler = Scheduler(enabled_settings(), adsbfi_settings=adsbfi)
+    built: list[timedelta] = []
+
+    class Recorder:
+        def __init__(self, retention: timedelta) -> None:
+            built.append(retention)
+
+        async def run(self) -> None:
+            return None
+
+    original = scheduler_module.ObservationPurger
+    scheduler_module.ObservationPurger = Recorder  # type: ignore[misc,assignment]
+    try:
+        await scheduler._purge()
+    finally:
+        scheduler_module.ObservationPurger = original  # type: ignore[misc]
+
+    assert built == [timedelta(days=3)]

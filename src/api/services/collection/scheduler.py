@@ -18,6 +18,7 @@ from services.collection.cycle import CollectionCycle
 from services.collection.flight_grouper import FlightGrouper
 from services.collection.opensky_client import OpenSkyClient, TokenProvider
 from services.collection.profiles import CollectionProfile
+from services.collection.purge import ObservationPurger
 from services.collection.run_repository import state_store
 from services.collection.run_state import CollectionRunResult
 from services.collection.sources import AdsbFiSource, LiveSource, OpenSkySource
@@ -25,6 +26,10 @@ from services.collection.sources import AdsbFiSource, LiveSource, OpenSkySource
 logger = get_logger()
 
 _JOB_PREFIX = "collection-"
+PURGE_JOB_ID = "purge-adsbfi"
+# The purge runs every hour, the first one a minute after the start.
+_PURGE_PERIOD = timedelta(hours=1)
+_PURGE_DELAY = timedelta(minutes=1)
 
 
 class CollectionBusy(Exception):
@@ -76,6 +81,7 @@ class Scheduler:
         cycle: CollectionCycle | None = None,
         adsbfi_settings: AdsbFiSettings | None = None,
         adsbfi_cycle: CollectionCycle | None = None,
+        purger: ObservationPurger | None = None,
     ) -> None:
         self._settings = settings or opensky_settings
         self._adsbfi_settings = adsbfi_settings or adsbfi_default_settings
@@ -83,6 +89,7 @@ class Scheduler:
             DataMode.OPENSKY: _Collection(cycle),
             DataMode.ADSBFI: _Collection(adsbfi_cycle),
         }
+        self._purger = purger
         self._jobs: AsyncIOScheduler | None = None
 
     @classmethod
@@ -158,6 +165,20 @@ class Scheduler:
                 profile.code,
                 profile.period_seconds,
             )
+        if DataMode.ADSBFI in sources and self._adsbfi_settings.ADSBFI_RETENTION_DAYS > 0:
+            self._jobs.add_job(
+                self._purge,
+                "interval",
+                seconds=_PURGE_PERIOD.total_seconds(),
+                id=PURGE_JOB_ID,
+                next_run_time=datetime.now(UTC) + _PURGE_DELAY,
+                max_instances=1,
+                coalesce=True,
+            )
+            logger.info(
+                "adsb.fi observations kept {} days, purged every hour",
+                self._adsbfi_settings.ADSBFI_RETENTION_DAYS,
+            )
         self._jobs.start()
 
     async def stop(self) -> None:
@@ -197,6 +218,17 @@ class Scheduler:
             return
         async with collection.lock:
             await collection.cycle.run()
+
+    async def _purge(self) -> None:
+        """Delete the adsb.fi observations older than the retention. Never raises: a failed
+        purge is logged and the next one tries again."""
+        if self._purger is None:
+            retention = timedelta(days=self._adsbfi_settings.ADSBFI_RETENTION_DAYS)
+            self._purger = ObservationPurger(retention)
+        try:
+            await self._purger.run()
+        except Exception:
+            logger.exception("adsb.fi purge failed")
 
     def _build_cycle(self, mode: DataMode) -> CollectionCycle:
         source: LiveSource
