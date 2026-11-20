@@ -1,6 +1,6 @@
 # OpenSky Network
 
-Terms of use and access conditions of the data source. The project sheet sets the OpenSky Network as the data source (§4) but says nothing about its terms. Checking them is V-01 in [open points](open-points.md), from specifications §V.1, §VII.1 and §VII.3. Quotas and collection profiles are also summarised in [architecture](architecture.md#data-source).
+Terms of use and access conditions of the data source. The project sheet sets the OpenSky Network as the data source (§4) but says nothing about its terms. Since 2026-11-20 the adsb.fi open data API is collected in parallel (D-23): the comparison of the two sources and the terms of adsb.fi are in [data sources](data-sources.md). Checking them is V-01 in [open points](open-points.md), from specifications §V.1, §VII.1 and §VII.3. Quotas and collection profiles are also summarised in [architecture](architecture.md#data-source).
 
 Checked on 2026-11-06 from two official pages:
 
@@ -84,7 +84,7 @@ The collector (`services/collection/normalizer.py`) applies these rules before s
 
 ## Collection
 
-The two collection profiles (Île-de-France every 30 s, metropolitan France every 120 s) are set in [architecture](architecture.md#data-source) (D-05). The terms add these constraints, a team proposal to validate:
+The two collection profiles (Île-de-France every 30 s, metropolitan France every 120 s) are set in [architecture](architecture.md#data-source) (D-05). The OpenSky collection runs whatever adsb.fi does: each one has its own setting (`COLLECTION_OPENSKY_ENABLED`, `COLLECTION_ADSBFI_ENABLED`), pause and runs. The terms add these constraints, a team proposal to validate:
 
 - **One** OpenSky account for the group, since the terms forbid several accounts. Its client ID and secret are shared only through each member's `.env` file.
 - **Only one instance collects with the group account at a time**, for example the demonstration machine. The high frequency profile uses 2 880 credits per day, so two instances at once would need 5 760 and exceed the 4 000 of the account.

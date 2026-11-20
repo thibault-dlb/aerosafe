@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
 import { useScrolled } from "@/hooks/useScrolled";
 import { useTranslation } from "@/hooks/useTranslation";
+import DataCredits from "@/components/layout/DataCredits";
 
 import styles from "./AppLayout.module.css";
 
@@ -55,7 +56,7 @@ export default function AppLayout() {
 
       <footer className={styles.footer}>
         <p>{t("footer.disclaimer")}</p>
-        <p>{t("footer.data")}</p>
+        <DataCredits />
       </footer>
     </div>
   );

@@ -2,7 +2,19 @@ from datetime import datetime
 from typing import Any
 
 from geoalchemy2 import WKTElement
-from sqlalchemy import BigInteger, ColumnElement, Text, any_, func, literal, select, update
+from sqlalchemy import (
+    BigInteger,
+    ColumnElement,
+    Text,
+    and_,
+    any_,
+    func,
+    literal,
+    or_,
+    select,
+    true,
+    update,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import TypeEngine
@@ -13,6 +25,7 @@ from core.repository import Repository
 from models.aircraft import Aircraft
 from models.flight import Flight
 from models.observation import Observation
+from models.reference import AircraftModel, DataSource
 from services.collection.flight_grouper import FlightDecision, FlightGrouper, OpenFlight
 from services.collection.normalizer import NormalizedState
 
@@ -24,12 +37,28 @@ def _any_of(values: list[Any], item_type: TypeEngine[Any]) -> ColumnElement[Any]
     return any_(literal(values, ARRAY(item_type)))
 
 
-class ObservationStore:
-    """Stores one collection: aircraft, flights and observations, in the caller's transaction."""
+def _latest_contact() -> Any:
+    """The latest contact of the flight of the outer query, read backwards on the index
+    (ID_VOL, DT_DERNIER_CONTACT) and stopped at the first row: it never reads the whole
+    history of the flight, which at 5 s holds hundreds of points an hour."""
+    return (
+        select(Observation.last_contact_at)
+        .where(Observation.flight_id == Flight.id, Observation.deleted_at.is_(None))
+        .order_by(Observation.last_contact_at.desc())
+        .limit(1)
+    )
 
-    def __init__(self, session: AsyncSession, grouper: FlightGrouper) -> None:
+
+class ObservationStore:
+    """Stores one collection of a live source: aircraft, flights and observations, in the
+    caller's transaction. Every aircraft and flight it reads or writes is one of its source."""
+
+    def __init__(
+        self, session: AsyncSession, grouper: FlightGrouper, mode: DataMode = DataMode.OPENSKY
+    ) -> None:
         self._session = session
         self._grouper = grouper
+        self._mode = mode
         self._aircraft = Repository(session, Aircraft)
         self._flights = Repository(session, Flight)
 
@@ -37,7 +66,7 @@ class ObservationStore:
         """Store the states and return how many observations are new."""
         if not states:
             return 0
-        aircraft_ids = await self._ensure_aircraft({state.icao24 for state in states})
+        aircraft_ids = await self._ensure_aircraft(states)
         open_flights = await self._open_flights(list(aircraft_ids.values()))
 
         # Every flight is decided first; the new ones are then inserted in one flush.
@@ -59,79 +88,126 @@ class ObservationStore:
         return len(stored.all())
 
     async def close_stale_flights(self, now: datetime) -> int:
-        """Close the open flights whose latest observation is older than the flight gap."""
-        last_seen = (
-            select(
-                Observation.flight_id.label("flight_id"),
-                func.max(Observation.last_contact_at).label("last_seen_at"),
-            )
-            .join(Flight, Flight.id == Observation.flight_id)
-            .where(
-                Flight.ended_at.is_(None),
-                Flight.deleted_at.is_(None),
-                Observation.deleted_at.is_(None),
-            )
-            .group_by(Observation.flight_id)
-            .subquery()
+        """Close the open flights of the source whose latest observation is older than the
+        flight gap, at that observation."""
+        last_seen = _latest_contact().correlate(Flight).scalar_subquery()
+        of_source = (
+            select(Aircraft.id)
+            .where(Aircraft.id == Flight.aircraft_id, self._mode.matches(Aircraft.source_id))
+            .correlate(Flight)
+            .exists()
         )
         statement = (
             update(Flight)
             .where(
-                Flight.id == last_seen.c.flight_id,
                 Flight.ended_at.is_(None),
-                last_seen.c.last_seen_at < self._grouper.stale_before(now),
+                Flight.deleted_at.is_(None),
+                of_source,
+                last_seen < self._grouper.stale_before(now),
             )
-            .values(ended_at=last_seen.c.last_seen_at)
+            .values(ended_at=last_seen)
             .execution_options(synchronize_session=False)
         )
         result = await self._session.execute(statement)
         return result.rowcount or 0
 
-    async def _ensure_aircraft(self, icao24s: set[str]) -> dict[str, int]:
-        """Create the aircraft seen for the first time, then map every ICAO24 to its key.
+    async def _ensure_aircraft(self, states: list[NormalizedState]) -> dict[str, int]:
+        """Create the aircraft seen for the first time in the source, fill or correct the
+        registration and the model it sends, then map every ICAO24 to its key.
 
-        A soft-deleted aircraft keeps its row, so the insert skips it: it is read back with
-        the others and its observations are still stored.
+        A value the source does not send never erases a known one, and an aircraft whose
+        values did not change is not written. A soft-deleted aircraft keeps its row: it is read
+        back with the others and its observations are still stored.
         """
-        # The source is the default of the column (DIRECT): the collector only knows live data.
-        await self._session.execute(
-            insert(Aircraft).on_conflict_do_nothing(
-                index_elements=["CD_ICAO24", "ID_SOURCE_DONNEE"]
+        source_id = await self._source_id()
+        model_ids = await self._ensure_models(states)
+        by_icao24 = {state.icao24: state for state in states}
+        statement = insert(Aircraft)
+        excluded = statement.excluded
+        statement = statement.on_conflict_do_update(
+            index_elements=["CD_ICAO24", "ID_SOURCE_DONNEE"],
+            set_={
+                Aircraft.registration: func.coalesce(
+                    excluded.LB_IMMATRICULATION, Aircraft.registration
+                ),
+                Aircraft.model_id: func.coalesce(excluded.ID_MODELE, Aircraft.model_id),
+            },
+            where=or_(
+                and_(
+                    excluded.LB_IMMATRICULATION.is_not(None),
+                    Aircraft.registration.is_distinct_from(excluded.LB_IMMATRICULATION),
+                ),
+                and_(
+                    excluded.ID_MODELE.is_not(None),
+                    Aircraft.model_id.is_distinct_from(excluded.ID_MODELE),
+                ),
             ),
-            [{"icao24": icao24, "public_id": new_ulid()} for icao24 in sorted(icao24s)],
         )
-        statement = self._aircraft.select(include_deleted=True).where(
-            Aircraft.icao24 == _any_of(sorted(icao24s), Text()),
-            DataMode.LIVE.matches(Aircraft.source_id),
+        await self._session.execute(
+            statement,
+            [
+                {
+                    "icao24": icao24,
+                    "public_id": new_ulid(),
+                    "source_id": source_id,
+                    "registration": state.registration,
+                    "model_id": model_ids.get(state.model_code) if state.model_code else None,
+                }
+                for icao24, state in sorted(by_icao24.items())
+            ],
         )
-        return {aircraft.icao24: aircraft.id for aircraft in await self._session.scalars(statement)}
+        read = self._aircraft.select(include_deleted=True).where(
+            Aircraft.icao24 == _any_of(sorted(by_icao24), Text()),
+            self._mode.matches(Aircraft.source_id),
+        )
+        return {aircraft.icao24: aircraft.id for aircraft in await self._session.scalars(read)}
 
-    async def _open_flights(self, aircraft_ids: list[int]) -> dict[int, tuple[Flight, OpenFlight]]:
-        flights = list(
-            await self._session.scalars(
-                self._flights.select().where(
-                    Flight.aircraft_id == _any_of(aircraft_ids, BigInteger()),
-                    Flight.ended_at.is_(None),
-                )
+    async def _source_id(self) -> int:
+        statement = select(DataSource.id).where(DataSource.code == self._mode.code)
+        source_id = await self._session.scalar(statement)
+        if source_id is None:
+            raise LookupError(f"No data source {self._mode.code}: are the migrations applied?")
+        return source_id
+
+    async def _ensure_models(self, states: list[NormalizedState]) -> dict[str, int]:
+        """Create the models seen for the first time, then map every model code to its key.
+
+        The label of a model already known is kept.
+        """
+        labels = {
+            state.model_code: state.model_label or state.model_code
+            for state in states
+            if state.model_code
+        }
+        if not labels:
+            return {}
+        await self._session.execute(
+            insert(AircraftModel).on_conflict_do_nothing(index_elements=["CD_MODELE"]),
+            [{"code": code, "label": label} for code, label in sorted(labels.items())],
+        )
+        rows = await self._session.execute(
+            select(AircraftModel.code, AircraftModel.id).where(
+                AircraftModel.code == _any_of(sorted(labels), Text())
             )
         )
-        if not flights:
-            return {}
-        last_seen = dict(
-            (
-                await self._session.execute(
-                    select(Observation.flight_id, func.max(Observation.last_contact_at))
-                    .where(
-                        Observation.flight_id == _any_of([f.id for f in flights], BigInteger()),
-                        Observation.deleted_at.is_(None),
-                    )
-                    .group_by(Observation.flight_id)
-                )
-            ).all()
+        return {code: model_id for code, model_id in rows.all()}
+
+    async def _open_flights(self, aircraft_ids: list[int]) -> dict[int, tuple[Flight, OpenFlight]]:
+        """The open flight of each aircraft, with the time of its latest observation."""
+        latest = _latest_contact().lateral("latest")
+        statement = (
+            self._flights.select()
+            .add_columns(latest.c.last_contact_at)
+            .outerjoin(latest, true())
+            .where(
+                Flight.aircraft_id == _any_of(aircraft_ids, BigInteger()),
+                Flight.ended_at.is_(None),
+            )
         )
         open_flights = {}
-        for flight in flights:
-            seen = last_seen.get(flight.id, flight.started_at)
+        for flight, last_seen_at in (await self._session.execute(statement)).all():
+            # A flight without observation is dated from its start.
+            seen = last_seen_at or flight.started_at
             open_flights[flight.aircraft_id] = (
                 flight,
                 OpenFlight(flight.id, flight.callsign, seen),

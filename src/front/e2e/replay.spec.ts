@@ -38,7 +38,7 @@ test("the replay is off until the user chooses it, and the choice is kept", asyn
   await openSession(page);
   await mockClock(page);
   await page.goto("/aircraft");
-  await expect(page.getByRole("button", { name: "Direct" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "adsb.fi" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("region", { name: "Rejeu du trafic historique" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Rejeu" }).click();
@@ -100,12 +100,12 @@ test("going back to the live data hides the replay player", async ({ page }) => 
   await page.getByRole("button", { name: "Rejeu" }).click();
   await expect(page.getByRole("region", { name: "Rejeu du trafic historique" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Direct" }).click();
+  await page.getByRole("button", { name: "adsb.fi" }).click();
 
   await expect(page.getByRole("region", { name: "Rejeu du trafic historique" })).toHaveCount(0);
 });
 
-test("the replay requests carry the source, and the live ones do not", async ({ page }) => {
+test("every request carries the source shown", async ({ page }) => {
   await mockClock(page);
   const sources: (string | null)[] = [];
   page.on("request", (request) => {
@@ -117,10 +117,11 @@ test("the replay requests carry the source, and the live ones do not", async ({ 
   // The overview that reads the aircraft is the top of the dashboard.
   await page.goto("/dashboard");
   await expect.poll(() => sources.length).toBeGreaterThan(0);
+  expect(sources[0]).toBe("adsbfi");
   await page.getByRole("button", { name: "Rejeu" }).click();
   await expect.poll(() => sources.includes("replay")).toBe(true);
-  await page.getByRole("button", { name: "Direct" }).click();
-  await expect.poll(() => sources.at(-1)).toBeNull();
+  await page.getByRole("button", { name: "OpenSky" }).click();
+  await expect.poll(() => sources.at(-1)).toBe("opensky");
 });
 
 test("the replay player does not make the page scroll sideways on a phone", async ({ page }) => {

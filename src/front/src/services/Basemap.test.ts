@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AirportJson, BasemapJson } from "@/models/Basemap";
 
-import { Basemap } from "./Basemap";
+import { Basemap, circleRing } from "./Basemap";
 import { MapTheme } from "./MapTheme";
 import type { MapView } from "./Mercator";
 
@@ -123,5 +123,39 @@ describe("Basemap", () => {
     const basemap = await Basemap.load();
 
     expect(basemap.airportCount).toBeGreaterThan(100);
+  });
+});
+
+describe("circleRing", () => {
+  it("puts every point of the ring at the radius of the circle", () => {
+    const circle = { latitude: 48.65, longitude: 2.5, radiusKm: 463 };
+    const toRadians = Math.PI / 180;
+
+    const ring = circleRing(circle, 12);
+
+    expect(ring).toHaveLength(12);
+    for (const [lon, lat] of ring) {
+      // Haversine distance from the centre, in kilometres.
+      const dLat = (lat - circle.latitude) * toRadians;
+      const dLon = (lon - circle.longitude) * toRadians;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(circle.latitude * toRadians) * Math.cos(lat * toRadians) * Math.sin(dLon / 2) ** 2;
+      expect(2 * 6371.0088 * Math.asin(Math.sqrt(a))).toBeCloseTo(463, 3);
+    }
+    // The first point is due north of the centre.
+    expect(ring[0][0]).toBeCloseTo(2.5, 6);
+    expect(ring[0][1]).toBeGreaterThan(48.65);
+  });
+
+  it("draws a circular zone as a closed ring", () => {
+    const basemap = new Basemap(DATA, AIRPORTS);
+    const circle = recorder();
+
+    basemap.draw(circle.context, VIEW, MapTheme.FALLBACK, { latitude: 48.65, longitude: 2.5, radiusKm: 463 });
+
+    expect(circle.calls.rect).toBeUndefined();
+    expect(circle.calls.closePath).toBeGreaterThan(0);
+    expect(circle.calls.setLineDash).toBeGreaterThan(0);
   });
 });

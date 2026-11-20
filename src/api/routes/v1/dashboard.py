@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.data_mode import DataMode
 from core.database import get_db
 from core.security import CurrentUser, get_current_user
 from routes.v1.collection import SchedulerDep
@@ -34,15 +35,21 @@ Service = Annotated[DashboardService, Depends(get_dashboard_service)]
 async def get_dashboard(
     _account: Account, service: Service, scope: Scope, scheduler: SchedulerDep
 ) -> DashboardOut:
-    """What the dashboard shows. With `source=replay`, the alerts of the replayed traffic up to
-    the simulated instant; the collection state is the real one in both modes."""
+    """What the dashboard shows, for one source: `opensky`, `adsbfi`, or `replay` for the alerts
+    of the replayed traffic up to the simulated instant. The collection state is the one of the
+    live source shown, adsb.fi during a replay."""
+    source = scope.mode if scope.mode.is_live else DataMode.ADSBFI
+    enabled, running = scheduler.is_enabled(source), scheduler.is_busy(source)
+    profile = scheduler.profile(source)
     if scope.nothing_to_show:
-        return DashboardService.empty(await service.collection(scheduler.enabled, scheduler.busy))
+        return DashboardService.empty(await service.collection(enabled, running, source, profile))
     return await service.overview(
         scope.mode,
         scope.at,
-        collection_enabled=scheduler.enabled,
-        collection_running=scheduler.busy,
+        collection_enabled=enabled,
+        collection_running=running,
+        collection_source=source,
+        collection_profile=profile,
     )
 
 

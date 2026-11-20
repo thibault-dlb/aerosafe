@@ -15,7 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.models import Base, TimestampMixin, primary_key, table_args
-from models.reference import CollectionProfile, CollectionStatus
+from models.reference import CollectionProfile, CollectionStatus, DataSource
 from models.user import User
 
 
@@ -25,8 +25,21 @@ def _state_count(column: str, comment: str) -> Mapped[int]:
     )
 
 
+def _source_id(comment: str) -> Mapped[int]:
+    """The live source a row is about. The key 1 is DIRECT (OpenSky), the default of the column,
+    as on `AERONEF`: the rows written before adsb.fi existed are OpenSky ones."""
+    return mapped_column(
+        "ID_SOURCE_DONNEE",
+        BigInteger,
+        ForeignKey("R_SOURCE_DONNEE.ID", ondelete="RESTRICT"),
+        nullable=False,
+        server_default=text("1"),
+        comment=comment,
+    )
+
+
 class CollectionRun(TimestampMixin, Base):
-    """One OpenSky collection cycle, written by the collector."""
+    """One live collection cycle (OpenSky or adsb.fi), written by the collector."""
 
     __tablename__ = "EXECUTION_COLLECTE"
     __table_args__ = table_args(
@@ -40,9 +53,11 @@ class CollectionRun(TimestampMixin, Base):
         # Also indexes the foreign key: ID_STATUT_COLLECTE comes first.
         Index("idx_execution_collecte_statut_debut", "ID_STATUT_COLLECTE", "DT_DEBUT"),
         Index("idx_execution_collecte_profil", "ID_PROFIL_COLLECTE"),
+        # Also indexes the foreign key, and serves "the latest cycles of one source".
+        Index("idx_execution_collecte_source_debut", "ID_SOURCE_DONNEE", "DT_DEBUT"),
         comment=(
-            "Cycle de collecte OpenSky, une ligne par cycle créée par le collecteur ; "
-            "figée une fois DT_FIN renseignée."
+            "Cycle de collecte en direct (OpenSky ou adsb.fi), une ligne par cycle créée par le "
+            "collecteur ; figée une fois DT_FIN renseignée."
         ),
     )
 
@@ -74,8 +89,11 @@ class CollectionRun(TimestampMixin, Base):
         nullable=False,
         comment="Profil de collecte utilisé pendant le cycle.",
     )
+    source_id: Mapped[int] = _source_id(
+        "Source collectée pendant le cycle : OpenSky (DIRECT, par défaut) ou adsb.fi (ADSBFI)."
+    )
     states_received: Mapped[int] = _state_count(
-        "NB_ETATS_RECUS", "Nombre de vecteurs d'état reçus d'OpenSky."
+        "NB_ETATS_RECUS", "Nombre de vecteurs d'état reçus de la source."
     )
     states_stored: Mapped[int] = _state_count(
         "NB_ETATS_STOCKES", "Nombre de vecteurs d'état enregistrés comme observations."
@@ -88,7 +106,8 @@ class CollectionRun(TimestampMixin, Base):
         "NB_CREDITS_RESTANTS",
         Integer,
         comment=(
-            "Crédits OpenSky restants selon l'en-tête X-Rate-Limit-Remaining ; NULL si absent."
+            "Crédits OpenSky restants selon l'en-tête X-Rate-Limit-Remaining ; NULL si absent, "
+            "et toujours pour adsb.fi, qui n'a pas de crédits."
         ),
     )
     error: Mapped[str | None] = mapped_column(
@@ -105,23 +124,27 @@ class CollectionRun(TimestampMixin, Base):
 
     status: Mapped[CollectionStatus] = relationship(lazy="raise")
     profile: Mapped[CollectionProfile] = relationship(lazy="raise")
+    source: Mapped[DataSource] = relationship(lazy="raise")
 
 
 class CollectionParameter(TimestampMixin, Base):
-    """The single row holding the collection state, so a pause survives a restart."""
+    """The state of one live collection, one row per source, so a pause survives a restart."""
 
     __tablename__ = "PARAMETRE_COLLECTE"
     __table_args__ = table_args(
-        # A unique index on a constant: any second row is rejected.
-        Index("uq_parametre_collecte_ligne_unique", text("(true)"), unique=True),
+        # One row per source; it also indexes the foreign key.
+        Index("uq_parametre_collecte_source_donnee", "ID_SOURCE_DONNEE", unique=True),
         Index("idx_parametre_collecte_utilisateur", "ID_UTILISATEUR"),
         comment=(
-            "État de la collecte, une seule ligne : la pause décidée par le Superviseur "
-            "survit au redémarrage de l'API."
+            "État de chaque collecte en direct, une ligne par source : la pause décidée par le "
+            "Superviseur survit au redémarrage de l'API."
         ),
     )
 
     id: Mapped[int] = primary_key("Identifiant technique de la ligne de paramètres.")
+    source_id: Mapped[int] = _source_id(
+        "Collecte décrite par la ligne : OpenSky (DIRECT, par défaut) ou adsb.fi (ADSBFI)."
+    )
     is_paused: Mapped[bool] = mapped_column(
         "BL_EN_PAUSE",
         Boolean,

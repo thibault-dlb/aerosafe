@@ -18,6 +18,8 @@ export interface AircraftSearch {
   airline?: string;
   area?: Area;
   limit?: number;
+  /** Live only: the aircraft heard in this many seconds before now, the traffic of the moment. */
+  heardWithinSeconds?: number;
 }
 
 export interface ObservationPeriod {
@@ -27,8 +29,9 @@ export interface ObservationPeriod {
 }
 
 /**
- * Calls the aircraft and flights endpoints of the API (BF-04 to BF-08). In the replay mode,
- * every request carries `source=replay`: the API answers for the shared simulated instant.
+ * Calls the aircraft and flights endpoints of the API (BF-04 to BF-08). Every request names the source
+ * shown (`source=opensky`, `adsbfi` or `replay`); in the replay, the API answers for the shared simulated
+ * instant.
  */
 export class AircraftService {
   constructor(
@@ -51,6 +54,9 @@ export class AircraftService {
     }
     if (search.limit !== undefined) {
       params.set("limit", String(search.limit));
+    }
+    if (search.heardWithinSeconds !== undefined) {
+      params.set("heard_within_seconds", String(search.heardWithinSeconds));
     }
     const query = params.toString();
     return query ? `?${query}` : "";

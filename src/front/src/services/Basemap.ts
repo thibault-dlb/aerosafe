@@ -10,8 +10,43 @@ export interface ZoneArea {
   east: number;
 }
 
-/** The zone of the collection drawn on the map: the outline of the historical data, a rectangle, or none. */
-export type Zone = "outline" | ZoneArea | null;
+/** A circle on the ground: its centre in degrees and its radius in kilometres. */
+export interface ZoneCircle {
+  latitude: number;
+  longitude: number;
+  radiusKm: number;
+}
+
+/** The zone of the collection drawn on the map: the outline of the historical data, a rectangle, a circle, or none. */
+export type Zone = "outline" | ZoneArea | ZoneCircle | null;
+
+/** Mean radius of the Earth, in kilometres. */
+const EARTH_RADIUS_KM = 6371.0088;
+/** Points of the ring that draws a circle. */
+const CIRCLE_POINTS = 96;
+
+/** The ring of a circle on the ground, in degrees: the points at its radius from its centre, in every direction. */
+export function circleRing(circle: ZoneCircle, points: number = CIRCLE_POINTS): [number, number][] {
+  const toRadians = Math.PI / 180;
+  const lat = circle.latitude * toRadians;
+  const lon = circle.longitude * toRadians;
+  const angle = circle.radiusKm / EARTH_RADIUS_KM;
+  const ring: [number, number][] = [];
+  for (let index = 0; index < points; index++) {
+    const bearing = (2 * Math.PI * index) / points;
+    const pointLat = Math.asin(
+      Math.sin(lat) * Math.cos(angle) + Math.cos(lat) * Math.sin(angle) * Math.cos(bearing),
+    );
+    const pointLon =
+      lon +
+      Math.atan2(
+        Math.sin(bearing) * Math.sin(angle) * Math.cos(lat),
+        Math.cos(angle) - Math.sin(lat) * Math.sin(pointLat),
+      );
+    ring.push([pointLon / toRadians, pointLat / toRadians]);
+  }
+  return ring;
+}
 
 /** A line or a ring in the unit square of Mercator, with its box, so a draw can skip what is out of view. */
 class Shape {
@@ -244,6 +279,14 @@ export class Basemap {
         }
         context.closePath();
       }
+    } else if ("radiusKm" in zone) {
+      circleRing(zone).forEach(([lon, lat], index) => {
+        const x = Mercator.x(lon) * frame.scale + frame.ox;
+        const y = Mercator.y(lat) * frame.scale + frame.oy;
+        if (index === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      });
+      context.closePath();
     } else {
       const x0 = Mercator.x(zone.west) * frame.scale + frame.ox;
       const x1 = Mercator.x(zone.east) * frame.scale + frame.ox;

@@ -20,6 +20,7 @@ from core.data_mode import DataMode
 from models import Aircraft, Alert, Flight, Rule
 from models.reference import DataSource
 from services.aircraft import AircraftSearchCriteria, AircraftService
+from services.collection.normalizer import NormalizedState
 from services.historical.prc2024 import ObservationBatch
 from services.historical.store import HistoricalStore, NewFlight, to_microseconds
 from services.replay import DatabaseReplayStore, ReplayService, ReplayState
@@ -122,7 +123,19 @@ class TestSourceOfTheAircraft:
         await HistoricalStore(session).ensure_aircraft([code])
         store = ObservationStore(session, FlightGrouper(timedelta(minutes=30)))
 
-        ids = await store._ensure_aircraft({code})
+        heard = NormalizedState(
+            icao24=code,
+            callsign=None,
+            last_contact_at=datetime(2026, 11, 20, tzinfo=UTC),
+            position_at=None,
+            latitude=None,
+            longitude=None,
+            altitude=None,
+            speed=None,
+            heading=None,
+            on_ground=False,
+        )
+        ids = await store._ensure_aircraft([heard])
 
         live = await session.get(Aircraft, ids[code])
         replayed_id = (await HistoricalStore(session).ensure_aircraft([code]))[code]
@@ -157,7 +170,7 @@ class TestSnapshots:
     ) -> None:
         aircraft, _ = await replayed(session, icao24(), {s: 1000.0 for s in range(0, 31)})
 
-        snapshots = await SnapshotReader(session).read(T0 + timedelta(seconds=25), DataMode.LIVE)
+        snapshots = await SnapshotReader(session).read(T0 + timedelta(seconds=25), DataMode.OPENSKY)
 
         assert aircraft not in {s.aircraft_id for s in snapshots}
 
@@ -181,7 +194,7 @@ class TestRulesInAReplay:
     ) -> None:
         aircraft, _ = await replayed(session, icao24(), {0: 1000.0, 10: 1400.0})
 
-        await RulesEngine(session).evaluate(T0 + timedelta(seconds=10), DataMode.LIVE)
+        await RulesEngine(session).evaluate(T0 + timedelta(seconds=10), DataMode.OPENSKY)
 
         assert (
             await session.scalars(select(Alert).where(Alert.aircraft_id == aircraft))
@@ -265,7 +278,6 @@ class TestAircraftAtTheInstant:
         self, session: AsyncSession
     ) -> None:
         from services.collection.flight_grouper import FlightGrouper
-        from services.collection.normalizer import NormalizedState
         from services.collection.store import ObservationStore
 
         code = icao24()

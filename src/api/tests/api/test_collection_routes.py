@@ -1,10 +1,13 @@
 from collections.abc import AsyncGenerator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
 
+from config.adsbfi import AdsbFiSettings
 from config.opensky import OpenSkySettings
+from core.data_mode import DataMode
 from core.models import new_ulid
 from core.security import CurrentUser, RoleCode, get_current_user
 from main import app
@@ -28,10 +31,13 @@ RUN = CollectionRunResult(NOW, NOW, RunStatus.SUCCESS, "ILE_DE_FRANCE", 3, 3, 0,
 
 class FakeScheduler(Scheduler):
     def __init__(self, outcome: CollectionRunResult | Exception) -> None:
-        super().__init__(OpenSkySettings(_env_file=None, COLLECTION_ENABLED=True))
+        super().__init__(OpenSkySettings(_env_file=None, COLLECTION_OPENSKY_ENABLED=True))
         self.outcome = outcome
 
-    async def run_now(self) -> CollectionRunResult:
+        self.sources: list[DataMode] = []
+
+    async def run_now(self, source: DataMode = DataMode.OPENSKY) -> CollectionRunResult:
+        self.sources.append(source)
         if isinstance(self.outcome, Exception):
             raise self.outcome
         return self.outcome
@@ -157,3 +163,65 @@ async def test_a_user_cannot_drive_the_collection(client: httpx.AsyncClient) -> 
 def test_without_a_started_scheduler_a_stopped_one_is_used() -> None:
     assert Scheduler.current() is None
     assert isinstance(get_scheduler(), Scheduler)
+
+
+async def test_the_status_of_adsbfi_has_no_credits(
+    client: httpx.AsyncClient, store: InMemoryCollectionStateStore
+) -> None:
+    await store.record(replace(RUN, source=DataMode.ADSBFI, remaining_credits=None))
+    use_scheduler(
+        Scheduler(
+            OpenSkySettings(_env_file=None),
+            adsbfi_settings=AdsbFiSettings(_env_file=None, COLLECTION_ADSBFI_ENABLED=True),
+        )
+    )
+
+    body = (await client.get("/api/v1/collection/status", params={"source": "adsbfi"})).json()
+
+    assert (body["source"], body["enabled"], body["profile"]) == ("adsbfi", True, "ADSBFI_250NM")
+    assert (body["period_seconds"], body["credits_per_day"]) == (5, 0)
+    assert (body["daily_quota"], body["authenticated"]) == (None, None)
+    assert body["last_run"]["source"] == "adsbfi"
+
+
+async def test_the_runs_of_each_source_are_listed_apart(
+    client: httpx.AsyncClient, store: InMemoryCollectionStateStore
+) -> None:
+    await store.record(RUN)
+    await store.record(replace(RUN, source=DataMode.ADSBFI, stored=7))
+
+    runs = (await client.get("/api/v1/collection/runs", params={"source": "adsbfi"})).json()
+
+    assert [run["stored"] for run in runs] == [7]
+
+
+async def test_a_manual_run_runs_the_source_asked(client: httpx.AsyncClient) -> None:
+    scheduler = FakeScheduler(RUN)
+    use_scheduler(scheduler)
+
+    await client.post("/api/v1/collection/run", params={"source": "adsbfi"})
+
+    assert scheduler.sources == [DataMode.ADSBFI]
+
+
+async def test_each_source_is_paused_on_its_own(
+    client: httpx.AsyncClient, store: InMemoryCollectionStateStore
+) -> None:
+    paused = await client.post("/api/v1/collection/pause", params={"source": "adsbfi"})
+
+    assert paused.json()["paused"] is True
+    assert (await store.pause_state(DataMode.ADSBFI)).paused is True
+    assert (await store.pause_state(DataMode.OPENSKY)).paused is False
+
+
+async def test_the_replay_is_not_a_collection(client: httpx.AsyncClient) -> None:
+    response = await client.get("/api/v1/collection/status", params={"source": "replay"})
+
+    assert response.status_code == 422
+
+
+def test_a_rate_limited_adsbfi_says_so() -> None:
+    error = CollectionRateLimited(NOW, DataMode.ADSBFI)
+
+    assert str(error).startswith("adsb.fi refuses requests until")
+    assert error.source is DataMode.ADSBFI

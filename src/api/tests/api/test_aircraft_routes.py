@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -122,9 +122,23 @@ async def test_the_search_passes_the_area(
     assert service.criteria.limit == 10
 
 
+async def test_the_search_passes_the_delay_of_the_live_map(
+    api: httpx.AsyncClient, service: FakeAircraftService
+) -> None:
+    response = await api.get(
+        "/api/v1/aircraft", params={"source": "adsbfi", "heard_within_seconds": 60}
+    )
+
+    assert response.status_code == 200
+    assert service.criteria is not None
+    assert service.criteria.heard_within == timedelta(seconds=60)
+
+
 @pytest.mark.parametrize(
     "params",
     [
+        {"heard_within_seconds": 0},
+        {"heard_within_seconds": 3_601},
         {"south": 48.1, "west": 1.4},
         {"south": 49.3, "west": 1.4, "north": 48.1, "east": 3.6},
         {"icao24": "xyz"},

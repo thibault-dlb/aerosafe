@@ -17,18 +17,18 @@ This is the logical schema derived from the [class diagram](uml/class-diagram.md
 | Alert | `ALERTE` | Business | Public ULID, aircraft, rule, trigger time, end of episode, observed value, threshold copied at trigger time, message, criticality, processing |
 | User | `UTILISATEUR` | Business | Public ULID, email, argon2id password hash, role, provisional-password flag; anonymised, never deleted (A-06, D-17) |
 | RefreshToken | `JETON_RAFRAICHISSEMENT` | Business | Hash of a refresh token, expiry, revocation |
-| CollectionRun | `EXECUTION_COLLECTE` | Business | One OpenSky collection cycle: start (also the `now` given to the rules engine), end, status, profile, state vectors received, stored and rejected, credits left, collection error, evaluation error |
-| CollectionParameter | `PARAMETRE_COLLECTE` | Business | Single row: whether the Supervisor paused the collection, when, and who |
+| CollectionRun | `EXECUTION_COLLECTE` | Business | One collection cycle of a live source (OpenSky or adsb.fi): source, start (also the `now` given to the rules engine), end, status, profile, state vectors received, stored and rejected, credits left (OpenSky), collection error, evaluation error |
+| CollectionParameter | `PARAMETRE_COLLECTE` | Business | One row per live source: whether the Supervisor paused its collection, when, and who (D-23) |
 | ReplayParameter | `PARAMETRE_REJEU` | Business | Single row: the replay clock shared by every user (simulated instant at the last change, real instant of that change, speed, pause, last instant evaluated by the rules engine, who) (D-20) |
 | Role | `R_ROLE` | Reference | `USER`, `SUPERVISOR` |
 | Criticality | `R_CRITICITE` | Reference | `LOW`, `MEDIUM`, `HIGH` |
 | Unit | `R_UNITE` | Reference | `s`, `m/s`, `m/s²`, `°/s` |
-| Model | `R_MODELE` | Reference | Aircraft models, from the OpenSky aircraft metadata |
+| Model | `R_MODELE` | Reference | Aircraft models, from the OpenSky aircraft metadata and from adsb.fi, which sends the type code and its description |
 | Airline | `R_COMPAGNIE` | Reference | Airlines, from the OpenSky aircraft metadata |
 | Airport | `R_AEROPORT` | Reference | Origin and destination airports of flights |
 | CollectionStatus | `R_STATUT_COLLECTE` | Reference | `SUCCESS`, `PARTIAL`, `FAILED`, `RATE_LIMITED`, `SKIPPED` |
-| CollectionProfile | `R_PROFIL_COLLECTE` | Reference | `ILE_DE_FRANCE`, `FRANCE` |
-| DataSource | `R_SOURCE_DONNEE` | Reference | `DIRECT` (live collection, key 1), `REJEU` (replayed historical traffic) (D-20) |
+| CollectionProfile | `R_PROFIL_COLLECTE` | Reference | `ILE_DE_FRANCE`, `FRANCE` (OpenSky), `ADSBFI_250NM` (adsb.fi) |
+| DataSource | `R_SOURCE_DONNEE` | Reference | `DIRECT` (live collection of OpenSky, key 1), `REJEU` (replayed historical traffic) (D-20), `ADSBFI` (live collection of adsb.fi) (D-23) |
 | None | `audit_actions` | Technical | `create`, `update`, `delete` |
 | None | `audit_logs` | Technical | Append-only log of threshold changes and anonymisations |
 
@@ -60,6 +60,8 @@ erDiagram
     UTILISATEUR |o--o| PARAMETRE_COLLECTE : "pauses or resumes"
     UTILISATEUR |o--o| PARAMETRE_REJEU : "drives"
     R_SOURCE_DONNEE ||--o{ AERONEF : "comes from"
+    R_SOURCE_DONNEE ||--o{ EXECUTION_COLLECTE : "collected by"
+    R_SOURCE_DONNEE ||--|| PARAMETRE_COLLECTE : "paused by"
 
     AERONEF {
         bigint ID PK
@@ -174,6 +176,7 @@ erDiagram
         timestamptz DT_FIN
         bigint ID_STATUT_COLLECTE FK
         bigint ID_PROFIL_COLLECTE FK
+        bigint ID_SOURCE_DONNEE FK
         integer NB_ETATS_RECUS
         integer NB_ETATS_STOCKES
         integer NB_ETATS_REJETES
@@ -183,6 +186,7 @@ erDiagram
     }
     PARAMETRE_COLLECTE {
         bigint ID PK
+        bigint ID_SOURCE_DONNEE FK, UK
         boolean BL_EN_PAUSE
         timestamptz DT_CHANGEMENT
         bigint ID_UTILISATEUR FK
@@ -224,27 +228,27 @@ erDiagram
 - A rule has exactly one unit and zero or one default criticality. An alert has zero or one criticality.
 - An alert is processed by zero or one user. A user has exactly one role and owns zero or more refresh tokens.
 - An aircraft has zero or one model and zero or one airline. A flight has zero or one origin airport and zero or one destination airport.
-- A collection cycle has exactly one status and one profile. The single row of `PARAMETRE_COLLECTE` records zero or one Supervisor, the last one who paused or resumed the collection.
+- A collection cycle has exactly one status, one profile and one source. Each row of `PARAMETRE_COLLECTE` belongs to one live source and records zero or one Supervisor, the last one who paused or resumed its collection.
 - An aircraft has exactly one source of data. The single row of `PARAMETRE_REJEU` records zero or one Supervisor, the last one who started, paused or sped up the replay.
 
 ## Table lifecycle
 
-Nothing is deleted physically while the project runs. At the end of the project, the OpenSky data is removed with the database, as the OpenSky terms require.
+Nothing is deleted physically while the project runs, with one exception decided on 2026-11-20 (D-23): the observations of adsb.fi older than 7 days, deleted every hour, since they weigh about 3.8 GB a day and a soft delete would keep their disk. At the end of the project, the collected data is removed with the database, as the OpenSky terms require.
 
 | Table | Created by | Modified by | Deleted by | Expected volume |
 |---|---|---|---|---|
-| `AERONEF` | Collector, at the first observation of an ICAO24 address (source `DIRECT`); the historical import, for each flight of the dataset (source `REJEU`, D-20) | Import of the OpenSky aircraft metadata, for the registration, model and airline | Nobody | One row per aircraft seen; for the replay of the year 2022 over France and 100 km, about 318 000 rows, one for each flight |
-| `VOL` | Collector, when a new flight starts (D-06) | Collector, which closes the flight | Nobody | One row per flight |
-| `OBSERVATION` | Collector, at each collection | Collector | Nobody: every observation is kept for the project, for the optional AI module | One row per aircraft and collection: 2 880 collections a day for Île-de-France every 30 s, 720 for metropolitan France every 120 s (D-05). As an assumption, 1 000 aircraft every 120 s give about 720 000 rows a day |
+| `AERONEF` | Collector, at the first observation of an ICAO24 address in its source (`DIRECT` for OpenSky, `ADSBFI` for adsb.fi); the historical import, for each flight of the dataset (source `REJEU`, D-20) | The adsb.fi collector, for the registration and the model it sends (a missing value never erases a known one); later the import of the OpenSky aircraft metadata | Nobody | One row per aircraft seen; for the replay of the year 2022 over France and 100 km, about 318 000 rows, one for each flight |
+| `VOL` | Collector, when a new flight starts (D-06) | Collector, which closes the flight | The adsb.fi purge, through `deleted_at`, for the flights ended before its cutoff, whose observations are all deleted | One row per flight |
+| `OBSERVATION` | Collector, at each collection | Collector | The adsb.fi purge, **physically**, for the adsb.fi observations older than `ADSBFI_RETENTION_DAYS` (7); the other ones are kept for the project | One row per aircraft and collection: 2 880 collections a day for Île-de-France every 30 s, 720 for metropolitan France every 120 s (D-05), 17 280 for adsb.fi every 5 s. About 130 000 rows a day for OpenSky over Île-de-France, about 12 million for adsb.fi over 250 NM (3.8 GB a day, about 27 GB for the week kept) |
 | `REGLE` | Initial data, then an `INSERT` for each new rule (NF-06) | Supervisor, for the threshold (UC-05) | Supervisor, through `deleted_at` | 5 rows at the start |
 | `ALERTE` | Rules engine | Rules engine, for the end of episode; Supervisor, who marks it as processed (C-03) | Supervisor, through `deleted_at` | To measure during the first real collection, since it depends on the thresholds (D-04) |
 | `UTILISATEUR` | The API, at registration | The API, including anonymisation on request (A-06) | Never: the row is anonymised | A few dozen accounts (estimate) |
 | `JETON_RAFRAICHISSEMENT` | The API, at login and at each refresh (rotation) | The API, which revokes it | Automatic task, through `deleted_at`, once the token has expired | One row per login and per refresh, so about one every 15 minutes of activity per user |
 | `audit_logs` | The API, in the transaction of the audited change | Nobody: a trigger rejects any change | Nobody | One row per threshold change or anonymisation |
-| `EXECUTION_COLLECTE` | Collector, at the start of each cycle, also when the collection is paused (status `SKIPPED`) | Collector, during its own cycle only: counts, credits left, status, errors, then `DT_FIN`, written last, after the rules evaluation. Once `DT_FIN` is set, nobody modifies the row | Nobody | One row per cycle: 2 880 a day for Île-de-France every 30 s, 720 for metropolitan France every 120 s |
-| `PARAMETRE_COLLECTE` | A migration, which inserts the single row (not paused) | Supervisor, through the API, to pause or resume the collection; the collector only reads it | Nobody | Exactly one row, enforced by a unique index on a constant |
+| `EXECUTION_COLLECTE` | Collector, at the start of each cycle of its source, also when its collection is paused (status `SKIPPED`) | Collector, during its own cycle only: counts, credits left, status, errors, then `DT_FIN`, written last, after the rules evaluation. Once `DT_FIN` is set, nobody modifies the row | Nobody | One row per cycle: 2 880 a day for Île-de-France every 30 s, 720 for metropolitan France every 120 s, 17 280 for adsb.fi |
+| `PARAMETRE_COLLECTE` | Migrations, which insert one row per live source (not paused) | Supervisor, through the API, to pause or resume the collection of a source; the collector only reads it | Nobody | One row per live source, enforced by a unique index on `ID_SOURCE_DONNEE` |
 | `PARAMETRE_REJEU` | A migration, which inserts the single row (paused, never started) | Supervisor, through the API, to start, pause, resume or speed up the replay; the replay scheduler writes the last instant evaluated | Nobody | Exactly one row, enforced by a unique index on a constant |
-| `R_SOURCE_DONNEE` | A migration, which inserts `DIRECT` first (key 1, the default source of an aircraft) then `REJEU` | Nobody | Nobody (`is_active`) | 2 rows |
+| `R_SOURCE_DONNEE` | Migrations, which insert `DIRECT` first (key 1, the default source of an aircraft), `REJEU`, then `ADSBFI` | Nobody | Nobody (`is_active`) | 3 rows |
 
 ## Deviation from the guide
 
@@ -261,7 +265,7 @@ The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, 
 | Table | Constraint |
 |---|---|
 | All | `ID` is `BIGINT GENERATED ALWAYS AS IDENTITY` |
-| All | Every foreign key is `ON DELETE RESTRICT`. Nothing is deleted physically: business tables use `deleted_at`, reference tables `is_active`, users are anonymised |
+| All | Every foreign key is `ON DELETE RESTRICT`. Nothing is deleted physically, the old adsb.fi observations aside: business tables use `deleted_at`, reference tables `is_active`, users are anonymised |
 | `AERONEF`, `VOL`, `ALERTE`, `UTILISATEUR` | `CD_ULID` is unique and has 26 Crockford base 32 characters; the application generates it |
 | `AERONEF` | `CD_ICAO24` has 6 lowercase hexadecimal characters and is unique for each source: the pair (`CD_ICAO24`, `ID_SOURCE_DONNEE`) is unique, since the synthetic code of a replayed flight can equal the address of a real aircraft (D-20) |
 | `VOL` | `DT_FIN` is on or after `DT_DEBUT` when known, since a flight can hold a single observation |
@@ -275,7 +279,7 @@ The trajectory of a flight is read through the (`ID_VOL`, `DT_POSITION`) index, 
 | `UTILISATEUR` | `LN_EMAIL` is unique; the password hash may only be empty once the account is anonymised |
 | `JETON_RAFRAICHISSEMENT` | `CD_HASH_JETON` is unique; only the hash is stored |
 | `EXECUTION_COLLECTE` | `DT_FIN` is on or after `DT_DEBUT` when known; `NB_ETATS_RECUS`, `NB_ETATS_STOCKES` and `NB_ETATS_REJETES` default to 0 and are never negative |
-| `PARAMETRE_COLLECTE` | A single row: the unique index `uq_parametre_collecte_ligne_unique` on the constant `true` rejects any second row |
+| `PARAMETRE_COLLECTE` | One row per live source: the unique index `uq_parametre_collecte_source_donnee` on `ID_SOURCE_DONNEE` rejects a second row for a source (it replaced, in migration 0059, the unique index on a constant of the single row) |
 | `PARAMETRE_REJEU` | A single row: the unique index `uq_parametre_rejeu_ligne_unique` on the constant `true`; `NB_VITESSE` is above 0 |
 
 `updated_at` is kept current by a `BEFORE UPDATE` trigger on every business table.
@@ -300,6 +304,7 @@ Every foreign key is indexed, except `OBSERVATION.ID_AERONEF`, which is the firs
 | `ALERTE` (`DT_DECLENCHEMENT`), and one per foreign key | Filter and sort alerts on the dashboard (BF-12) |
 | `EXECUTION_COLLECTE` (`DT_DEBUT`) | Latest cycle on the dashboard and history newest first, paged by `DT_DEBUT` (keyset); PostgreSQL reads the B-tree backwards for `ORDER BY "DT_DEBUT" DESC` |
 | `EXECUTION_COLLECTE` (`ID_STATUT_COLLECTE`, `DT_DEBUT`) | Latest successful cycle, without reading back through the skipped ones; also indexes the foreign key to `R_STATUT_COLLECTE` |
+| `EXECUTION_COLLECTE` (`ID_SOURCE_DONNEE`, `DT_DEBUT`) | Latest cycles of one source; also indexes the foreign key to `R_SOURCE_DONNEE` |
 | One per foreign key on `AERONEF`, `VOL`, `REGLE`, `UTILISATEUR`, `JETON_RAFRAICHISSEMENT`, `EXECUTION_COLLECTE`, `PARAMETRE_COLLECTE`, `PARAMETRE_REJEU` | Conventions: foreign keys are never indexed automatically |
 
 No migration of the replay touches `OBSERVATION` and none adds an index to it: on the whole year of 2022 over France and 100 km (856 million rows, about 272 GB), a rewrite would take hours and each index about 30 minutes and 27 GB or more. The replay reads it through the indexes above only: a range of (`DT_DERNIER_CONTACT`) for the aircraft present at an instant, and (`ID_AERONEF`, `DT_DERNIER_CONTACT`) for one aircraft.
@@ -327,8 +332,10 @@ Collection reference rows:
 | `R_STATUT_COLLECTE` | `SKIPPED` | Ignorée, collecte en pause |
 | `R_PROFIL_COLLECTE` | `ILE_DE_FRANCE` | Île-de-France, toutes les 30 s |
 | `R_PROFIL_COLLECTE` | `FRANCE` | France métropolitaine, toutes les 120 s |
+| `R_PROFIL_COLLECTE` | `ADSBFI_250NM` | adsb.fi, 250 NM autour de Paris, toutes les 5 s |
+| `R_SOURCE_DONNEE` | `ADSBFI` | Collecte adsb.fi en direct |
 
-The period and the bounding box of each profile are settings of the collector, not columns: the table only lets each cycle record which profile it used. `PARAMETRE_COLLECTE` starts with one row, not paused.
+The period and the area of each profile are settings of the collector, not columns: the table only lets each cycle record which profile it used. `PARAMETRE_COLLECTE` starts with one row per live source, not paused.
 
 ## Data rules
 
@@ -356,7 +363,7 @@ The email address is not encrypted: this is an educational project with few acco
 
 | Point | Decision |
 |---|---|
-| Retention of observations | Every observation is kept for the project, to feed the optional AI module |
+| Retention of observations | Every observation is kept for the project, to feed the optional AI module. Changed on 2026-11-20 (D-23) for adsb.fi only: its observations are kept 7 days, enough to tune the AI module, which is trained on the replayed history |
 | Size of `OBSERVATION` | No partitioning; the size of the table is monitored during collection |
 | Deletion | Only the Supervisor deletes rules and alerts, and an automatic task deletes expired refresh tokens, always through `deleted_at` |
 | Reference data | Airports, airlines and models move to `R_AEROPORT`, `R_COMPAGNIE` and `R_MODELE` |

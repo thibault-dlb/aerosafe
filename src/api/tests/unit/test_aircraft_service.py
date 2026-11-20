@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy.dialects import postgresql
 
+from core.data_mode import DataMode
 from models import Aircraft
 from services.aircraft import AircraftSearchCriteria, AircraftService, BoundingBox
 from services.aircraft.service import escape_like
@@ -173,3 +174,35 @@ async def test_get_looks_up_the_public_identifier() -> None:
 
 async def test_get_returns_none_for_an_unknown_aircraft() -> None:
     assert await AircraftService(session_returning([])).get("unknown") is None
+
+
+def test_the_live_map_keeps_the_aircraft_heard_recently() -> None:
+    now = datetime(2026, 11, 20, 12, tzinfo=UTC)
+    criteria = AircraftSearchCriteria(mode=DataMode.ADSBFI, heard_within=timedelta(seconds=60))
+
+    query = (
+        AircraftService(AsyncMock())
+        .search_query(criteria, now)
+        .compile(dialect=postgresql.dialect())
+    )
+    sql = str(query)
+
+    # A range of the index on the contact time, without upper bound, instead of one LATERAL
+    # per aircraft of the source.
+    assert "DISTINCT ON" in sql
+    assert "LATERAL" not in sql
+    assert now - timedelta(seconds=60) in query.params.values()
+    assert now not in query.params.values()
+
+
+def test_the_heard_delay_means_nothing_in_a_replay() -> None:
+    at = datetime(2022, 8, 14, 15, tzinfo=UTC)
+    criteria = AircraftSearchCriteria(
+        mode=DataMode.REPLAY, at=at, heard_within=timedelta(seconds=10)
+    )
+
+    query = compiled(criteria)
+
+    # The replay keeps its own minute before the simulated instant.
+    assert at in query.params.values()
+    assert at - timedelta(seconds=10) not in query.params.values()

@@ -19,7 +19,8 @@ export const fr = {
   "layout.skipToContent": "Aller au contenu",
 
   "mode.label": "Source des données",
-  "mode.live": "Direct",
+  "mode.opensky": "OpenSky",
+  "mode.adsbfi": "adsb.fi",
   "mode.replay": "Rejeu",
 
   "replay.bar": "Rejeu du trafic historique",
@@ -86,7 +87,8 @@ export const fr = {
   "home.figures.days": "jours de trafic rejouable",
   "home.steps.title": "Comment ça marche",
   "home.steps.collect.title": "Collecter",
-  "home.steps.collect.text": "Les positions des aéronefs sont relevées en continu auprès d'OpenSky Network.",
+  "home.steps.collect.text":
+    "Les positions sont relevées en continu auprès de deux sources : adsb.fi toutes les 5 s, avec des positions de moins de 3 s, et OpenSky Network toutes les 30 s, mieux couvert au sol des aéroports.",
   "home.steps.detect.title": "Détecter",
   "home.steps.detect.text": "Après chaque relevé, cinq règles analysent chaque aéronef.",
   "home.steps.alert.title": "Alerter",
@@ -97,7 +99,8 @@ export const fr = {
   "home.cta.text": "Ouvrez le tableau de bord, ou connectez-vous pour accéder à toutes les fonctions.",
   "layout.disclaimer":
     "Projet pédagogique : AeroSafe n'est pas un outil certifié de surveillance ou de gestion du trafic aérien. Il ne doit jamais servir à un usage opérationnel.",
-  "overview.live.title": "En direct · Île-de-France",
+  "overview.opensky.title": "OpenSky · Île-de-France",
+  "overview.adsbfi.title": "adsb.fi · 250 NM autour de Paris",
   "overview.replay.title": "Rejeu · {time} UTC · France",
   "overview.replay.waiting": "Rejeu non démarré",
   "overview.live.loading": "Chargement des données…",
@@ -149,7 +152,14 @@ export const fr = {
   "dashboard.chart.table": "Afficher les données",
   "dashboard.chart.slice": "Tranche",
   "dashboard.chart.total": "Total",
-  "dashboard.collection.title": "Collecte OpenSky",
+  "dashboard.collection.title": "Collecte {source}",
+  "dashboard.collection.period": "Rythme",
+  "dashboard.collection.every": "Toutes les {seconds} s",
+  "dashboard.collection.precision": "Précision",
+  "dashboard.collection.precision.opensky":
+    "Données d'environ 15 s, heures à la seconde, bonne couverture au sol des aéroports.",
+  "dashboard.collection.precision.adsbfi":
+    "Positions de moins de 3 s, erreur souvent sous 10 à 30 m, peu d'avions au sol.",
   "dashboard.collection.state": "État",
   "dashboard.collection.active": "Active",
   "dashboard.collection.paused": "En pause",
@@ -167,7 +177,7 @@ export const fr = {
   "dashboard.collection.toast.paused": "Collecte mise en pause.",
   "dashboard.collection.toast.resumed": "Collecte reprise.",
   "dashboard.collection.toast.ran": "Collecte lancée.",
-  "dashboard.collection.error.conflict": "La collecte est désactivée, déjà en cours ou limitée par OpenSky.",
+  "dashboard.collection.error.conflict": "La collecte est désactivée, déjà en cours ou limitée par sa source.",
 
   "aircraft.search.title": "Recherche d'aéronefs",
   "aircraft.column.time": "Heure",
@@ -285,7 +295,8 @@ export const fr = {
 
   "footer.disclaimer":
     "AeroSafe est un projet pédagogique. Ce n'est pas un système certifié de surveillance ou de gestion du trafic aérien et il ne doit pas servir à un usage opérationnel.",
-  "footer.data": "Données : The OpenSky Network. Fond de carte : Natural Earth et OurAirports.",
+  "footer.data": "Données : The OpenSky Network et",
+  "footer.map": ". Fond de carte : Natural Earth et OurAirports.",
 
   // Shared interface elements.
   "criticality.high": "Haute",

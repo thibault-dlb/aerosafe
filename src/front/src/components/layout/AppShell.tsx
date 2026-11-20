@@ -13,6 +13,7 @@ import ReplayProvider from "@/providers/ReplayProvider";
 import type { AlertService } from "@/services/AlertService";
 import { AppNavigation } from "@/services/AppNavigation";
 import { SidebarPreference } from "@/services/SidebarPreference";
+import DataCredits from "@/components/layout/DataCredits";
 
 import styles from "./AppShell.module.css";
 import Sidebar from "./Sidebar";
@@ -120,7 +121,7 @@ export default function AppShell({ preferences, alerts }: AppShellProps) {
 
           <footer className={mode === "replay" ? `${styles.footer} ${styles.footerClearsPlayer}` : styles.footer}>
             <p>{t("footer.disclaimer")}</p>
-            <p>{t("footer.data")}</p>
+            <DataCredits />
           </footer>
         </div>
       </div>

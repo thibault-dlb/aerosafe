@@ -5,26 +5,28 @@ from typing import Any
 
 import httpx
 
+from services.collection.errors import SourceError, SourceRateLimited, SourceUnavailable
 from services.collection.profiles import BoundingBox
 
 # Renew the token a little before OpenSky expires it.
 _TOKEN_MARGIN_SECONDS = 60
 
 
-class OpenSkyError(Exception):
+class OpenSkyError(SourceError):
     """Base error of the OpenSky client. The collector never lets it reach the API."""
 
 
-class OpenSkyUnavailable(OpenSkyError):
+class OpenSkyUnavailable(OpenSkyError, SourceUnavailable):
     """OpenSky is down, too slow, or answered something unusable."""
 
 
-class OpenSkyRateLimited(OpenSkyError):
+class OpenSkyRateLimited(OpenSkyError, SourceRateLimited):
     """OpenSky answered 429: the daily credits are used up."""
 
     def __init__(self, retry_after_seconds: int | None) -> None:
-        super().__init__(f"OpenSky rate limit reached, retry after {retry_after_seconds} s")
-        self.retry_after_seconds = retry_after_seconds
+        super().__init__(
+            f"OpenSky rate limit reached, retry after {retry_after_seconds} s", retry_after_seconds
+        )
 
 
 @dataclass(frozen=True)

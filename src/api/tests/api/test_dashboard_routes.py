@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock
 
 import httpx
@@ -38,6 +39,8 @@ class FakeDashboard(DashboardService):
     def __init__(self) -> None:
         super().__init__(AsyncMock(), AsyncMock())  # every method is overridden: unused
         self.calls: list[tuple[str, DataMode | None, datetime | None]] = []
+        self.collection_sources: list[DataMode] = []
+        self.collection_periods: list[int] = []
 
     async def overview(  # type: ignore[override]
         self,
@@ -46,12 +49,23 @@ class FakeDashboard(DashboardService):
         *,
         collection_enabled: bool,
         collection_running: bool,
+        collection_source: DataMode = DataMode.OPENSKY,
+        collection_profile: Any = None,
     ) -> DashboardOut:
         self.calls.append(("overview", mode, at))
+        self.collection_sources.append(collection_source)
+        self.collection_periods.append(collection_profile.period_seconds)
         return OVERVIEW
 
-    async def collection(self, enabled: bool, running: bool) -> CollectionSummary:
+    async def collection(
+        self,
+        enabled: bool,
+        running: bool,
+        source: DataMode = DataMode.OPENSKY,
+        profile: Any = None,
+    ) -> CollectionSummary:
         self.calls.append(("collection", None, None))
+        self.collection_sources.append(source)
         return COLLECTION
 
     async def statistics(
@@ -100,7 +114,7 @@ async def test_an_ordinary_user_reads_the_dashboard(
         "unprocessed_alerts": 3,
         "alerts_24h": 5,
     }
-    assert dashboard.calls == [("overview", DataMode.LIVE, None)]
+    assert dashboard.calls == [("overview", DataMode.OPENSKY, None)]
 
 
 async def test_a_supervisor_reads_it_too(dashboard: FakeDashboard) -> None:
@@ -153,7 +167,7 @@ async def test_the_statistics_follow_the_period(
     assert response.status_code == 200
     body = response.json()
     assert (body["unit"], len(body["slices"])) == (unit, count)
-    assert dashboard.calls == [(f"statistics {period}", DataMode.LIVE, None)]
+    assert dashboard.calls == [(f"statistics {period}", DataMode.OPENSKY, None)]
 
 
 async def test_the_statistics_default_to_the_last_day(api: httpx.AsyncClient) -> None:
@@ -174,3 +188,26 @@ async def test_the_statistics_of_a_replay_that_never_started_are_empty(
     assert response.status_code == 200
     assert response.json()["total"] == 0
     assert dashboard.calls == []
+
+
+@pytest.mark.parametrize(
+    ("source", "shown", "period"),
+    [("opensky", DataMode.OPENSKY, 30), ("adsbfi", DataMode.ADSBFI, 5)],
+)
+async def test_the_collection_shown_is_the_one_of_the_source(
+    api: httpx.AsyncClient, dashboard: FakeDashboard, source: str, shown: DataMode, period: int
+) -> None:
+    await api.get("/api/v1/dashboard", params={"source": source})
+
+    assert dashboard.collection_sources == [shown]
+    assert dashboard.collection_periods == [period]
+
+
+async def test_a_replay_shows_the_adsbfi_collection(
+    api: httpx.AsyncClient, dashboard: FakeDashboard
+) -> None:
+    replay_at(ReplayState(T0, REAL, 1, False))
+
+    await api.get("/api/v1/dashboard", params={"source": "replay"})
+
+    assert dashboard.collection_sources == [DataMode.ADSBFI]

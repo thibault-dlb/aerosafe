@@ -3,6 +3,7 @@
 Uses the session fixture of tests/integration/conftest.py, rolled back after each test.
 """
 
+import math
 import secrets
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -13,9 +14,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.data_mode import DataMode
 from models import Aircraft, Alert, Rule
 from services.collection.flight_grouper import FlightGrouper
 from services.collection.normalizer import NormalizedState
+from services.collection.profiles import KM_PER_DEGREE, BoundingBox
 from services.collection.store import ObservationStore
 from services.rules.engine import RulesEngine
 
@@ -161,3 +164,31 @@ async def test_r2_reads_the_latest_position_behind_newer_contacts(session: Async
 
     codes = {code: alert for code, alert in await alerts_of(session, aircraft)}
     assert codes["R2"].observed_value == Decimal("900.000")
+
+
+async def test_at_5_s_r3_compares_with_the_point_10_s_back(session: AsyncSession) -> None:
+    """adsb.fi stores a point every 5 s: the pair is the latest point and the one 10 s back,
+    never the one just before (5 s, a pair the rates ignore)."""
+    aircraft = secrets.token_hex(3)
+    store = ObservationStore(session, FlightGrouper(timedelta(minutes=30)), DataMode.ADSBFI)
+    for seconds_ago, altitude in [(10, "10000.0"), (5, "10200.0"), (0, "10400.0")]:
+        await store.save([state(aircraft, seconds_ago, altitude)])
+
+    await RulesEngine(session).evaluate(NOW, DataMode.ADSBFI)
+
+    [(code, alert)] = await alerts_of(session, aircraft)
+    # 400 m in 10 s: 40 m/s, against 30 m/s.
+    assert (code, alert.observed_value) == ("R3", Decimal("40.000"))
+
+
+async def test_r1_says_nothing_about_an_aircraft_that_left_by_the_edge(
+    session: AsyncSession,
+) -> None:
+    aircraft = secrets.token_hex(3)
+    await save(session, state(aircraft, 420))
+    # The aircraft was last placed 1 km inside the eastern side of the box.
+    edge = BoundingBox(48.0, 50.0, 1.0, 2.5 + 1 / (KM_PER_DEGREE * math.cos(math.radians(49))))
+
+    await RulesEngine(session).evaluate(NOW, area=edge)
+
+    assert await alerts_of(session, aircraft) == []

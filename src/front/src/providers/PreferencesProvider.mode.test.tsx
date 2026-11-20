@@ -28,7 +28,7 @@ function Probe() {
     <>
       <p data-testid="mode">{mode}</p>
       <button onClick={() => setMode("replay")}>choose the replay</button>
-      <button onClick={() => setMode("live")}>choose the live data</button>
+      <button onClick={() => setMode("opensky")}>choose the live data</button>
     </>
   );
 }
@@ -36,10 +36,10 @@ function Probe() {
 afterEach(() => DataModeService.reset());
 
 describe("PreferencesProvider data mode", () => {
-  it("shows the live data by default", () => {
+  it("shows the adsb.fi data by default", () => {
     render(<Probe />, { wrapper: wrapperWith(memoryStore()) });
 
-    expect(screen.getByTestId("mode")).toHaveTextContent("live");
+    expect(screen.getByTestId("mode")).toHaveTextContent("adsbfi");
   });
 
   it("switches to the replay and back, and tells the services that read the mode", () => {
@@ -51,7 +51,7 @@ describe("PreferencesProvider data mode", () => {
     expect(new DataModeService(store).isReplay()).toBe(true);
 
     fireEvent.click(screen.getByText("choose the live data"));
-    expect(screen.getByTestId("mode")).toHaveTextContent("live");
+    expect(screen.getByTestId("mode")).toHaveTextContent("opensky");
     expect(new DataModeService(store).isReplay()).toBe(false);
   });
 

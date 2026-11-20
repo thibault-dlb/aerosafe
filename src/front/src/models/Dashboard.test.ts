@@ -87,3 +87,44 @@ describe("DashboardStatistics", () => {
     expect(new DashboardStatistics("7d", "day", 0, []).peak).toBe(0);
   });
 });
+
+describe("CollectionSummary", () => {
+  const BASE = {
+    enabled: true,
+    paused: false,
+    running: false,
+    last_success_at: null,
+    remaining_credits: null,
+    recent_runs: [],
+  };
+
+  it("reads the source, the pace and the circle of adsb.fi", () => {
+    const summary = CollectionSummary.fromJson({
+      ...BASE,
+      source: "adsbfi",
+      period_seconds: 5,
+      area: { south: 44.5, west: -3.8, north: 52.8, east: 8.8, latitude: 48.65, longitude: 2.5, radius_km: 463 },
+    });
+
+    expect([summary.source, summary.periodSeconds, summary.countsCredits]).toEqual(["adsbfi", 5, false]);
+    expect(summary.area?.bounds).toEqual({ south: 44.5, west: -3.8, north: 52.8, east: 8.8 });
+    expect(summary.area?.zone).toEqual({ latitude: 48.65, longitude: 2.5, radiusKm: 463 });
+  });
+
+  it("outlines the box of OpenSky", () => {
+    const summary = CollectionSummary.fromJson({
+      ...BASE,
+      source: "opensky",
+      area: { south: 48, west: 1.4, north: 49.3, east: 3.6, latitude: null, longitude: null, radius_km: null },
+    });
+
+    expect(summary.countsCredits).toBe(true);
+    expect(summary.area?.zone).toEqual({ south: 48, west: 1.4, north: 49.3, east: 3.6 });
+  });
+
+  it("takes an answer without source for OpenSky, as before the second source", () => {
+    const summary = CollectionSummary.fromJson({ ...BASE, source: "elsewhere" });
+
+    expect([summary.source, summary.periodSeconds, summary.area]).toEqual(["opensky", null, null]);
+  });
+});

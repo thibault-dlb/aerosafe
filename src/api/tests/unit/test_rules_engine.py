@@ -224,3 +224,53 @@ async def test_stops_early_without_aircraft() -> None:
 def test_the_registry_knows_r1_to_r5() -> None:
     assert RuleRegistry().codes == ["R1", "R2", "R3", "R4", "R5"]
     assert RuleRegistry().get("R9") is None
+
+
+class Strip:
+    """An area whose edge is the meridian 0: the distance is the longitude, in km."""
+
+    def distance_to_edge_km(self, latitude: float, longitude: float) -> float:
+        return longitude
+
+
+def placed(aircraft_id: int, contact_ago: int, longitude: float | None) -> AircraftSnapshot:
+    located = snapshot(aircraft_id, contact_ago)
+    sample = replace(located.latest, latitude=48.0, longitude=longitude)
+    return replace(located, latest=sample, latest_with_position=sample)
+
+
+async def test_an_aircraft_last_placed_near_the_edge_raises_no_r1() -> None:
+    snapshots = [placed(10, 420, longitude=19.9), placed(11, 420, longitude=20.0)]
+    rules_engine, session = engine([rule("R1", "300", 1)], snapshots)
+
+    await rules_engine.evaluate(NOW, area=Strip())
+
+    assert [alert.aircraft_id for alert in added_alerts(session)] == [11]
+
+
+async def test_the_edge_margin_can_be_set() -> None:
+    session = MagicMock()
+    session.scalars = AsyncMock(side_effect=[scalars([rule("R1", "300", 1)]), scalars([])])
+    session.flush = AsyncMock()
+    reader = MagicMock()
+    reader.read = AsyncMock(return_value=[placed(10, 420, longitude=19.9)])
+
+    await RulesEngine(session, reader=reader, edge_margin_km=5).evaluate(NOW, area=Strip())
+
+    assert len(added_alerts(session)) == 1
+
+
+async def test_an_aircraft_without_position_is_never_near_the_edge() -> None:
+    rules_engine, session = engine([rule("R1", "300", 1)], [placed(10, 420, longitude=None)])
+
+    await rules_engine.evaluate(NOW, area=Strip())
+
+    assert len(added_alerts(session)) == 1
+
+
+async def test_without_area_nothing_is_near_the_edge() -> None:
+    rules_engine, session = engine([rule("R1", "300", 1)], [placed(10, 420, longitude=1.0)])
+
+    await rules_engine.evaluate(NOW)
+
+    assert len(added_alerts(session)) == 1

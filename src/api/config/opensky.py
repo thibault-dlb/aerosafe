@@ -21,7 +21,7 @@ class OpenSkySettings(CustomBaseSettings):
     """
 
     # Off by default: only one instance may collect with the group account at a time.
-    COLLECTION_ENABLED: bool = False
+    COLLECTION_OPENSKY_ENABLED: bool = False
     COLLECTION_PROFILE: Literal["ILE_DE_FRANCE", "FRANCE"] = "ILE_DE_FRANCE"
     # Maximum gap between two observations of the same flight (D-06).
     COLLECTION_FLIGHT_GAP_MINUTES: int = Field(default=30, gt=0)

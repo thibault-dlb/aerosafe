@@ -107,3 +107,18 @@ class TestStalePositionRule:
 
         assert outcome is not None
         assert outcome.observed_value == 0
+
+
+class TestNearTheEdge:
+    """An aircraft last placed near the edge of the area has probably left it."""
+
+    def test_r1_says_nothing_near_the_edge(self) -> None:
+        latest = sample(420, 420)
+        near = replace(snapshot(latest, latest), near_edge=True)
+
+        assert LastContactRule().check(near, 300, NOW) is None
+
+    def test_r2_says_nothing_near_the_edge(self) -> None:
+        near = replace(snapshot(sample(20), sample(900, 900)), near_edge=True)
+
+        assert StalePositionRule().check(near, 600, NOW) is None

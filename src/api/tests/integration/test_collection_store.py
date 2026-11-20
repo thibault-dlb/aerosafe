@@ -4,6 +4,7 @@ Uses the session fixture of tests/integration/conftest.py, rolled back after eac
 """
 
 import secrets
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -11,9 +12,11 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.data_mode import DataMode
 from models.aircraft import Aircraft
 from models.flight import Flight
 from models.observation import Observation
+from models.reference import AircraftModel, DataSource
 from services.collection.flight_grouper import FlightGrouper
 from services.collection.normalizer import NormalizedState
 from services.collection.store import ObservationStore
@@ -153,3 +156,81 @@ async def test_a_soft_deleted_aircraft_does_not_block_the_collection(
 
 async def test_an_empty_collection_stores_nothing(session: AsyncSession) -> None:
     assert await store(session).save([]) == 0
+
+
+def adsbfi_store(session: AsyncSession) -> ObservationStore:
+    return ObservationStore(session, FlightGrouper(GAP), DataMode.ADSBFI)
+
+
+async def test_each_live_source_has_its_own_aircraft_and_flights(session: AsyncSession) -> None:
+    aircraft = icao24()
+
+    await store(session).save([state(aircraft, T0)])
+    await adsbfi_store(session).save([state(aircraft, T0 + timedelta(seconds=5))])
+
+    rows = (
+        await session.execute(
+            select(DataSource.code, func.count(Flight.id))
+            .join(Aircraft, Aircraft.source_id == DataSource.id)
+            .join(Flight, Flight.aircraft_id == Aircraft.id)
+            .where(Aircraft.icao24 == aircraft)
+            .group_by(DataSource.code)
+            .order_by(DataSource.code)
+        )
+    ).all()
+    assert [tuple(row) for row in rows] == [("ADSBFI", 1), ("DIRECT", 1)]
+
+
+async def test_the_stale_flights_of_one_source_are_closed_alone(session: AsyncSession) -> None:
+    aircraft = icao24()
+    await store(session).save([state(aircraft, T0)])
+    await adsbfi_store(session).save([state(aircraft, T0)])
+
+    await adsbfi_store(session).close_stale_flights(T0 + GAP + timedelta(minutes=1))
+
+    ended = (
+        await session.execute(
+            select(DataSource.code, Flight.ended_at)
+            .join(Aircraft, Aircraft.source_id == DataSource.id)
+            .join(Flight, Flight.aircraft_id == Aircraft.id)
+            .where(Aircraft.icao24 == aircraft)
+            .order_by(DataSource.code)
+        )
+    ).all()
+    assert [tuple(row) for row in ended] == [("ADSBFI", T0), ("DIRECT", None)]
+
+
+async def test_the_registration_and_the_model_fill_the_aircraft(session: AsyncSession) -> None:
+    aircraft = icao24()
+    code = f"T{secrets.token_hex(2).upper()}"
+    described = replace(
+        state(aircraft, T0), registration="F-TEST", model_code=code, model_label="TEST AIRCRAFT"
+    )
+
+    await adsbfi_store(session).save([described])
+    # A later state without them never erases them.
+    await adsbfi_store(session).save([state(aircraft, T0 + timedelta(seconds=5))])
+
+    found = (
+        await session.execute(
+            select(Aircraft.registration, AircraftModel.code, AircraftModel.label)
+            .join(AircraftModel, AircraftModel.id == Aircraft.model_id)
+            .where(Aircraft.icao24 == aircraft, DataMode.ADSBFI.matches(Aircraft.source_id))
+        )
+    ).one()
+    assert tuple(found) == ("F-TEST", code, "TEST AIRCRAFT")
+
+
+async def test_a_new_registration_replaces_the_old_one(session: AsyncSession) -> None:
+    aircraft = icao24()
+    await adsbfi_store(session).save([replace(state(aircraft, T0), registration="F-OLD")])
+    await adsbfi_store(session).save(
+        [replace(state(aircraft, T0 + timedelta(seconds=5)), registration="F-NEW")]
+    )
+
+    registration = await session.scalar(
+        select(Aircraft.registration).where(
+            Aircraft.icao24 == aircraft, DataMode.ADSBFI.matches(Aircraft.source_id)
+        )
+    )
+    assert registration == "F-NEW"

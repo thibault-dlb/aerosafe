@@ -33,11 +33,32 @@ class CollectionRunSummary(BaseModel):
     status: str
 
 
-class CollectionSummary(BaseModel):
-    """State of the collection, readable by every account (the controls are the Supervisor's)."""
+class CollectionArea(BaseModel):
+    """The area of a collection: the rectangle that holds it, which the map frames, and for a
+    circle (adsb.fi) its centre and radius, which the map draws."""
 
     model_config = ConfigDict(frozen=True)
 
+    south: float
+    west: float
+    north: float
+    east: float
+    latitude: float | None = Field(default=None, description="Centre of a circle")
+    longitude: float | None = Field(default=None, description="Centre of a circle")
+    radius_km: float | None = Field(default=None, description="Radius of a circle")
+
+
+class CollectionSummary(BaseModel):
+    """State of the collection of one live source, readable by every account (the controls are
+    the Supervisor's)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source: str = Field(default="opensky", description="`opensky` or `adsbfi`")
+    period_seconds: int | None = Field(
+        default=None, description="Seconds between two collections, the refresh of the map"
+    )
+    area: CollectionArea | None = None
     enabled: bool
     paused: bool
     running: bool

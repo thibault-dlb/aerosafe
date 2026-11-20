@@ -1,15 +1,16 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import Select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config.rules import settings as rules_settings
 from core.data_mode import DataMode
 from core.logger import get_logger
 from core.repository import Repository
 from models import Aircraft, Alert, Rule
-from services.rules.base import AircraftSnapshot, BusinessRule
+from services.rules.base import AircraftSnapshot, BusinessRule, CoverageZone
 from services.rules.observations import SnapshotReader
 from services.rules.registry import RuleRegistry
 
@@ -41,23 +42,37 @@ class RulesEngine:
         session: AsyncSession,
         registry: RuleRegistry | None = None,
         reader: SnapshotReader | None = None,
+        edge_margin_km: float | None = None,
     ) -> None:
         self._session = session
         self._registry = registry or RuleRegistry()
         self._reader = reader or SnapshotReader(session)
+        self._edge_margin_km = (
+            rules_settings.RULES_EDGE_MARGIN_KM if edge_margin_km is None else edge_margin_km
+        )
 
-    async def evaluate(self, now: datetime, mode: DataMode = DataMode.LIVE) -> EvaluationReport:
+    async def evaluate(
+        self,
+        now: datetime,
+        mode: DataMode = DataMode.OPENSKY,
+        area: CoverageZone | None = None,
+    ) -> EvaluationReport:
         """Evaluate the rules for the collection that ran at `now`.
 
         `now` is the collection time, not the time the engine runs, so a delay in the
         evaluation never makes the data look older than it is. The caller commits.
 
-        `mode` picks the source: the live collection or the replayed history. A mode only sees
-        the aircraft and the episodes of its own source, so a replay never ends a live episode,
-        and the other way round. In a replay, `now` is an instant of the dataset.
+        `mode` picks the source: one of the live collections or the replayed history. A mode
+        only sees the aircraft and the episodes of its own source, so a replay never ends a
+        live episode, and the other way round. In a replay, `now` is an instant of the dataset.
+
+        `area` is the area the source covers: an aircraft last placed near its edge is flagged,
+        so that R1 and R2 do not take its exit from the area for a loss of contact.
         """
         rules = await self._active_rules(mode)
         snapshots = await self._reader.read(now, mode) if rules else []
+        if area is not None:
+            snapshots = [self._flag_edge(snapshot, area) for snapshot in snapshots]
         episodes = await self._open_episodes(mode)
         closed = self._end_finished_episodes(episodes, rules, snapshots, now)
         if not rules or not snapshots:
@@ -137,6 +152,13 @@ class RulesEngine:
                 continue
             rules.append((model, rule))
         return rules
+
+    def _flag_edge(self, snapshot: AircraftSnapshot, area: CoverageZone) -> AircraftSnapshot:
+        sample = snapshot.latest_with_position
+        if sample is None or sample.latitude is None or sample.longitude is None:
+            return snapshot
+        distance = area.distance_to_edge_km(sample.latitude, sample.longitude)
+        return replace(snapshot, near_edge=distance < self._edge_margin_km)
 
     @staticmethod
     def open_episodes_query(session: AsyncSession, mode: DataMode) -> Select:
