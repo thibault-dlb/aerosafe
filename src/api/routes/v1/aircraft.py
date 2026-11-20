@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -82,11 +82,20 @@ async def search_aircraft(
     north: Annotated[float | None, Query(ge=-90, le=90)] = None,
     east: Annotated[float | None, Query(ge=-180, le=180)] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_RESULTS)] = 50,
+    heard_within_seconds: Annotated[
+        int | None,
+        Query(
+            ge=1,
+            le=3_600,
+            description="Live only: keep the aircraft heard in this many seconds before now",
+        ),
+    ] = None,
 ) -> list[AircraftSummary]:
     """Aircraft matching every given criterion (BF-04). The area applies to the latest
     known position. An empty list means no match (UC-01, alternative flow 2a).
 
-    With `source=replay`, the aircraft heard in the minute before the simulated instant."""
+    With `source=replay`, the aircraft heard in the minute before the simulated instant. Live,
+    `heard_within_seconds` keeps the traffic of the moment, as the map shows it."""
     area = build_area(south, west, north, east)
     if scope.nothing_to_show:
         return []
@@ -98,6 +107,9 @@ async def search_aircraft(
         limit=limit,
         mode=scope.mode,
         at=scope.at,
+        heard_within=None
+        if heard_within_seconds is None
+        else timedelta(seconds=heard_within_seconds),
     )
     return await service.search(criteria)
 

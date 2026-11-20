@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import Select, func, or_, select, true
 from sqlalchemy.dialects.postgresql import distinct_on
@@ -36,9 +36,12 @@ class BoundingBox:
 class AircraftSearchCriteria:
     """Search criteria of UC-01. Every criterion is optional and they are combined with AND.
 
-    `mode` picks the source of the aircraft: the live collection, or the replayed history, in
-    which case `at` is the simulated instant and only the aircraft heard in the minute before
-    it are listed, with their position at that instant.
+    `mode` picks the source of the aircraft: one of the live collections, or the replayed
+    history, in which case `at` is the simulated instant and only the aircraft heard in the
+    minute before it are listed, with their position at that instant.
+
+    `heard_within` keeps, live, only the aircraft heard in that delay before now: the map shows
+    the traffic of the moment, and adsb.fi gathers tens of thousands of aircraft a week.
     """
 
     icao24: str | None = None
@@ -48,6 +51,7 @@ class AircraftSearchCriteria:
     limit: int = 50
     mode: DataMode = DataMode.OPENSKY
     at: datetime | None = None
+    heard_within: timedelta | None = None
 
 
 def escape_like(value: str) -> str:
@@ -91,10 +95,19 @@ class AircraftService:
             .lateral("latest")
         )
 
-    @staticmethod
-    def replay_observations(at: datetime) -> FromClause:
+    @classmethod
+    def replay_observations(cls, at: datetime) -> FromClause:
         """The latest observation, at the simulated instant `at`, of each aircraft heard in the
         minute before: a range of the index on the contact time, a few thousand rows."""
+        return cls.recent_observations(at - REPLAY_WINDOW, at)
+
+    @staticmethod
+    def recent_observations(since: datetime, until: datetime | None = None) -> FromClause:
+        """The latest observation of each aircraft heard after `since` (and up to `until`
+        when given): a range of the index on the contact time."""
+        conditions = [Observation.deleted_at.is_(None), Observation.last_contact_at > since]
+        if until is not None:
+            conditions.append(Observation.last_contact_at <= until)
         return (
             select(
                 Observation.aircraft_id,
@@ -107,23 +120,23 @@ class AircraftService:
                 Observation.speed,
                 Observation.on_ground,
             )
-            .where(
-                Observation.deleted_at.is_(None),
-                Observation.last_contact_at > at - REPLAY_WINDOW,
-                Observation.last_contact_at <= at,
-            )
+            .where(*conditions)
             .ext(distinct_on(Observation.aircraft_id))
             .order_by(Observation.aircraft_id, Observation.last_contact_at.desc())
             .subquery("latest")
         )
 
     def summary_query(
-        self, at: datetime | None = None, windowed: bool = False
+        self,
+        at: datetime | None = None,
+        windowed: bool = False,
+        heard_since: datetime | None = None,
     ) -> tuple[Select, FromClause]:
         """Aircraft with their model, airline and latest observation, deleted rows excluded.
 
-        `windowed` keeps only the aircraft heard in the minute before `at` (a replay);
-        otherwise every aircraft is kept, with its latest observation up to `at` if given.
+        `windowed` keeps only the aircraft heard in the minute before `at` (a replay), and
+        `heard_since` only those heard after it (live); otherwise every aircraft is kept, with
+        its latest observation up to `at` if given.
         """
         statement = (
             self._aircraft.select()
@@ -139,6 +152,9 @@ class AircraftService:
                 raise ValueError("A replay needs the simulated instant")
             latest = self.replay_observations(at)
             statement = statement.join(latest, latest.c.aircraft_id == Aircraft.id)
+        elif heard_since is not None:
+            latest = self.recent_observations(heard_since)
+            statement = statement.join(latest, latest.c.aircraft_id == Aircraft.id)
         else:
             latest = self.latest_observation(at)
             statement = statement.outerjoin(latest, true())
@@ -153,9 +169,12 @@ class AircraftService:
         )
         return statement, latest
 
-    def search_query(self, criteria: AircraftSearchCriteria) -> Select:
+    def search_query(self, criteria: AircraftSearchCriteria, now: datetime | None = None) -> Select:
+        heard_since = None
+        if criteria.mode.is_live and criteria.heard_within is not None:
+            heard_since = (now or datetime.now(UTC)) - criteria.heard_within
         statement, latest = self.summary_query(
-            criteria.at, windowed=criteria.mode is DataMode.REPLAY
+            criteria.at, windowed=criteria.mode is DataMode.REPLAY, heard_since=heard_since
         )
         # The address is unique for each source: a replayed aircraft can share it with a real one.
         statement = statement.where(criteria.mode.matches(Aircraft.source_id))

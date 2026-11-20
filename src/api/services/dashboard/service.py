@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from core.data_mode import DataMode
 from schemas.alert import AlertOut
 from schemas.dashboard import (
+    CollectionArea,
     CollectionRunSummary,
     CollectionSummary,
     DashboardCounters,
@@ -13,6 +14,7 @@ from schemas.dashboard import (
     StatisticsSlice,
 )
 from services.alerts.service import AlertFilters, AlertService, AlertStatus
+from services.collection.profiles import CollectionProfile
 from services.collection.run_state import CollectionStateStore
 
 ACTIVE_ALERTS_SHOWN = 5
@@ -65,6 +67,8 @@ class DashboardService:
         *,
         collection_enabled: bool,
         collection_running: bool,
+        collection_source: DataMode = DataMode.OPENSKY,
+        collection_profile: CollectionProfile | None = None,
     ) -> DashboardOut:
         """Figures, latest active alerts and collection state. `at` is the simulated instant."""
         now = at or datetime.now(UTC)
@@ -86,7 +90,9 @@ class DashboardService:
             ),
             active_alerts=latest.items,
             alerted_aircraft=self.most_critical_per_aircraft(active.items),
-            collection=await self.collection(collection_enabled, collection_running),
+            collection=await self.collection(
+                collection_enabled, collection_running, collection_source, collection_profile
+            ),
         )
 
     @staticmethod
@@ -109,11 +115,27 @@ class DashboardService:
             collection=collection,
         )
 
-    async def collection(self, enabled: bool, running: bool) -> CollectionSummary:
-        pause = await self._collection.pause_state()
-        runs = await self._collection.runs(limit=RECENT_RUNS_SHOWN)
-        last_success = await self._collection.last_success()
+    async def collection(
+        self,
+        enabled: bool,
+        running: bool,
+        source: DataMode = DataMode.OPENSKY,
+        profile: CollectionProfile | None = None,
+    ) -> CollectionSummary:
+        """The state of the collection of one live source; `profile` gives its period and its
+        area, which the map follows."""
+        pause = await self._collection.pause_state(source)
+        runs = await self._collection.runs(limit=RECENT_RUNS_SHOWN, source=source)
+        last_success = await self._collection.last_success(source)
+        bounds = profile.bounding_box if profile else None
         return CollectionSummary(
+            source=source.value,
+            period_seconds=profile.period_seconds if profile else None,
+            area=None
+            if bounds is None
+            else CollectionArea(
+                south=bounds.lat_min, west=bounds.lon_min, north=bounds.lat_max, east=bounds.lon_max
+            ),
             enabled=enabled,
             paused=pause.paused,
             running=running,

@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -11,6 +12,7 @@ from services.alerts.service import (
     AlertStatistics,
     AlertStatus,
 )
+from services.collection.profiles import Circle, CollectionProfile, ProfileCode
 from services.collection.run_state import (
     CollectionRunResult,
     InMemoryCollectionStateStore,
@@ -217,3 +219,29 @@ class TestStatistics:
         assert len(out.slices) == 24
         assert out.total == 0
         assert alerts.sliced is None
+
+
+async def test_the_collection_of_a_source_gives_its_period_and_its_area() -> None:
+    store = InMemoryCollectionStateStore()
+    await store.record(
+        CollectionRunResult(NOW, NOW, RunStatus.SUCCESS, "ADSBFI_250NM", source=DataMode.ADSBFI)
+    )
+    await store.set_paused(True, NOW, 1, DataMode.ADSBFI)
+    service = DashboardService(AsyncMock(), store)
+    profile = CollectionProfile(ProfileCode.ADSBFI_250NM, Circle(48.65, 2.5, 250), 5)
+
+    summary = await service.collection(True, False, DataMode.ADSBFI, profile)
+
+    assert (summary.source, summary.period_seconds, summary.paused) == ("adsbfi", 5, True)
+    assert summary.last_success_at == NOW
+    assert summary.area is not None
+    assert summary.area.south == pytest.approx(48.65 - 4.164, abs=0.01)
+    assert summary.area.north == pytest.approx(48.65 + 4.164, abs=0.01)
+
+
+async def test_the_collection_without_profile_has_no_area() -> None:
+    service = DashboardService(AsyncMock(), InMemoryCollectionStateStore())
+
+    summary = await service.collection(False, False)
+
+    assert (summary.source, summary.period_seconds, summary.area) == ("opensky", None, None)

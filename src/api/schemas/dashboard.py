@@ -33,11 +33,28 @@ class CollectionRunSummary(BaseModel):
     status: str
 
 
-class CollectionSummary(BaseModel):
-    """State of the collection, readable by every account (the controls are the Supervisor's)."""
+class CollectionArea(BaseModel):
+    """The rectangle that holds the area of a collection, the one the map shows."""
 
     model_config = ConfigDict(frozen=True)
 
+    south: float
+    west: float
+    north: float
+    east: float
+
+
+class CollectionSummary(BaseModel):
+    """State of the collection of one live source, readable by every account (the controls are
+    the Supervisor's)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source: str = Field(default="opensky", description="`opensky` or `adsbfi`")
+    period_seconds: int | None = Field(
+        default=None, description="Seconds between two collections, the refresh of the map"
+    )
+    area: CollectionArea | None = None
     enabled: bool
     paused: bool
     running: bool
