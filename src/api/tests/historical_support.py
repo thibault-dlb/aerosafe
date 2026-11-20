@@ -113,6 +113,30 @@ class SlowSink(FakeSink):
         return await super().insert_observations(batch)
 
 
+class GatedSink(FakeSink):
+    """A database whose inserts all wait until `parallel` of them are in progress together.
+
+    It proves that the workers insert at the same time without depending on the speed of
+    the machine, which a pause (`SlowSink`) does: on a busy machine the batches arrive one
+    by one, each insert ends before the next begins, and nothing ever overlaps.
+    """
+
+    def __init__(self, parallel: int, timeout: float = 5.0) -> None:
+        super().__init__()
+        self._parallel = parallel
+        self._timeout = timeout
+        self._arrived = 0
+        self._gate = asyncio.Event()
+
+    async def insert_observations(self, batch: ObservationBatch) -> int:
+        self._arrived += 1
+        if self._arrived >= self._parallel:
+            self._gate.set()
+        # Fails after the timeout instead of hanging, if the workers never overlap.
+        await asyncio.wait_for(self._gate.wait(), self._timeout)
+        return await super().insert_observations(batch)
+
+
 class FakeUnitOfWork:
     """Gives the same fake database to every unit, and records the transactions.
 

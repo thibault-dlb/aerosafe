@@ -17,6 +17,7 @@ from tests.historical_support import (
     OTHER_FLIGHT,
     FakeSink,
     FakeUnitOfWork,
+    GatedSink,
     Point,
     SlowSink,
     write_day,
@@ -245,14 +246,16 @@ class TestWorkers:
     async def test_several_workers_insert_at_the_same_time_but_never_more_than_asked(
         self, reader: Prc2024Reader, points: Path
     ) -> None:
-        sink = SlowSink()
+        # Every insert waits until three are in progress together: the test does not depend
+        # on how fast the machine reads the batches.
+        sink = GatedSink(parallel=3)
         loader, unit = importer(reader, sink, batch_size=1, workers=3)
 
         report = await loader.import_file(points)
 
         assert report.inserted == 12
         assert len(sink.stored) == 12
-        assert 2 <= unit.max_active <= 3
+        assert unit.max_active == 3
 
     async def test_one_worker_inserts_one_batch_at_a_time(
         self, reader: Prc2024Reader, points: Path
