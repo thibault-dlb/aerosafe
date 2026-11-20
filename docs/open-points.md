@@ -16,8 +16,8 @@ Decided on 2026-11-03 and moved to [Team decisions](#team-decisions-pending-conf
 
 | ID | Topic | What the sheet says | Question |
 | --- | --- | --- | --- |
-| A-01 | R1 and R2 overlap | R1: "too long a delay since the last contact"; R2: "a position that has become too old" (§6) | Settled by the team: R1 is the time since the last message, R2 the age of the last position (to confirm with the teacher) |
-| A-02 | Scope of the Supervisor | Supervises aircraft, business rules and alerts through a Dashboard (§3) | Settled by the team: thresholds, alert processing and account management (to confirm with the teacher) |
+| A-01 | R1 and R2 overlap | R1: "too long a delay since the last contact"; R2: "a position that has become too old" (§6) | Settled by the team: R1 is the time since the last message, R2 the age of the last position (confirmed with the teacher on 2026-11-12) |
+| A-02 | Scope of the Supervisor | Supervises aircraft, business rules and alerts through a Dashboard (§3) | Settled by the team: thresholds, alert processing and account management (confirmed with the teacher on 2026-11-12) |
 | A-03 | Mandatory alert fields | An alert "may contain" the aircraft, rule, date and time, criticality (optional), observed value, threshold and message (§6) | Settled by the team: aircraft, rule, date and time, message are mandatory |
 | A-04 | Dashboard and flight statistics | Both are named (§2, §5) and neither is described | Settled by the team, see [business rules](business-rules.md#dashboard-a-04-team-decision) |
 | A-05 | PostgreSQL | "A database such as PostgreSQL" (§4) | PostgreSQL is an example, not a requirement. The team chose PostgreSQL 17 |
@@ -36,13 +36,29 @@ Decisions that belong to the team and do not come from the sheet.
 | D-17 | Table for users | Decided on 2026-11-03: `UTILISATEUR`, a business table. Not `W_`, which the guide reserves for temporary or import tables |
 | D-18 | Storage of positions | Decided on 2026-11-03: PostGIS `geometry` column. Its exact name is set in the logical schema |
 | D-19 | Interface design | Decided on 2026-11-12: plain CSS with CSS modules, the dark theme and the fonts of the [brand guidelines](brand/brand-guidelines.md) (the light theme was dropped on 2026-11-15), French by default with an English switch, responsive. See [technology choices](technology-choices.md#interface-design) |
-| D-20 | Historical replay mode | Decided on 2026-11-13, reopening D-05: next to the live collection, the application can replay the historical traffic of the PRC Data Challenge 2024 dataset (the year 2022 over France and 100 km), imported into PostgreSQL. A shared simulated clock (start, pause, speed ×1, ×10 or ×60) drives what every user sees; the rules R3 to R5 run on the replayed traffic as the clock goes by (R1 and R2 need a contact time that the dataset does not have). A Live / Replay switch in the interface picks the source of the data. See [historical data](historical-data.md#replay-mode) |
+| D-20 | Historical replay mode | Decided on 2026-11-13, reopening D-05: next to the live collection, the application can replay the historical traffic of the PRC Data Challenge 2024 dataset (the year 2022 over France and 100 km), imported into PostgreSQL. A shared simulated clock (start, pause, speed ×1, ×10 or ×60) drives what every user sees; the rules R3 to R5 run on the replayed traffic as the clock goes by (R1 and R2 need a contact time that the dataset does not have). A Live / Replay switch in the interface picks the source of the data. Confirmed by the supervising teacher (reported on 2026-11-20). See [historical data](historical-data.md#replay-mode) |
 | D-21 | One theme: dark | Decided on 2026-11-15, narrowing D-19: the light theme (B · Papyrus) and its switch are dropped. The map, the home page and the radar screens are drawn for the dark theme, and keeping two themes meant keeping two of every colour. The home page no longer carries the replay or the choice of the data source either; the replay is driven by a floating player at the bottom of the application pages. See [brand guidelines](brand/brand-guidelines.md#3-the-retained-theme) |
-| D-22 | Signed vertical rate for R3 | Decided on 2026-11-15, refining R3 (D-04): the observed value of R3 is the signed vertical rate, negative in a descent, so an alert says which way the aircraft went. The rule still triggers on the size of the rate. Alerts stored before keep their unsigned value (a descent of 40 m/s was stored as 40). Open for review: the threshold stays positive and applies both ways. See [business rules](business-rules.md#rules) |
+| D-22 | Signed vertical rate for R3 | Decided on 2026-11-15, refining R3 (D-04): the observed value of R3 is the signed vertical rate, negative in a descent, so an alert says which way the aircraft went. The rule still triggers on the size of the rate. Alerts stored before keep their unsigned value (a descent of 40 m/s was stored as 40). The threshold stays positive and applies both ways. Confirmed by the supervising teacher (reported on 2026-11-20). See [business rules](business-rules.md#rules) |
 
 ## Team decisions pending confirmation
 
-Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go beyond the project sheet or settle points of the specifications. They are the team's choice, not the sheet's, and should be confirmed with the supervising teacher.
+Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go beyond the project sheet or settle points of the specifications. They are the team's choice, not the sheet's, and were confirmed with the supervising teacher on 2026-11-12.
+
+Answers of the supervising teacher, reported on 2026-11-20:
+
+| Topic | Answer |
+| --- | --- |
+| Automated collection with OpenSky (V-01) | Acceptable without a licence |
+| Anonymising aircraft at the defence | Not needed |
+| Dashboard open to a User (2026-11-15) | Confirmed |
+| Accounts created by a Supervisor (2026-11-14) | Confirmed |
+| Signed vertical rate for R3 (D-22) | Confirmed |
+| Replay mode (D-20) | Confirmed |
+| Specifications | Only the project sheet is binding; the delivery details of the specifications apply |
+| AI module (bonus) | Counts in the grading |
+| Licence of the repository | None needed |
+
+The deployment and the estimated position of the aircraft between two reports are the team's own choices, not put to the teacher.
 
 | Topic | Decision | Settles |
 | --- | --- | --- |
@@ -60,12 +76,12 @@ Taken on 2026-11-03 to draw the [UML diagrams](uml/use-cases.md). Several go bey
 | Dashboard | Active alerts, tracked aircraft, alert statistics, collection state. Flight statistics: duration and distance, altitude and speed, number of observations | A-04 |
 | Scope | Every requirement of the specifications is to be developed, including flight statistics (BF-08), alert configuration (UC-05) and account management (UC-06) | C-01, C-04 |
 | Account deletion | A user can request it; the account is anonymised, never deleted, following the database guide | C-05 |
-| Dashboard for a User | The dashboard is open to every account in read only: the figures, the active alerts, the chart and the state of the collection (without error text). Alerts, rules and accounts stay the Supervisor's. Added on 2026-11-15, to confirm with the teacher | A-02, A-04 |
-| Position of an aircraft between two reports | The map moves each aircraft from its last report at its heading and ground speed, for 90 seconds at most, and draws a line of its next 15 minutes at the same heading and speed. This is an estimate, labelled as such on the card of the followed aircraft; it is not stored and no rule reads it. Added on 2026-11-15, to confirm with the teacher | A-04 |
-| Accounts created by a Supervisor | Besides self sign-up, a Supervisor creates an account (UC-06); the application generates a provisional password, shown once, that the owner must replace at the first login. A Supervisor cannot change their own role or state, or anonymise themselves, from the list, and the last active Supervisor stays. Added on 2026-11-14, to confirm with the teacher | C-02 |
+| Dashboard for a User | The dashboard is open to every account in read only: the figures, the active alerts, the chart and the state of the collection (without error text). Alerts, rules and accounts stay the Supervisor's. Added on 2026-11-15, confirmed by the teacher (reported on 2026-11-20) | A-02, A-04 |
+| Position of an aircraft between two reports | The map moves each aircraft from its last report at its heading and ground speed, for 90 seconds at most, and draws a line of its next 15 minutes at the same heading and speed. This is an estimate, labelled as such on the card of the followed aircraft; it is not stored and no rule reads it. Added on 2026-11-15; the team's own choice, not put to the teacher | A-04 |
+| Accounts created by a Supervisor | Besides self sign-up, a Supervisor creates an account (UC-06); the application generates a provisional password, shown once, that the owner must replace at the first login. A Supervisor cannot change their own role or state, or anonymise themselves, from the list, and the last active Supervisor stays. Added on 2026-11-14, confirmed by the teacher (reported on 2026-11-20) | C-02 |
 | AI module | Shown in the diagrams as optional, with an anomaly score | Bonus |
 
-Taken on 2026-11-09 for the collection work package (`feat/collection-dashboard`). Same status: the team's choice, to confirm with the supervising teacher.
+Taken on 2026-11-09 for the collection work package (`feat/collection-dashboard`). Same status as the decisions above: the team's choice, confirmed with the supervising teacher on 2026-11-12.
 
 | Topic | Decision | Settles |
 | --- | --- | --- |
@@ -77,7 +93,7 @@ Taken on 2026-11-09 for the collection work package (`feat/collection-dashboard`
 
 ## Not in the project sheet
 
-Everything below comes from the specifications (`Cahier_Des_Charge_Projet_Fil_Rouge.pdf`). It does not appear in the project sheet, so none of it is binding. It becomes relevant only if the supervising teacher confirms that the specifications apply.
+Everything below comes from the specifications (`Cahier_Des_Charge_Projet_Fil_Rouge.pdf`). It does not appear in the project sheet, so none of it is binding. The supervising teacher said (reported on 2026-11-20) that only the project sheet is binding, except the [delivery details](../ROADMAP.md#delivery-details-not-in-the-project-sheet), which follow the specifications. The contradictions below are kept for the record and do not bind the team.
 
 ### Contradictions in the specifications
 
@@ -102,6 +118,6 @@ Everything below comes from the specifications (`Cahier_Des_Charge_Projet_Fil_Ro
 
 | ID | Topic | Detail |
 | --- | --- | --- |
-| V-01 | OpenSky Network conditions | Quotas and authentication checked on 2026-11-03 (see [architecture](architecture.md#data-source)); terms of use read on 2026-11-06 (see [OpenSky Network](opensky.md)). Still open: whether automated collection through the REST API counts as "operational use", which needs a written licence from OpenSky (§V.1, §VII.1, §VII.3) |
+| V-01 | OpenSky Network conditions | Quotas and authentication checked on 2026-11-03 (see [architecture](architecture.md#data-source)); terms of use read on 2026-11-06 (see [OpenSky Network](opensky.md)). Settled: the supervising teacher said (reported on 2026-11-20) that the automated collection through the REST API is acceptable without a licence from OpenSky (§V.1, §VII.1, §VII.3). The terms still forbid redistributing the data |
 | V-02 | Public sharing | Settled on 2026-11-09: the supervising teacher agreed to make the repository public (§V.2) |
 | V-03 | Teacher access | Settled on 2026-11-09: the repository is public, so the supervising teacher can read it (§VIII.2) |

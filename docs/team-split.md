@@ -20,7 +20,7 @@ The split was made without information on each member's skills. Work packages ca
 | Sacha | `feat/rules-alerts` | Rules engine R1 to R5, alerts, thresholds | BF-09, BF-10, BF-12, BF-13 | UC-03, UC-04, UC-05 |
 | Yassine | `feat/aircraft-lookup` | Search, aircraft record, flight parameters, trajectory, map, flight statistics | BF-04 to BF-08 | UC-01, UC-02 |
 
-The AI module (BF-15, UC-07) is **not assigned**. It is a bonus and only starts once all priority E requirements are met.
+The AI module (BF-15, UC-07) is **not assigned**. It is a bonus and only starts once all priority E requirements are met. The supervising teacher said it counts in the grading (reported on 2026-11-20).
 
 ## File ownership
 

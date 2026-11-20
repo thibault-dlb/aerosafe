@@ -16,7 +16,8 @@ The work is shared between the five group members in [team work split](docs/team
 - The CI pipeline runs on GitHub Actions on every push (step 7): lint, formatting, tests with the 80% coverage threshold, production build, Docker stack, migration round trip, end-to-end tests on three browsers, a dependency review on pull requests and CodeQL (Python, TypeScript and the workflows). Deployment is not started.
 - The last pull request merged into `develop` is #39 (2026-11-15). No pull request or issue is open on 2026-11-20, and no Git tag exists yet.
 - The OpenSky account of the group and its OAuth2 API client exist (2026-11-20, 4 000 credits a day). A test on 2026-11-20, without a database, ran the real token provider, OpenSky client and normaliser on the Île-de-France area: the token was obtained and 78 state vectors were read and cleaned, none rejected. The collection has not run end to end in the stack yet (storage, flights, scheduler), because Docker is not installed on the machine of the account holder, who has asked the IT service for it. `COLLECTION_ENABLED` stays `false` by default.
-- Not started: the continuous deployment, the monitoring and the AI module (bonus, not assigned).
+- Not started: the continuous deployment, the monitoring and the AI module (bonus, not assigned, but it counts in the grading).
+- Answers of the supervising teacher, reported on 2026-11-20: automated collection with OpenSky needs no licence (V-01), no anonymisation is needed at the defence, the decisions of 2026-11-14 and 2026-11-15 on the dashboard and the accounts, D-22 and the replay are confirmed, only the project sheet is binding (the delivery details of the specifications apply), the AI module counts in the grading and the repository needs no licence. See [open points](docs/open-points.md).
 - The repository is public since 2026-11-09, with the agreement of the supervising teacher.
 
 ## Steps
@@ -54,11 +55,11 @@ From the project sheet:
 - [x] Read the OpenSky terms of use (see [OpenSky Network](docs/opensky.md))
 - [x] Register one OpenSky account for the group and create its OAuth2 API client (quotas are documented in [architecture](docs/architecture.md)); the token and the reading of the Île-de-France area were checked on 2026-11-20
 - [ ] Run the live collection end to end in the Docker stack with that account: storage of the observations, flights, scheduler and dashboard (needs Docker on the machine of the account holder)
-- [ ] Confirm with the supervising teacher the decisions of 2026-11-14 and 2026-11-15 (the dashboard open to a User, the estimated position of an aircraft, the accounts created by a Supervisor, D-22) and V-01 (automated collection and operational use of OpenSky), see [open points](docs/open-points.md)
+- [x] Confirm with the supervising teacher the decisions of 2026-11-14 and 2026-11-15 (the dashboard open to a User, the accounts created by a Supervisor, D-22), the replay and V-01 (automated collection and operational use of OpenSky); answers reported on 2026-11-20, see [open points](docs/open-points.md). The estimated position of an aircraft is the team's own choice
 - [ ] Fill in the test data, the test cases of R1 to R5 and the functional acceptance record in [testing](docs/testing.md)
-- [ ] Continuous deployment and monitoring (steps 7 and 9), and the deployment environment (step 8)
+- [ ] Continuous deployment and monitoring (steps 7 and 9), and the deployment environment (step 8): the team's own choice, to make the demonstration easier
 - [ ] Decide the version numbering scheme (D-13) and tag the version submitted for evaluation
-- [ ] Decide whether to start the AI module (bonus) and choose its library (D-14)
+- [ ] Start the AI module (bonus, BF-15 and UC-07), which counts in the grading: assign it, choose its library (D-14) and compare its anomaly score with the rules
 - [ ] Assemble deliverables 1 and 3 (see below)
 
 Repository housekeeping:
@@ -80,7 +81,7 @@ Not in the project sheet:
 
 ## Delivery details (not in the project sheet)
 
-The specifications add the following. Treat it as unconfirmed until the supervising teacher says it applies.
+The specifications add the following. The supervising teacher confirmed on 2026-11-20 (reported) that these delivery details apply, while only the project sheet is binding for the rest.
 
 Deliverable 2 also includes:
 

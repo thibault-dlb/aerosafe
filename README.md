@@ -99,4 +99,4 @@ Supervising teacher: Sirine SBOUI.
 
 ## Ownership and licence
 
-No open-source licence has been chosen. The project sheet says nothing about intellectual property. The terms in [project terms](docs/project-terms.md) come from the specifications and are not confirmed.
+No open-source licence has been chosen, and the supervising teacher said none is needed (reported on 2026-11-20). The project sheet says nothing about intellectual property. The terms in [project terms](docs/project-terms.md) come from the specifications and are informative only.
