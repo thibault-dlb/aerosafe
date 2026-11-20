@@ -77,7 +77,7 @@ class TestRecentQuery:
         assert "aircraft_rank = " not in replay
 
     @pytest.mark.parametrize(
-        ("mode", "code"), [(DataMode.LIVE, "DIRECT"), (DataMode.REPLAY, "REJEU")]
+        ("mode", "code"), [(DataMode.OPENSKY, "DIRECT"), (DataMode.REPLAY, "REJEU")]
     )
     def test_each_mode_reads_the_aircraft_of_its_own_source(
         self, mode: DataMode, code: str
@@ -225,7 +225,7 @@ class TestEngineInAReplay:
 
         report = await engine.evaluate(NOW)
 
-        reader.read.assert_awaited_once_with(NOW, DataMode.LIVE)
+        reader.read.assert_awaited_once_with(NOW, DataMode.OPENSKY)
         assert report.rules == 2
 
     async def test_a_climb_of_40_m_s_triggers_r3_at_the_simulated_time(self) -> None:
@@ -242,7 +242,7 @@ class TestEngineInAReplay:
     async def test_the_open_episodes_are_those_of_the_aircraft_of_the_source(self) -> None:
         session = MagicMock()
 
-        live = literal_sql(RulesEngine.open_episodes_query(session, DataMode.LIVE))
+        live = literal_sql(RulesEngine.open_episodes_query(session, DataMode.OPENSKY))
         replay = literal_sql(RulesEngine.open_episodes_query(session, DataMode.REPLAY))
 
         assert "'DIRECT'" in live and "'REJEU'" not in live

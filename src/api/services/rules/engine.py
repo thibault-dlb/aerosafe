@@ -46,7 +46,7 @@ class RulesEngine:
         self._registry = registry or RuleRegistry()
         self._reader = reader or SnapshotReader(session)
 
-    async def evaluate(self, now: datetime, mode: DataMode = DataMode.LIVE) -> EvaluationReport:
+    async def evaluate(self, now: datetime, mode: DataMode = DataMode.OPENSKY) -> EvaluationReport:
         """Evaluate the rules for the collection that ran at `now`.
 
         `now` is the collection time, not the time the engine runs, so a delay in the

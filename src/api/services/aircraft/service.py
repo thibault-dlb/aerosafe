@@ -46,7 +46,7 @@ class AircraftSearchCriteria:
     airline: str | None = None
     area: BoundingBox | None = None
     limit: int = 50
-    mode: DataMode = DataMode.LIVE
+    mode: DataMode = DataMode.OPENSKY
     at: datetime | None = None
 
 

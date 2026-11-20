@@ -35,7 +35,7 @@ class SnapshotReader:
         self._silence_limit = silence_limit
         self._replay_silence_limit = replay_silence_limit
 
-    def recent_query(self, now: datetime, mode: DataMode = DataMode.LIVE) -> Select:
+    def recent_query(self, now: datetime, mode: DataMode = DataMode.OPENSKY) -> Select:
         """The observations of the aircraft heard in the window, ranked from the latest.
 
         Live, only the latest observation of each aircraft and the one before it in each of
@@ -49,7 +49,7 @@ class SnapshotReader:
         later point of the dataset would count as the latest one. The window is short, so every
         row in it is kept and `read` picks the previous observation itself.
         """
-        live = mode is DataMode.LIVE
+        live = mode.is_live
         window = self._silence_limit if live else self._replay_silence_limit
         conditions = [
             Observation.deleted_at.is_(None),
@@ -127,7 +127,9 @@ class SnapshotReader:
             .where(Aircraft.id.in_(aircraft_ids))
         )
 
-    async def read(self, now: datetime, mode: DataMode = DataMode.LIVE) -> list[AircraftSnapshot]:
+    async def read(
+        self, now: datetime, mode: DataMode = DataMode.OPENSKY
+    ) -> list[AircraftSnapshot]:
         """One snapshot per aircraft heard in the window before `now`."""
         rows = (await self._session.execute(self.recent_query(now, mode))).all()
         latest: dict[int, Row] = {}
@@ -144,7 +146,7 @@ class SnapshotReader:
 
         # R2 reads the latest position, and is not evaluated in a replay: no lookup there.
         positioned: dict[int, StateSample] = {}
-        if mode is DataMode.LIVE:
+        if mode.is_live:
             positioned_rows = await self._session.execute(self.positioned_query(list(latest)))
             positioned = {row.aircraft_id: self.to_sample(row) for row in positioned_rows.all()}
 
@@ -175,7 +177,7 @@ class SnapshotReader:
         for other in candidates:
             if other.flight_id != latest.flight_id:
                 continue
-            if mode is DataMode.LIVE:
+            if mode.is_live:
                 return other
             if (latest.last_contact_at - other.last_contact_at).total_seconds() >= MIN_GAP_SECONDS:
                 return other

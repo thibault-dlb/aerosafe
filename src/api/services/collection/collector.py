@@ -3,14 +3,14 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.data_mode import DataMode
 from services.collection.flight_grouper import FlightGrouper
-from services.collection.normalizer import StateVectorNormalizer
-from services.collection.opensky_client import OpenSkyClient
 from services.collection.profiles import CollectionProfile
 from services.collection.run_state import CollectionRunResult, RunStatus
+from services.collection.sources import LiveSource
 from services.collection.store import ObservationStore
 
-StoreFactory = Callable[[AsyncSession, FlightGrouper], ObservationStore]
+StoreFactory = Callable[[AsyncSession, FlightGrouper, DataMode], ObservationStore]
 
 
 def utc_now() -> datetime:
@@ -18,24 +18,22 @@ def utc_now() -> datetime:
 
 
 class DataCollector:
-    """One collection (UC-08): read OpenSky, clean, store, close finished flights.
+    """One collection (UC-08): read a live source, clean, store, close finished flights.
 
-    OpenSky errors propagate as `OpenSkyError`; the collection cycle turns them into a status.
+    Source errors propagate as `SourceError`; the collection cycle turns them into a status.
     """
 
     def __init__(
         self,
-        client: OpenSkyClient,
+        source: LiveSource,
         profile: CollectionProfile,
         grouper: FlightGrouper,
-        normalizer: StateVectorNormalizer | None = None,
         store_factory: StoreFactory = ObservationStore,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
-        self._client = client
+        self._source = source
         self._profile = profile
         self._grouper = grouper
-        self._normalizer = normalizer or StateVectorNormalizer()
         self._store_factory = store_factory
         self._clock = clock
 
@@ -44,14 +42,19 @@ class DataCollector:
         return self._profile
 
     @property
-    def authenticated(self) -> bool:
-        return self._client.authenticated
+    def mode(self) -> DataMode:
+        """The source this collector feeds."""
+        return self._source.mode
+
+    @property
+    def source(self) -> LiveSource:
+        return self._source
 
     async def run(self, session: AsyncSession, started_at: datetime) -> CollectionRunResult:
-        response = await self._client.fetch_states(self._profile.bounding_box)
-        normalized = self._normalizer.normalize(response.states)
+        response = await self._source.fetch(self._profile.area)
+        normalized = response.states
 
-        store = self._store_factory(session, self._grouper)
+        store = self._store_factory(session, self._grouper, self.mode)
         stored = await store.save(normalized.states)
         await store.close_stale_flights(started_at)
         await session.commit()
@@ -61,8 +64,9 @@ class DataCollector:
             ended_at=self._clock(),
             status=RunStatus.PARTIAL if normalized.rejected else RunStatus.SUCCESS,
             profile=self._profile.code,
-            received=len(response.states),
+            received=response.received,
             stored=stored,
             rejected=normalized.rejected,
             remaining_credits=response.remaining_credits,
+            source=self.mode,
         )

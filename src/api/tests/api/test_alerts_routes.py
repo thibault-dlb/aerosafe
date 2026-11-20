@@ -59,7 +59,7 @@ class FakeAlertService:
         return PROCESSED
 
     async def statistics(
-        self, start: datetime, end: datetime, mode: DataMode = DataMode.LIVE
+        self, start: datetime, end: datetime, mode: DataMode = DataMode.OPENSKY
     ) -> AlertStatistics:
         self.period = (start, end)
         self.mode = mode

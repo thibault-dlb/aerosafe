@@ -100,7 +100,7 @@ async def test_an_ordinary_user_reads_the_dashboard(
         "unprocessed_alerts": 3,
         "alerts_24h": 5,
     }
-    assert dashboard.calls == [("overview", DataMode.LIVE, None)]
+    assert dashboard.calls == [("overview", DataMode.OPENSKY, None)]
 
 
 async def test_a_supervisor_reads_it_too(dashboard: FakeDashboard) -> None:
@@ -153,7 +153,7 @@ async def test_the_statistics_follow_the_period(
     assert response.status_code == 200
     body = response.json()
     assert (body["unit"], len(body["slices"])) == (unit, count)
-    assert dashboard.calls == [(f"statistics {period}", DataMode.LIVE, None)]
+    assert dashboard.calls == [(f"statistics {period}", DataMode.OPENSKY, None)]
 
 
 async def test_the_statistics_default_to_the_last_day(api: httpx.AsyncClient) -> None:

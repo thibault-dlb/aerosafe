@@ -60,8 +60,25 @@ class TestAircraft:
 
         await client.get("/api/v1/aircraft")
 
-        assert aircraft.criteria.mode is DataMode.LIVE
+        assert aircraft.criteria.mode is DataMode.OPENSKY
         assert aircraft.criteria.at is None
+
+    @pytest.mark.parametrize("source", ["opensky", "adsbfi"])
+    async def test_a_live_source_is_searched_without_the_clock(
+        self, client: httpx.AsyncClient, aircraft: FakeAircraftService, source: str
+    ) -> None:
+        run_replay(ReplayState(T0, REAL, 1, False))
+
+        response = await client.get("/api/v1/aircraft", params={"source": source})
+
+        assert response.status_code == 200
+        assert aircraft.criteria.mode is DataMode(source)
+        assert aircraft.criteria.at is None
+
+    async def test_the_former_live_value_is_refused(self, client: httpx.AsyncClient) -> None:
+        run_replay(ReplayState())
+
+        assert (await client.get("/api/v1/aircraft", params={"source": "live"})).status_code == 422
 
     async def test_a_replay_search_is_made_at_the_instant_of_the_clock(
         self, client: httpx.AsyncClient, aircraft: FakeAircraftService
@@ -141,7 +158,7 @@ class TestAlerts:
 
         await client.get("/api/v1/alerts")
 
-        assert (alerts.filters.mode, alerts.filters.at) == (DataMode.LIVE, None)
+        assert (alerts.filters.mode, alerts.filters.at) == (DataMode.OPENSKY, None)
 
     async def test_a_replay_that_never_started_has_no_alert(
         self, client: httpx.AsyncClient, alerts: FakeAlertService
@@ -174,7 +191,7 @@ class TestAlerts:
         start, end = alerts.period
         assert end - start == timedelta(hours=24)
         assert end > T0 + timedelta(days=365)
-        assert alerts.mode is DataMode.LIVE
+        assert alerts.mode is DataMode.OPENSKY
 
     async def test_the_statistics_of_a_replay_that_never_started_are_empty(
         self, client: httpx.AsyncClient, alerts: FakeAlertService

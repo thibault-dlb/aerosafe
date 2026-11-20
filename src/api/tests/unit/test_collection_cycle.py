@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from config.opensky import OpenSkySettings
+from core.data_mode import DataMode
 from services.collection.collector import DataCollector
 from services.collection.cycle import CollectionCycle
 from services.collection.flight_grouper import FlightGrouper
@@ -29,6 +30,7 @@ from services.collection.scheduler import (
     CollectionRateLimited,
     Scheduler,
 )
+from services.collection.sources import OpenSkySource
 
 NOW = datetime(2026, 11, 9, 12, tzinfo=UTC)
 PROFILE = CollectionProfile(ProfileCode.ILE_DE_FRANCE, BoundingBox(48.0, 49.3, 1.4, 3.6), 30)
@@ -49,7 +51,7 @@ class FakeClient:
 
 
 class FakeStore:
-    def __init__(self, _session: Any, _grouper: FlightGrouper) -> None:
+    def __init__(self, _session: Any, _grouper: FlightGrouper, _mode: DataMode) -> None:
         self.saved: list[Any] = []
 
     async def save(self, states: list[Any]) -> int:
@@ -69,7 +71,7 @@ class Clock:
 
 def collector(outcome: StatesResponse | Exception, clock: Clock) -> DataCollector:
     return DataCollector(
-        FakeClient(outcome),  # type: ignore[arg-type]
+        OpenSkySource(FakeClient(outcome)),  # type: ignore[arg-type]
         PROFILE,
         FlightGrouper(timedelta(minutes=30)),
         store_factory=FakeStore,  # type: ignore[arg-type]
@@ -92,12 +94,14 @@ class Engine:
     def __init__(self, error: Exception | None = None) -> None:
         self.error = error
         self.calls: list[datetime] = []
+        self.modes: list[DataMode] = []
 
     def __call__(self, _session: Any) -> "Engine":
         return self
 
-    async def evaluate(self, now: datetime) -> None:
+    async def evaluate(self, now: datetime, mode: DataMode) -> None:
         self.calls.append(now)
+        self.modes.append(mode)
         if self.error:
             raise self.error
 
@@ -132,6 +136,8 @@ async def test_a_successful_cycle_collects_then_evaluates_at_the_collection_time
     assert result.remaining_credits == 399
     assert result.evaluation_error is None
     assert engine.calls == [NOW]
+    assert engine.modes == [DataMode.OPENSKY]
+    assert result.source is DataMode.OPENSKY
     assert await store.runs(10) == [result]
     assert await store.last_success() == result
 
@@ -142,8 +148,8 @@ async def test_the_run_ends_after_the_evaluation() -> None:
             super().__init__()
             self.clock = clock
 
-        async def evaluate(self, now: datetime) -> None:
-            await super().evaluate(now)
+        async def evaluate(self, now: datetime, mode: DataMode) -> None:
+            await super().evaluate(now, mode)
             self.clock.now = NOW + timedelta(seconds=7)
 
     clock = Clock()
@@ -369,7 +375,7 @@ async def test_the_scheduler_builds_its_own_cycle_with_credentials() -> None:
     try:
         assert scheduler.settings is settings
         assert scheduler._cycle is not None
-        assert scheduler._cycle._collector.authenticated
+        assert scheduler._cycle._collector.source._client.authenticated  # type: ignore[attr-defined]
     finally:
         await scheduler.stop()
 
@@ -421,6 +427,6 @@ async def test_the_anonymous_scheduler_warns_about_the_quota() -> None:
     await scheduler.start()
     try:
         assert scheduler._cycle is not None
-        assert not scheduler._cycle._collector.authenticated
+        assert not scheduler._cycle._collector.source._client.authenticated  # type: ignore[attr-defined]
     finally:
         await scheduler.stop()

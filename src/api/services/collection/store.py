@@ -27,9 +27,12 @@ def _any_of(values: list[Any], item_type: TypeEngine[Any]) -> ColumnElement[Any]
 class ObservationStore:
     """Stores one collection: aircraft, flights and observations, in the caller's transaction."""
 
-    def __init__(self, session: AsyncSession, grouper: FlightGrouper) -> None:
+    def __init__(
+        self, session: AsyncSession, grouper: FlightGrouper, mode: DataMode = DataMode.OPENSKY
+    ) -> None:
         self._session = session
         self._grouper = grouper
+        self._mode = mode
         self._aircraft = Repository(session, Aircraft)
         self._flights = Repository(session, Flight)
 
@@ -102,7 +105,7 @@ class ObservationStore:
         )
         statement = self._aircraft.select(include_deleted=True).where(
             Aircraft.icao24 == _any_of(sorted(icao24s), Text()),
-            DataMode.LIVE.matches(Aircraft.source_id),
+            self._mode.matches(Aircraft.source_id),
         )
         return {aircraft.icao24: aircraft.id for aircraft in await self._session.scalars(statement)}
 

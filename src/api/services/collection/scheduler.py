@@ -14,6 +14,7 @@ from services.collection.flight_grouper import FlightGrouper
 from services.collection.opensky_client import OpenSkyClient, TokenProvider
 from services.collection.run_repository import state_store
 from services.collection.run_state import CollectionRunResult
+from services.collection.sources import OpenSkySource
 
 logger = get_logger()
 
@@ -152,4 +153,6 @@ class Scheduler:
             )
         client = OpenSkyClient(self._http, settings.OPENSKY_API_URL, token_provider)
         grouper = FlightGrouper(timedelta(minutes=settings.COLLECTION_FLIGHT_GAP_MINUTES))
-        return CollectionCycle(DataCollector(client, settings.profile, grouper), state_store)
+        return CollectionCycle(
+            DataCollector(OpenSkySource(client), settings.profile, grouper), state_store
+        )

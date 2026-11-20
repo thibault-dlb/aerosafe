@@ -157,7 +157,7 @@ class TestSnapshots:
     ) -> None:
         aircraft, _ = await replayed(session, icao24(), {s: 1000.0 for s in range(0, 31)})
 
-        snapshots = await SnapshotReader(session).read(T0 + timedelta(seconds=25), DataMode.LIVE)
+        snapshots = await SnapshotReader(session).read(T0 + timedelta(seconds=25), DataMode.OPENSKY)
 
         assert aircraft not in {s.aircraft_id for s in snapshots}
 
@@ -181,7 +181,7 @@ class TestRulesInAReplay:
     ) -> None:
         aircraft, _ = await replayed(session, icao24(), {0: 1000.0, 10: 1400.0})
 
-        await RulesEngine(session).evaluate(T0 + timedelta(seconds=10), DataMode.LIVE)
+        await RulesEngine(session).evaluate(T0 + timedelta(seconds=10), DataMode.OPENSKY)
 
         assert (
             await session.scalars(select(Alert).where(Alert.aircraft_id == aircraft))

@@ -46,13 +46,13 @@ class FakeAlerts:
         return AlertPage(items=[], total=9)
 
     async def statistics(
-        self, start: datetime, end: datetime, mode: DataMode = DataMode.LIVE
+        self, start: datetime, end: datetime, mode: DataMode = DataMode.OPENSKY
     ) -> AlertStatistics:
         self.period = (start, end, mode)
         return AlertStatistics(total=17, per_rule={"R1": 17})
 
     async def statistics_by_slice(
-        self, start: datetime, end: datetime, unit: str, mode: DataMode = DataMode.LIVE
+        self, start: datetime, end: datetime, unit: str, mode: DataMode = DataMode.OPENSKY
     ) -> list[AlertBucketCount]:
         self.sliced = (start, end, unit, mode)
         return self.slices
@@ -89,15 +89,15 @@ class TestOverview:
         self, service: DashboardService, alerts: FakeAlerts
     ) -> None:
         out = await service.overview(
-            DataMode.LIVE, NOW, collection_enabled=True, collection_running=False
+            DataMode.OPENSKY, NOW, collection_enabled=True, collection_running=False
         )
 
         assert out.counters.active_alerts == 4
         assert out.counters.unprocessed_alerts == 9
         assert out.counters.alerts_24h == 17
         assert out.active_alerts == [ALERT]
-        assert alerts.period == (NOW - timedelta(hours=24), NOW, DataMode.LIVE)
-        assert alerts.searches[0].mode is DataMode.LIVE
+        assert alerts.period == (NOW - timedelta(hours=24), NOW, DataMode.OPENSKY)
+        assert alerts.searches[0].mode is DataMode.OPENSKY
         assert alerts.searches[0].at == NOW
 
     async def test_it_gives_the_mode_and_instant_of_a_replay(
@@ -131,7 +131,7 @@ class TestOverview:
 
     async def test_it_lists_the_alerted_aircraft(self, service: DashboardService) -> None:
         out = await service.overview(
-            DataMode.LIVE, NOW, collection_enabled=True, collection_running=False
+            DataMode.OPENSKY, NOW, collection_enabled=True, collection_running=False
         )
 
         assert [item.aircraft_id for item in out.alerted_aircraft] == [ALERT.aircraft_id]
@@ -183,7 +183,7 @@ class TestStatistics:
             AlertBucketCount(datetime(2026, 11, 13, 11, tzinfo=UTC), {"R2": 4}),
         ]
 
-        out = await service.statistics(StatisticsPeriod.DAY, DataMode.LIVE, NOW)
+        out = await service.statistics(StatisticsPeriod.DAY, DataMode.OPENSKY, NOW)
 
         assert out.unit == "hour"
         assert len(out.slices) == 24
@@ -193,7 +193,7 @@ class TestStatistics:
         assert out.slices[-1].total == 3
         assert out.slices[5].total == 0
         assert out.total == 7
-        assert alerts.sliced == (out.start, NOW, "hour", DataMode.LIVE)
+        assert alerts.sliced == (out.start, NOW, "hour", DataMode.OPENSKY)
 
     @pytest.mark.parametrize(
         ("period", "count"), [(StatisticsPeriod.WEEK, 7), (StatisticsPeriod.MONTH, 30)]

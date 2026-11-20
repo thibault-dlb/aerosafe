@@ -27,6 +27,7 @@ from services.collection.opensky_client import OpenSkyClient, TokenProvider
 from services.collection.run_repository import get_state_store
 from services.collection.run_state import InMemoryCollectionStateStore, RunStatus
 from services.collection.scheduler import Scheduler
+from services.collection.sources import OpenSkySource
 
 API_URL = "https://opensky.test/api"
 TOKEN_URL = "https://auth.opensky.test/token"
@@ -94,7 +95,7 @@ class MemoryObservationStore:
     flights: dict[str, OpenFlight]
     started: int
 
-    def __init__(self, _session: Any, grouper: FlightGrouper) -> None:
+    def __init__(self, _session: Any, grouper: FlightGrouper, _mode: Any) -> None:
         self._grouper = grouper
 
     async def save(self, normalized: list[NormalizedState]) -> int:
@@ -132,7 +133,7 @@ class Engine:
     def __init__(self, _session: Any) -> None:
         pass
 
-    async def evaluate(self, _now: datetime) -> None:
+    async def evaluate(self, _now: datetime, _mode: Any) -> None:
         return None
 
 
@@ -177,7 +178,7 @@ def use_opensky(opensky: FakeOpenSky, store: InMemoryCollectionStateStore) -> Sc
     http = httpx.AsyncClient(transport=httpx.MockTransport(opensky))
     tokens = TokenProvider(http, TOKEN_URL, "group", "secret")
     collector = DataCollector(
-        OpenSkyClient(http, API_URL, tokens),
+        OpenSkySource(OpenSkyClient(http, API_URL, tokens)),
         config.profile,
         FlightGrouper(timedelta(minutes=config.COLLECTION_FLIGHT_GAP_MINUTES)),
         store_factory=MemoryObservationStore,  # type: ignore[arg-type]
