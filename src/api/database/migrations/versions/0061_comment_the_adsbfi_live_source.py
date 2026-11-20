@@ -1,7 +1,8 @@
 """Update the comments that name OpenSky as the only live source.
 
 A single change: the comments of the reference, collection, aircraft and observation tables
-now describe the two live sources (OpenSky and adsb.fi) and the parameter row of each one.
+now describe the two live sources (OpenSky and adsb.fi) and the parameter row of each one, and
+R_MODELE says that adsb.fi fills it too.
 Nothing else is touched; the downgrade puts the previous comments back.
 
 Revision ID: 0061
@@ -89,6 +90,12 @@ _COMMENTS: tuple[tuple[str, str, str], ...] = (
         "Superviseur survit au redémarrage de l'API.",
         "État de la collecte, une seule ligne : la pause décidée par le Superviseur "
         "survit au redémarrage de l'API.",
+    ),
+    (
+        'TABLE "R_MODELE"',
+        "Référentiel des modèles d'aéronefs, alimenté par la base de métadonnées OpenSky "
+        "et par la collecte adsb.fi.",
+        "Référentiel des modèles d'aéronefs, alimenté par la base de métadonnées OpenSky.",
     ),
     (
         'TABLE "OBSERVATION"',

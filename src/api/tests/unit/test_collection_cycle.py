@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from config.adsbfi import AdsbFiSettings
 from config.opensky import OpenSkySettings
 from core.data_mode import DataMode
 from services.collection.collector import DataCollector
@@ -30,7 +31,7 @@ from services.collection.scheduler import (
     CollectionRateLimited,
     Scheduler,
 )
-from services.collection.sources import OpenSkySource
+from services.collection.sources import AdsbFiSource, OpenSkySource
 
 NOW = datetime(2026, 11, 9, 12, tzinfo=UTC)
 PROFILE = CollectionProfile(ProfileCode.ILE_DE_FRANCE, BoundingBox(48.0, 49.3, 1.4, 3.6), 30)
@@ -298,11 +299,11 @@ def test_the_dependency_gives_the_shared_store() -> None:
 
 
 def disabled_settings() -> OpenSkySettings:
-    return OpenSkySettings(_env_file=None, COLLECTION_ENABLED=False)
+    return OpenSkySettings(_env_file=None, COLLECTION_OPENSKY_ENABLED=False)
 
 
 def enabled_settings() -> OpenSkySettings:
-    return OpenSkySettings(_env_file=None, COLLECTION_ENABLED=True)
+    return OpenSkySettings(_env_file=None, COLLECTION_OPENSKY_ENABLED=True)
 
 
 async def test_a_disabled_scheduler_registers_itself_but_never_collects() -> None:
@@ -311,8 +312,8 @@ async def test_a_disabled_scheduler_registers_itself_but_never_collects() -> Non
     await scheduler.start()
     try:
         assert Scheduler.current() is scheduler
-        assert not scheduler.enabled
-        assert scheduler.rate_limited_until is None
+        assert not scheduler.is_enabled()
+        assert scheduler.rate_limited_until() is None
         with pytest.raises(CollectionDisabled):
             await scheduler.run_now()
     finally:
@@ -329,7 +330,7 @@ async def test_an_enabled_scheduler_runs_cycles_on_demand() -> None:
     try:
         assert (await scheduler.run_now()).status == RunStatus.SUCCESS
         await scheduler._tick()
-        assert not scheduler.busy
+        assert not scheduler.is_busy()
     finally:
         await scheduler.stop()
 
@@ -339,8 +340,8 @@ async def test_a_second_cycle_is_refused_while_one_runs() -> None:
     scheduler = Scheduler(enabled_settings(), run_cycle)
     await scheduler.start()
     try:
-        async with scheduler._lock:
-            assert scheduler.busy
+        async with scheduler._collections[DataMode.OPENSKY].lock:
+            assert scheduler.is_busy()
             with pytest.raises(CollectionBusy):
                 await scheduler.run_now()
             await scheduler._tick()  # Skipped silently.
@@ -365,7 +366,7 @@ async def test_a_manual_run_is_refused_while_waiting_for_credits() -> None:
 async def test_the_scheduler_builds_its_own_cycle_with_credentials() -> None:
     settings = OpenSkySettings(
         _env_file=None,
-        COLLECTION_ENABLED=True,
+        COLLECTION_OPENSKY_ENABLED=True,
         OPENSKY_CLIENT_ID="group",
         OPENSKY_CLIENT_SECRET="secret",
     )
@@ -374,8 +375,10 @@ async def test_the_scheduler_builds_its_own_cycle_with_credentials() -> None:
     await scheduler.start()
     try:
         assert scheduler.settings is settings
-        assert scheduler._cycle is not None
-        assert scheduler._cycle._collector.source._client.authenticated  # type: ignore[attr-defined]
+        assert scheduler._collections[DataMode.OPENSKY].cycle is not None
+        assert scheduler._collections[
+            DataMode.OPENSKY
+        ].cycle._collector.source._client.authenticated  # type: ignore[attr-defined]
     finally:
         await scheduler.stop()
 
@@ -394,7 +397,7 @@ async def test_stop_waits_for_the_running_cycle() -> None:
     await scheduler.start()
     running = asyncio.create_task(scheduler.run_now())
     await asyncio.sleep(0)
-    assert scheduler.busy
+    assert scheduler.is_busy()
 
     stopping = asyncio.create_task(scheduler.stop())
     await asyncio.sleep(0)
@@ -409,14 +412,20 @@ async def test_stop_waits_for_the_running_cycle() -> None:
 async def test_a_restarted_scheduler_builds_a_new_cycle() -> None:
     scheduler = Scheduler(enabled_settings())
     await scheduler.start()
-    first = scheduler._cycle
+    first = scheduler._collections[DataMode.OPENSKY].cycle
     await scheduler.stop()
-    assert scheduler._cycle is None
+    assert scheduler._collections[DataMode.OPENSKY].cycle is None
 
     await scheduler.start()
     try:
-        assert scheduler._cycle is not None and scheduler._cycle is not first
-        assert scheduler._http is not None and not scheduler._http.is_closed
+        assert (
+            scheduler._collections[DataMode.OPENSKY].cycle is not None
+            and scheduler._collections[DataMode.OPENSKY].cycle is not first
+        )
+        assert (
+            scheduler._collections[DataMode.OPENSKY].http is not None
+            and not scheduler._collections[DataMode.OPENSKY].http.is_closed
+        )
     finally:
         await scheduler.stop()
 
@@ -426,7 +435,125 @@ async def test_the_anonymous_scheduler_warns_about_the_quota() -> None:
 
     await scheduler.start()
     try:
-        assert scheduler._cycle is not None
-        assert not scheduler._cycle._collector.source._client.authenticated  # type: ignore[attr-defined]
+        assert scheduler._collections[DataMode.OPENSKY].cycle is not None
+        assert not scheduler._collections[
+            DataMode.OPENSKY
+        ].cycle._collector.source._client.authenticated  # type: ignore[attr-defined]
     finally:
         await scheduler.stop()
+
+
+def adsbfi_cycle(
+    outcome: StatesResponse | Exception, store: InMemoryCollectionStateStore
+) -> CollectionCycle:
+    """A cycle labelled adsb.fi: the source only differs by its mode here."""
+
+    class AdsbFiLike(OpenSkySource):
+        @property
+        def mode(self) -> DataMode:
+            return DataMode.ADSBFI
+
+    clock = Clock()
+    return CollectionCycle(
+        DataCollector(
+            AdsbFiLike(FakeClient(outcome)),  # type: ignore[arg-type]
+            PROFILE,
+            FlightGrouper(timedelta(minutes=30)),
+            store_factory=FakeStore,  # type: ignore[arg-type]
+            clock=clock,
+        ),
+        store,
+        session_factory=Sessions(),
+        engine_factory=Engine(),  # type: ignore[arg-type]
+        clock=clock,
+    )
+
+
+def both_enabled() -> tuple[OpenSkySettings, AdsbFiSettings]:
+    return enabled_settings(), AdsbFiSettings(_env_file=None, COLLECTION_ADSBFI_ENABLED=True)
+
+
+async def test_each_enabled_source_gets_its_own_periodic_job() -> None:
+    opensky, adsbfi = both_enabled()
+    scheduler = Scheduler(opensky, adsbfi_settings=adsbfi)
+
+    await scheduler.start()
+    try:
+        assert scheduler._jobs is not None
+        jobs = {job.id: job.trigger.interval.total_seconds() for job in scheduler._jobs.get_jobs()}
+        assert jobs == {"collection-opensky": 30, "collection-adsbfi": 5}
+        cycle = scheduler._collections[DataMode.ADSBFI].cycle
+        assert cycle is not None and cycle.mode is DataMode.ADSBFI
+        assert isinstance(cycle._collector.source, AdsbFiSource)
+    finally:
+        await scheduler.stop()
+
+    assert scheduler._collections[DataMode.ADSBFI].cycle is None
+
+
+async def test_adsbfi_alone_can_be_collected() -> None:
+    adsbfi = AdsbFiSettings(_env_file=None, COLLECTION_ADSBFI_ENABLED=True)
+    scheduler = Scheduler(disabled_settings(), adsbfi_settings=adsbfi)
+
+    await scheduler.start()
+    try:
+        assert scheduler.is_enabled(DataMode.ADSBFI)
+        assert not scheduler.is_enabled(DataMode.OPENSKY)
+        assert scheduler._collections[DataMode.OPENSKY].cycle is None
+        with pytest.raises(CollectionDisabled):
+            await scheduler.run_now(DataMode.OPENSKY)
+    finally:
+        await scheduler.stop()
+
+
+async def test_a_busy_source_never_blocks_the_other() -> None:
+    store = InMemoryCollectionStateStore()
+    opensky, adsbfi = both_enabled()
+    opensky_cycle, _, _ = cycle(StatesResponse(time=1, states=[VALID]), store=store)
+    scheduler = Scheduler(
+        opensky,
+        opensky_cycle,
+        adsbfi_settings=adsbfi,
+        adsbfi_cycle=adsbfi_cycle(StatesResponse(time=1, states=[VALID]), store),
+    )
+    await scheduler.start()
+    try:
+        async with scheduler._collections[DataMode.OPENSKY].lock:
+            assert scheduler.is_busy(DataMode.OPENSKY)
+            assert not scheduler.is_busy(DataMode.ADSBFI)
+            result = await scheduler.run_now(DataMode.ADSBFI)
+        assert (result.source, result.status) == (DataMode.ADSBFI, RunStatus.SUCCESS)
+        await scheduler._tick(DataMode.ADSBFI)
+        assert len(await store.runs(10, source=DataMode.ADSBFI)) == 2
+        assert await store.runs(10) == []
+    finally:
+        await scheduler.stop()
+
+
+async def test_a_rate_limited_adsbfi_refuses_a_manual_run() -> None:
+    store = InMemoryCollectionStateStore()
+    opensky, adsbfi = both_enabled()
+    scheduler = Scheduler(
+        opensky,
+        adsbfi_settings=adsbfi,
+        adsbfi_cycle=adsbfi_cycle(OpenSkyRateLimited(retry_after_seconds=60), store),
+    )
+    await scheduler.start()
+    try:
+        await scheduler._tick(DataMode.ADSBFI)
+        with pytest.raises(CollectionRateLimited) as error:
+            await scheduler.run_now(DataMode.ADSBFI)
+        assert error.value.source is DataMode.ADSBFI
+        assert scheduler.rate_limited_until(DataMode.ADSBFI) == NOW + timedelta(seconds=60)
+        [waiting] = await store.runs(10, source=DataMode.ADSBFI)
+        assert waiting.status == RunStatus.RATE_LIMITED
+    finally:
+        await scheduler.stop()
+
+
+def test_the_replay_is_never_collected() -> None:
+    scheduler = Scheduler(enabled_settings())
+
+    assert not scheduler.is_enabled(DataMode.REPLAY)
+    assert not scheduler.is_busy(DataMode.REPLAY)
+    assert scheduler.rate_limited_until(DataMode.REPLAY) is None

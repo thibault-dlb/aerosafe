@@ -52,7 +52,7 @@ def test_the_default_profiles_match_the_architecture() -> None:
 def test_collection_is_off_and_anonymous_by_default() -> None:
     settings = make_settings()
 
-    assert settings.COLLECTION_ENABLED is False
+    assert settings.COLLECTION_OPENSKY_ENABLED is False
     assert settings.has_credentials is False
     assert settings.daily_quota == ANONYMOUS_DAILY_CREDITS
 

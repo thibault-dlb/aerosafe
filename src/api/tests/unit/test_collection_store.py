@@ -1,10 +1,14 @@
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 
+import pytest
 from sqlalchemy.dialects import postgresql
 
+from core.data_mode import DataMode
 from models import Aircraft, Flight
+from models.reference import AircraftModel
 from services.collection.flight_grouper import FlightGrouper
 from services.collection.normalizer import NormalizedState
 from services.collection.store import ObservationStore
@@ -23,21 +27,37 @@ class FakeSession:
         last_seen: list[tuple[int, datetime]] | None = None,
         stored: int = 1,
         rowcount: int | None = 0,
+        models: list[tuple[str, int]] | None = None,
+        source_id: int | None = 1,
     ) -> None:
         self.aircraft = aircraft or []
         self.open_flights = open_flights or []
-        self.last_seen = last_seen or []
+        self.last_seen = dict(last_seen or [])
         self.stored = stored
         self.rowcount = rowcount
+        self.models = models or []
+        self.source_id = source_id
         self.added: list[Flight] = []
         self.executed: list[tuple[object, object]] = []
+        self.source_queries: list[object] = []
         self.inserted_rows: list[dict] = []
         self.flushes = 0
         self._next_flight_id = 100
 
     async def execute(self, statement, params=None) -> SimpleNamespace:
         self.executed.append((statement, params))
-        return SimpleNamespace(all=lambda: self.last_seen, rowcount=self.rowcount)
+        rows: list = []
+        if getattr(statement, "is_select", False):
+            entity = statement.column_descriptions[0]["entity"]
+            if entity is Flight:  # the open flights, with their latest contact
+                rows = [(flight, self.last_seen.get(flight.id)) for flight in self.open_flights]
+            elif entity is AircraftModel:
+                rows = self.models
+        return SimpleNamespace(all=lambda: rows, rowcount=self.rowcount)
+
+    async def scalar(self, statement) -> int | None:
+        self.source_queries.append(statement)
+        return self.source_id
 
     async def scalars(self, statement, params=None):
         if params is not None:  # the insert of the observations
@@ -78,8 +98,14 @@ def state(
     )
 
 
-def store_on(session: FakeSession) -> ObservationStore:
-    return ObservationStore(session, FlightGrouper(GAP))
+def store_on(session: FakeSession, mode: DataMode = DataMode.OPENSKY) -> ObservationStore:
+    return ObservationStore(session, FlightGrouper(GAP), mode)
+
+
+def literal_sql(statement) -> str:
+    return str(
+        statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
+    )
 
 
 def known_aircraft() -> Aircraft:
@@ -127,6 +153,7 @@ async def test_the_new_aircraft_are_inserted_in_sorted_order_with_a_public_ident
     statement, rows = session.executed[0]
     assert [row["icao24"] for row in rows] == ["01020a", "3c6444"]
     assert all(len(row["public_id"]) == 26 for row in rows)
+    assert all(row["source_id"] == 1 for row in rows)
     assert "ON CONFLICT" in str(statement.compile(dialect=postgresql.dialect()))
 
 
@@ -223,12 +250,86 @@ async def test_the_stale_flights_are_closed_with_one_update() -> None:
 
     assert closed == 3
     statement, _ = session.executed[0]
-    sql = str(statement.compile(dialect=postgresql.dialect()))
+    sql = literal_sql(statement)
     assert sql.startswith('UPDATE "VOL" SET')
-    assert "max(" in sql.lower()
+    # The latest contact of each open flight is read on the index, never aggregated.
+    assert "max(" not in sql.lower()
+    assert "LIMIT 1" in sql
+    assert "'DIRECT'" in sql
 
 
 async def test_no_stale_flight_gives_zero_even_without_a_row_count() -> None:
     session = FakeSession(rowcount=None)
 
     assert await store_on(session).close_stale_flights(T0) == 0
+
+
+async def test_the_stale_flights_closed_are_those_of_the_source() -> None:
+    session = FakeSession(rowcount=0)
+
+    await store_on(session, DataMode.ADSBFI).close_stale_flights(T0)
+
+    statement, _ = session.executed[0]
+    assert "'ADSBFI'" in literal_sql(statement)
+
+
+async def test_the_aircraft_are_created_in_the_source_of_the_store() -> None:
+    session = FakeSession(aircraft=[known_aircraft()], source_id=3)
+
+    await store_on(session, DataMode.ADSBFI).save([state()])
+
+    [query] = session.source_queries
+    assert "'ADSBFI'" in literal_sql(query)
+    _, rows = session.executed[0]
+    assert rows[0]["source_id"] == 3
+
+
+async def test_a_missing_source_stops_the_collection() -> None:
+    session = FakeSession(aircraft=[known_aircraft()], source_id=None)
+
+    with pytest.raises(LookupError):
+        await store_on(session, DataMode.ADSBFI).save([state()])
+
+
+def described(seconds: int = 0, **values: object) -> NormalizedState:
+    return replace(state(seconds), **values)
+
+
+async def test_the_models_seen_for_the_first_time_are_created_with_their_label() -> None:
+    session = FakeSession(aircraft=[known_aircraft()], models=[("A320", 41)])
+
+    await store_on(session, DataMode.ADSBFI).save(
+        [described(registration="F-TEST", model_code="A320", model_label="TEST AIRCRAFT")]
+    )
+
+    (insert_models, model_rows), _, (upsert, aircraft_rows) = session.executed[:3]
+    assert model_rows == [{"code": "A320", "label": "TEST AIRCRAFT"}]
+    assert "DO NOTHING" in literal_sql(insert_models)
+    assert (aircraft_rows[0]["registration"], aircraft_rows[0]["model_id"]) == ("F-TEST", 41)
+    sql = str(upsert.compile(dialect=postgresql.dialect()))
+    # A missing value never erases a known one, and an unchanged aircraft is not written.
+    assert 'coalesce(excluded."LB_IMMATRICULATION", "AERONEF"."LB_IMMATRICULATION")' in sql
+    assert "IS DISTINCT FROM" in sql
+
+
+async def test_a_model_without_label_is_named_after_its_code() -> None:
+    session = FakeSession(aircraft=[known_aircraft()], models=[("A320", 41)])
+
+    await store_on(session, DataMode.ADSBFI).save([described(model_code="A320")])
+
+    _, model_rows = session.executed[0]
+    assert model_rows == [{"code": "A320", "label": "A320"}]
+
+
+async def test_a_state_without_model_reads_no_model() -> None:
+    session = FakeSession(aircraft=[known_aircraft()])
+
+    await store_on(session).save([state()])
+
+    _, rows = session.executed[0]
+    assert (rows[0]["registration"], rows[0]["model_id"]) == (None, None)
+    assert not any(
+        getattr(statement, "is_select", False)
+        and statement.column_descriptions[0]["entity"] is AircraftModel
+        for statement, _ in session.executed
+    )

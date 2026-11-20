@@ -37,12 +37,14 @@ async def get_dashboard(
     """What the dashboard shows. With `source=replay`, the alerts of the replayed traffic up to
     the simulated instant; the collection state is the real one in both modes."""
     if scope.nothing_to_show:
-        return DashboardService.empty(await service.collection(scheduler.enabled, scheduler.busy))
+        return DashboardService.empty(
+            await service.collection(scheduler.is_enabled(), scheduler.is_busy())
+        )
     return await service.overview(
         scope.mode,
         scope.at,
-        collection_enabled=scheduler.enabled,
-        collection_running=scheduler.busy,
+        collection_enabled=scheduler.is_enabled(),
+        collection_running=scheduler.is_busy(),
     )
 
 

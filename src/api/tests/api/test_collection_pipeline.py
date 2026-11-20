@@ -140,7 +140,7 @@ class Engine:
 def settings() -> OpenSkySettings:
     return OpenSkySettings(
         _env_file=None,
-        COLLECTION_ENABLED=True,
+        COLLECTION_OPENSKY_ENABLED=True,
         OPENSKY_API_URL=API_URL,
         OPENSKY_TOKEN_URL=TOKEN_URL,
         OPENSKY_CLIENT_ID="group",

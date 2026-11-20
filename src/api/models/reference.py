@@ -74,7 +74,10 @@ class Unit(Base):
 class AircraftModel(Base):
     __tablename__ = "R_MODELE"
     __table_args__ = table_args(
-        comment="Référentiel des modèles d'aéronefs, alimenté par la base de métadonnées OpenSky."
+        comment=(
+            "Référentiel des modèles d'aéronefs, alimenté par la base de métadonnées OpenSky "
+            "et par la collecte adsb.fi."
+        )
     )
 
     id: Mapped[int] = primary_key("Identifiant technique du modèle.")
