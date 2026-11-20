@@ -1,6 +1,6 @@
 # Business rules
 
-Source: project sheet §6; specifications §VI.1.5, §VI.1.6 and §VI.1.8 for the additional detail flagged below. OpenSky fields, units and terms: [OpenSky Network](opensky.md).
+Source: project sheet §6; specifications §VI.1.5, §VI.1.6 and §VI.1.8 for the additional detail flagged below. OpenSky fields, units and terms: [OpenSky Network](opensky.md); the two live sources and their precision: [data sources](data-sources.md).
 
 ## Rules
 
@@ -18,7 +18,7 @@ AeroSafe initially includes five business rules to detect unusual situations.
 
 ### Proposed calculations
 
-Notation: `now` is the time of the collection that has just run, not the time the engine runs, so a delay in the evaluation never makes the data look older than it is. The observations stored by that collection are evaluated even when their contact is a few seconds after `now` (time of the request, clock difference with OpenSky): R1 and R2 then count no delay. For an aircraft, `p1` and `p2` are its two latest consecutive observations of the same flight, `Δt = p2.positionAt − p1.positionAt`. OpenSky gives altitude in metres, speed in m/s and heading in degrees (see [fields used by the rules](opensky.md#fields-used-by-the-rules)).
+Notation: `now` is the time of the collection that has just run, not the time the engine runs, so a delay in the evaluation never makes the data look older than it is. The observations stored by that collection are evaluated even when their contact is a few seconds after `now` (time of the request, clock difference with the source): R1 and R2 then count no delay. For an aircraft, `p2` is its latest observation and `p1` the observation of the same flight nearest to it and at least 10 s back, `Δt = p2.positionAt − p1.positionAt`. Until 2026-11-20 `p1` was the observation just before; at the 5 s period of adsb.fi it would be a pair the rates ignore, so both live sources now take the one 10 s back, as the replay did (D-23). Both sources are stored in metres, m/s and degrees (see [fields used by the rules](opensky.md#fields-used-by-the-rules) and [data sources](data-sources.md)).
 
 | Rule | Observed value | Triggers when |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ Notation: `now` is the time of the collection that has just run, not the time th
 
 Reasoning behind the values:
 
-- **Collection period.** The data is collected every 30 s or 120 s depending on the profile. R1 at 300 s means missing more than two cycles of the slowest profile. R2 is higher than R1 on purpose: a position is never more recent than the last contact (`positionAt ≤ lastContactAt`), so R2 with a threshold below R1 would always fire first or at the same time. With R2 above R1, R1 means "the aircraft went silent" and R2 means "it still sends messages but without a usable position" (A-01).
+- **Collection period.** OpenSky is collected every 30 s or 120 s depending on the profile, adsb.fi every 5 s. R1 at 300 s means missing more than two cycles of the slowest profile. R2 is higher than R1 on purpose: a position is never more recent than the last contact (`positionAt ≤ lastContactAt`), so R2 with a threshold below R1 would always fire first or at the same time. With R2 above R1, R1 means "the aircraft went silent" and R2 means "it still sends messages but without a usable position" (A-01).
 - **R3.** Airliners climb and descend at about 5 to 15 m/s. 30 m/s is roughly 5 900 ft/min, which is unusual for a commercial flight.
 - **R4.** Normal acceleration of an airliner is about 1 m/s². 2 m/s² flags an abrupt change.
 - **R5.** A standard-rate turn is 3 °/s. 5 °/s is well above it. The heading is compared as the shortest angle, so 359° to 1° is a 2° change. Measuring a rate and not an absolute change avoids false alerts with the 120 s period, where a normal turn can reach 90° between two points. Below 50 m/s the heading of OpenSky is too noisy to use.
@@ -41,6 +41,8 @@ Reasoning behind the values:
 ### Scope and deduplication
 
 - Rules apply to aircraft that are **airborne** (`on_ground` false). R1 and R2 also stop being evaluated for an aircraft silent for more than 30 minutes, so that an aircraft which left the coverage zone does not raise alerts forever.
+- **Edge of the area** (D-23). R1 and R2 say nothing about an aircraft whose latest position is closer than 20 km (`RULES_EDGE_MARGIN_KM`) to the edge of the area of its source: the box of OpenSky or the circle of adsb.fi. Such an aircraft has probably left the area, which is no loss of contact. 20 km is about 80 s at 250 m/s: a cycle of OpenSky and its delay, with a margin.
+- Each source is evaluated on its own aircraft and has its own episodes: an aircraft heard by OpenSky and adsb.fi can raise the same rule in both.
 - An aircraft does not raise the same rule twice while the situation lasts: a new alert for the same aircraft and rule is generated only after the previous episode ended. An episode ends when the value goes back under the threshold, when the aircraft lands or is silent for more than 30 minutes, or when the rule is disabled. It stays open while an airborne aircraft lacks the data the rule needs (no position, no previous observation in the same flight).
 - Observations that belong to no flight are not used for R3 to R5, since a rate needs two points of the same flight (D-06).
 - An observation with a missing value (altitude, speed or heading) is skipped by the rule that needs it.
@@ -51,7 +53,7 @@ Reasoning behind the values:
 
 ## Evaluation
 
-- The engine evaluates the rules on the data collected (BF-09), right after each collection: every 30 s with the Île-de-France profile, every 120 s with the metropolitan France profile (D-05). The project sheet does not say that rules are evaluated periodically; this is the team's choice.
+- The engine evaluates the rules on the data collected (BF-09), right after each collection, on the aircraft of that source: every 30 s with the Île-de-France profile of OpenSky, every 120 s with the metropolitan France profile (D-05), every 5 s for adsb.fi (D-23). The project sheet does not say that rules are evaluated periodically; this is the team's choice.
 - When a rule detects that a threshold has been exceeded, an alert is generated (UC-03).
 - When no threshold is exceeded, no alert is generated and the evaluation is logged (UC-03).
 - Rule triggers are logged so that the generation of an alert can be replayed and explained (NF-08).
@@ -99,7 +101,8 @@ Proposed cases, for an airborne aircraft and two observations of the same flight
 
 Edge cases:
 
-- R3 to R5: a pair with `Δt` = 5 s or `Δt` = 600 s is ignored.
+- R3 to R5: a pair with `Δt` = 5 s or `Δt` = 600 s is ignored. With points every 5 s (adsb.fi), the pair is the latest point and the one 10 s back.
+- R1 and R2: an aircraft last placed 1 km from the edge of the area raises nothing, however long its silence.
 - R3 to R5: an aircraft with `on_ground` true is ignored.
 - R5: a 110° turn in 20 s at 30 m/s (below 50 m/s) is ignored.
 - R2: a latest observation without a position falls back to the previous observation that has one.

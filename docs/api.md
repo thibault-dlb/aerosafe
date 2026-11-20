@@ -98,6 +98,7 @@ Query parameters of `GET /aircraft`. Every criterion is optional and they are co
 | `airline` | Part of the airline name or code, case ignored |
 | `south`, `west`, `north`, `east` | Area in degrees (WGS 84), all four or none. It applies to the latest known position of each aircraft |
 | `limit` | 1 to 2 000, default 50. The dashboard map asks for 2 000: it draws every aircraft of the area |
+| `heard_within_seconds` | Live sources only, 1 to 3 600: keeps the aircraft heard in that many seconds before now, from a range of the index on the contact time. The dashboard map asks for 60 (or two periods of a slower source): adsb.fi gathers tens of thousands of aircraft a week, and the map shows the traffic of the moment |
 
 Aircraft (search result and record):
 
@@ -118,7 +119,7 @@ Aircraft (search result and record):
 }
 ```
 
-`model`, `airline` and `registration` are `null` when unknown; the last contact and the position are `null` when the aircraft never sent any. `altitude` (in metres), `heading` (degrees clockwise from north), `speed` (ground speed, in metres per second) and `on_ground` are those of the latest observation, and are `null` when OpenSky did not send them or the aircraft was never observed. The map uses `heading` to turn the marker, `on_ground` to draw a grounded aircraft as a diamond, and `heading` with `speed` to carry the aircraft forward between two reports and to draw its line of the next 15 minutes.
+`model`, `airline` and `registration` are `null` when unknown; the last contact and the position are `null` when the aircraft never sent any. `altitude` (in metres), `heading` (degrees clockwise from north), `speed` (ground speed, in metres per second) and `on_ground` are those of the latest observation, and are `null` when the source did not send them or the aircraft was never observed. The map uses `heading` to turn the marker, `on_ground` to draw a grounded aircraft as a diamond, and `heading` with `speed` to carry the aircraft forward between two reports and to draw its line of the next 15 minutes.
 
 `GET /aircraft/{aircraft_id}/observations` takes `start` and `end` (ISO 8601, inclusive, both optional; `start` must not be after `end`) and `limit` (1 to 5 000, default 500). It returns the latest `limit` observations of the period, in chronological order:
 
@@ -136,7 +137,7 @@ Aircraft (search result and record):
 }
 ```
 
-Units: altitude in metres, speed in metres per second, heading in degrees clockwise from north. Any measured value is `null` when OpenSky did not send it; `flight_id` is `null` for an observation that belongs to no flight.
+Units: altitude in metres, speed in metres per second, heading in degrees clockwise from north. Any measured value is `null` when the source did not send it; `flight_id` is `null` for an observation that belongs to no flight.
 
 `GET /aircraft/{aircraft_id}/flights` takes `limit` (1 to 200, default 50) and returns flight summaries, described below.
 
@@ -269,7 +270,9 @@ The replay of the historical traffic (D-20, see [historical data](historical-dat
 
 The clock stops at the end of the data. It is stored in `PARAMETRE_REJEU` (a start moves nothing while it runs: the simulated time is the instant at the last change plus the real time gone by times the speed), so it survives a restart of the API. A scheduler reads it every 10 s and runs the rules engine for each 30 s step of simulated time that went by, at most 120 steps a tick.
 
-`source=replay` (default `live`) on `GET /aircraft`, `/aircraft/{id}`, `/aircraft/{id}/observations`, `/aircraft/{id}/flights`, `/flights/{id}`, `/alerts` and `/alerts/statistics` reads the replayed traffic at the simulated instant:
+`source` on `GET /aircraft`, `/aircraft/{id}`, `/aircraft/{id}/observations`, `/aircraft/{id}/flights`, `/flights/{id}`, `/alerts`, `/alerts/statistics` and the dashboard picks the data: `opensky` (the default when the parameter is absent) or `adsbfi` for one of the two live collections, `replay` for the historical traffic. Each source has its own aircraft, flights, observations and alerts (D-23): an aircraft heard by both live sources has one record in each. The interface always sends the source shown, adsb.fi by default. The former value `live` is refused (422).
+
+`source=replay` reads the replayed traffic at the simulated instant:
 
 - the aircraft search lists the aircraft heard in the minute before it, with their position then; the record gives the latest position up to it;
 - the observation history, the flights and the trajectory stop at it (a flight that ends after it is still in progress, one that starts after it does not exist yet);
@@ -278,44 +281,50 @@ The clock stops at the end of the data. It is stored in `PARAMETRE_REJEU` (a sta
 
 ### Dashboard (`/api/v1/dashboard`)
 
-Work package `feat/dashboard` (BF-11, UC-04, team decision A-04). **Every account** reads the dashboard, a User as well as a Supervisor: 401 without a token, 403 while the password is a provisional one. It changes nothing; the actions behind it (processing an alert, pausing the collection) stay the Supervisor's, on their own routes. The service reads through `AlertService` and `CollectionStateStore`, never the tables. With `source=replay` the alerts are those of the replayed traffic up to the simulated instant, and a replay that was never started has no alert; the collection state is the real one in both modes.
+Work package `feat/dashboard` (BF-11, UC-04, team decision A-04). **Every account** reads the dashboard, a User as well as a Supervisor: 401 without a token, 403 while the password is a provisional one. It changes nothing; the actions behind it (processing an alert, pausing the collection) stay the Supervisor's, on their own routes. The service reads through `AlertService` and `CollectionStateStore`, never the tables. The alerts are those of the source asked; with `source=replay`, those of the replayed traffic up to the simulated instant, and a replay that was never started has no alert. The collection state is the one of the live source shown, and of adsb.fi during a replay.
 
 | Method and path | Query | Success | Errors |
 | --- | --- | --- | --- |
-| `GET /dashboard` | `source` (`live` or `replay`) | 200, `{"counters": {"active_alerts", "unprocessed_alerts", "alerts_24h"}, "active_alerts": [alert], "alerted_aircraft": [alert], "collection": {...}}`. `active_alerts` holds the 5 latest alerts whose situation lasts (same body as in [Alerts](#alerts)); `alerted_aircraft` holds, for each aircraft with an active alert (up to 500 alerts read), its most critical one: the map colours these aircraft and the card of the followed aircraft shows its alert; `alerts_24h` counts the 24 hours before now, or before the simulated instant | 401 |
+| `GET /dashboard` | `source` (`opensky`, `adsbfi` or `replay`) | 200, `{"counters": {"active_alerts", "unprocessed_alerts", "alerts_24h"}, "active_alerts": [alert], "alerted_aircraft": [alert], "collection": {...}}`. `active_alerts` holds the 5 latest alerts whose situation lasts (same body as in [Alerts](#alerts)); `alerted_aircraft` holds, for each aircraft with an active alert (up to 500 alerts read), its most critical one: the map colours these aircraft and the card of the followed aircraft shows its alert; `alerts_24h` counts the 24 hours before now, or before the simulated instant | 401 |
 | `GET /dashboard/statistics` | `period` (`24h` default, `7d`, `30d`), `source` | 200, `{"period", "unit", "start", "end", "total", "slices": [{"start", "total", "per_rule": {"R1": 2}}]}`. 24 slices of one hour for `24h`, 7 or 30 of one day otherwise, the last one being the current hour or day (UTC). The slices without alert are present, with a total of 0 | 401, 422 unknown period |
 
-`collection` is a summary the User may read: `{"enabled", "paused", "running", "last_success_at", "remaining_credits", "recent_runs": [{"started_at", "status"}]}`, the 12 latest runs, newest first. It carries no error text; the Supervisor's `GET /collection/status` has the detail.
+`collection` is a summary the User may read: `{"source", "period_seconds", "area", "enabled", "paused", "running", "last_success_at", "remaining_credits", "recent_runs": [{"started_at", "status"}]}`, the 12 latest runs, newest first. `period_seconds` is the pace of the collection, which the map follows; `area` holds the rectangle that contains the area of the source (`south`, `west`, `north`, `east`), which the map frames, and for adsb.fi the centre and radius of its circle (`latitude`, `longitude`, `radius_km`, `null` for OpenSky), which the map draws. `remaining_credits` is always `null` for adsb.fi. It carries no error text; the Supervisor's `GET /collection/status` has the detail.
 
 The map of the dashboard is not part of this answer: it reads the aircraft of the area with `GET /aircraft`.
 
 ### Collection (`/api/v1/collection`)
 
-Every endpoint needs the Supervisor role (401 without a token, 403 with another role). Run times are UTC.
+Every endpoint needs the Supervisor role (401 without a token, 403 with another role) and takes `source=opensky` (the default) or `source=adsbfi`: the two live collections run in parallel, each with its own runs, pause and wait after a 429 (`replay` is refused, 422). Run times are UTC.
 
 | Method and path | Purpose | Answer |
 | --- | --- | --- |
-| `GET /collection/status` | State of the collection: enabled on this instance, paused, cycle running, profile, period, credits per day and daily quota, anonymous or authenticated access, wait after a 429, last run and last successful run | `200` |
+| `GET /collection/status` | State of the collection of the source: `source`, enabled on this instance, paused, cycle running, profile, period, credits per day and daily quota, anonymous or authenticated access (`daily_quota` and `authenticated` are `null` for adsb.fi, which has no account), wait after a 429, last run and last successful run | `200` |
 | `GET /collection/runs?limit=20&before=<started_at>` | Latest runs, newest first. `limit` from 1 to 100. For the next page, `before` is the `started_at` of the last run received (keyset paging: cycles never overlap, so `started_at` is unique) | `200`, `422` if out of range |
-| `POST /collection/run` | Runs one cycle now and returns it, even when the collection is paused. It uses OpenSky credits | `200`, `409` when the collection is disabled on this instance, a cycle is already running, or OpenSky answered 429 and its delay is not over |
+| `POST /collection/run` | Runs one cycle of the source now and returns it, even when its collection is paused. With OpenSky it uses credits | `200`, `409` when the collection of the source is disabled on this instance, a cycle of it is already running, or the source answered 429 (or refused a request, for adsb.fi) and its delay is not over |
 | `POST /collection/pause` | Suspends the periodic collection, without stopping the API. Later cycles are recorded as `SKIPPED` | `200` with the status |
 | `POST /collection/resume` | Resumes the periodic collection | `200` with the status |
 
-A run has `started_at` (also the `now` given to the rules engine), `ended_at`, `status` (`SUCCESS`, `PARTIAL` when some state vectors were rejected, `FAILED`, `RATE_LIMITED` for a 429 and for the cycles during its delay, `SKIPPED` while paused), `profile`, `received`, `stored` (new observations), `rejected`, `remaining_credits` (from OpenSky), `error` and `evaluation_error` (a failure of the rules engine, which never cancels the collection).
+A run has `source`, `started_at` (also the `now` given to the rules engine), `ended_at`, `status` (`SUCCESS`, `PARTIAL` when some state vectors were rejected, `FAILED`, `RATE_LIMITED` for a 429 and for the cycles during its delay, `SKIPPED` while paused), `profile`, `received`, `stored` (new observations), `rejected`, `remaining_credits` (from OpenSky, `null` for adsb.fi), `error` and `evaluation_error` (a failure of the rules engine, which never cancels the collection).
 
-Each run is written once to `EXECUTION_COLLECTE`, complete, with its end set after the rules evaluation. The pause is kept in `PARAMETRE_COLLECTE`, so it survives a restart of the API.
+Each run is written once to `EXECUTION_COLLECTE`, complete, with its source and its end set after the rules evaluation. The pause of each source is kept in its row of `PARAMETRE_COLLECTE`, so it survives a restart of the API.
 
 Configuration, in `.env`:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `COLLECTION_ENABLED` | `false` | Whether this instance collects. Only one instance collects with the group account at a time |
-| `COLLECTION_PROFILE` | `ILE_DE_FRANCE` | `ILE_DE_FRANCE` (every 30 s) or `FRANCE` (every 120 s), see [architecture](architecture.md#data-source) |
-| `COLLECTION_FLIGHT_GAP_MINUTES` | `30` | Maximum gap between two observations of the same flight (D-06) |
-| `COLLECTION_BBOX_ILE_DE_FRANCE`, `COLLECTION_BBOX_FRANCE` | see [OpenSky Network](opensky.md#collection) | Areas, as `lat_min,lat_max,lon_min,lon_max` |
+| `COLLECTION_OPENSKY_ENABLED` | `false` | Whether this instance collects OpenSky. Only one instance collects with the group account at a time |
+| `COLLECTION_PROFILE` | `ILE_DE_FRANCE` | OpenSky profile: `ILE_DE_FRANCE` (every 30 s) or `FRANCE` (every 120 s), see [architecture](architecture.md#data-source) |
+| `COLLECTION_FLIGHT_GAP_MINUTES` | `30` | Maximum gap between two observations of the same flight, for both sources (D-06) |
+| `COLLECTION_BBOX_ILE_DE_FRANCE`, `COLLECTION_BBOX_FRANCE` | see [OpenSky Network](opensky.md#collection) | OpenSky areas, as `lat_min,lat_max,lon_min,lon_max` |
 | `OPENSKY_CLIENT_ID`, `OPENSKY_CLIENT_SECRET` | empty | OAuth2 API client of the group account; empty means anonymous access |
+| `COLLECTION_ADSBFI_ENABLED` | `false` | Whether this instance collects adsb.fi. adsb.fi needs no account |
+| `ADSBFI_CENTER`, `ADSBFI_RADIUS_NM` | `48.65,2.5`, `250` | Circle collected from adsb.fi: its centre (`lat,lon`, the middle of the Île-de-France box) and its radius in nautical miles, 250 at most |
+| `ADSBFI_PERIOD_SECONDS` | `5` | Period of the adsb.fi collection, 2 s at least (one request per second at most) |
+| `ADSBFI_TIMEOUT_SECONDS` | `4` | Time allowed to an adsb.fi answer, shorter than the period |
+| `ADSBFI_RETENTION_DAYS` | `7` | Days of adsb.fi observations kept; older ones are deleted every hour. `0` keeps everything |
+| `RULES_EDGE_MARGIN_KM` | `20` | R1 and R2 say nothing about an aircraft last placed closer than this to the edge of the area of its source (D-23) |
 
-The API refuses to start when the profile would use more than the 4 000 daily credits of an account. With anonymous access the credits run out after a few hours; OpenSky then answers 429 and the collection waits for the delay it announces.
+The API refuses to start when the OpenSky profile would use more than the 4 000 daily credits of an account, or when the adsb.fi settings are out of bounds. With anonymous access the OpenSky credits run out after a few hours; OpenSky then answers 429 and the collection waits for the delay it announces. adsb.fi answers 429 when requests come too fast, and counts the refused requests (400, 401, 403, 404) against its limit: after either, the adsb.fi collection waits the announced delay, a minute without one. See [data sources](data-sources.md).
 
 ## Errors
 

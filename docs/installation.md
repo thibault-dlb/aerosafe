@@ -54,10 +54,16 @@ Secrets such as database credentials, API keys and environment variables are nev
 | `AUTH_ACCESS_TOKEN_MINUTES`, `AUTH_REFRESH_TOKEN_DAYS` | Lifetime of the access token and of the refresh token | No | `15`, `7` |
 | `AUTH_COOKIE_SECURE` | `true` behind HTTPS; `false` lets the refresh cookie work over plain HTTP | No | `false` |
 | `AUTH_LOGIN_MAX_FAILURES`, `AUTH_LOGIN_LOCK_MINUTES` | Throttling of failed logins | No | `5`, `15` |
-| `COLLECTION_ENABLED` | Starts the OpenSky collection. Keep `false` unless this instance is the only one to collect with the group account | No | `false` |
+| `FORWARDED_ALLOW_IPS` | Addresses whose `X-Forwarded-For` uvicorn trusts. `*` while the API port is not published; the address of the gateway otherwise | No | `*` |
+| `COLLECTION_OPENSKY_ENABLED` | Starts the OpenSky collection. Keep `false` unless this instance is the only one to collect with the group account | No | `false` |
 | `COLLECTION_PROFILE` | `ILE_DE_FRANCE` (every 30 s, 1 credit) or `FRANCE` (every 120 s, 3 credits) | No | `ILE_DE_FRANCE` |
-| `COLLECTION_FLIGHT_GAP_MINUTES` | Maximum gap between two observations of the same flight | No | `30` |
+| `COLLECTION_FLIGHT_GAP_MINUTES` | Maximum gap between two observations of the same flight, for both sources | No | `30` |
 | `OPENSKY_CLIENT_ID`, `OPENSKY_CLIENT_SECRET` | OAuth2 API client of the group account; empty means anonymous access (400 credits a day) | No | Empty |
+| `COLLECTION_ADSBFI_ENABLED` | Starts the adsb.fi collection, in parallel with OpenSky. No account; about 3.8 GB of observations a day, kept a week | No | `false` |
+| `ADSBFI_CENTER`, `ADSBFI_RADIUS_NM` | Circle collected from adsb.fi: its centre (`lat,lon`) and its radius in nautical miles, 250 at most | No | `48.65,2.5`, `250` |
+| `ADSBFI_PERIOD_SECONDS`, `ADSBFI_TIMEOUT_SECONDS` | Period of the adsb.fi collection (2 s at least) and time allowed to an answer (shorter than the period) | No | `5`, `4` |
+| `ADSBFI_RETENTION_DAYS` | Days of adsb.fi observations kept; older ones are deleted every hour. `0` keeps everything | No | `7` |
+| `RULES_EDGE_MARGIN_KM` | R1 and R2 say nothing about an aircraft last placed closer than this to the edge of the area of its source | No | `20` |
 | `VITE_API_URL` | Public URL of the API, as seen from the browser | No | `http://localhost:8888/api` |
 
 ## Environments
