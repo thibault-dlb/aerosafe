@@ -60,7 +60,7 @@ describe("AlertService", () => {
 
     const page = await service.search({ status: "active" });
 
-    expect(get).toHaveBeenCalledWith("/v1/alerts?status=active");
+    expect(get).toHaveBeenCalledWith("/v1/alerts?status=active&source=adsbfi");
     expect(page.total).toBe(7);
     const [alert] = page.items;
     expect(alert.triggeredAt).toEqual(new Date("2026-11-09T10:00:00Z"));
@@ -74,7 +74,7 @@ describe("AlertService", () => {
 
     await service.search();
 
-    expect(get).toHaveBeenCalledWith("/v1/alerts");
+    expect(get).toHaveBeenCalledWith("/v1/alerts?source=adsbfi");
   });
 
   it("reads one alert", async () => {
@@ -114,7 +114,7 @@ describe("AlertService", () => {
     );
 
     expect(get).toHaveBeenCalledWith(
-      "/v1/alerts/statistics?start=2026-11-08T00%3A00%3A00.000Z&end=2026-11-09T00%3A00%3A00.000Z",
+      "/v1/alerts/statistics?start=2026-11-08T00%3A00%3A00.000Z&end=2026-11-09T00%3A00%3A00.000Z&source=adsbfi",
     );
     expect(statistics.total).toBe(3);
     expect(statistics.perRule).toEqual({ R1: 2, R3: 1 });
@@ -126,6 +126,6 @@ describe("AlertService", () => {
 
     await service.statistics();
 
-    expect(get).toHaveBeenCalledWith("/v1/alerts/statistics");
+    expect(get).toHaveBeenCalledWith("/v1/alerts/statistics?source=adsbfi");
   });
 });

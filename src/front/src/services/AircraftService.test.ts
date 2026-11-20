@@ -83,7 +83,7 @@ describe("AircraftService", () => {
 
     const [aircraft] = await service.search({ icao24: "3c64" });
 
-    expect(get).toHaveBeenCalledWith("/v1/aircraft?icao24=3c64");
+    expect(get).toHaveBeenCalledWith("/v1/aircraft?icao24=3c64&source=adsbfi");
     expect(aircraft.displayName).toBe("D-AIBD");
     expect(aircraft.lastContactAt).toEqual(new Date("2026-11-09T10:00:00Z"));
     expect(aircraft.hasPosition).toBe(true);
@@ -107,7 +107,7 @@ describe("AircraftService", () => {
 
     const aircraft = await service.get(AIRCRAFT.id);
 
-    expect(get).toHaveBeenCalledWith(`/v1/aircraft/${AIRCRAFT.id}`);
+    expect(get).toHaveBeenCalledWith(`/v1/aircraft/${AIRCRAFT.id}?source=adsbfi`);
     expect(aircraft.displayName).toBe("3C6444");
     expect(aircraft.hasPosition).toBe(false);
   });
@@ -122,7 +122,7 @@ describe("AircraftService", () => {
     });
 
     expect(get).toHaveBeenCalledWith(
-      `/v1/aircraft/${AIRCRAFT.id}/observations?start=2026-11-09T09%3A00%3A00.000Z&end=2026-11-09T11%3A00%3A00.000Z&limit=100`,
+      `/v1/aircraft/${AIRCRAFT.id}/observations?start=2026-11-09T09%3A00%3A00.000Z&end=2026-11-09T11%3A00%3A00.000Z&limit=100&source=adsbfi`,
     );
     expect(observation.altitude).toBe(10000);
     expect(observation.hasPosition).toBe(false);
@@ -133,7 +133,7 @@ describe("AircraftService", () => {
 
     await service.observations(AIRCRAFT.id);
 
-    expect(get).toHaveBeenCalledWith(`/v1/aircraft/${AIRCRAFT.id}/observations`);
+    expect(get).toHaveBeenCalledWith(`/v1/aircraft/${AIRCRAFT.id}/observations?source=adsbfi`);
   });
 
   it("lists the flights of an aircraft", async () => {
@@ -141,7 +141,7 @@ describe("AircraftService", () => {
 
     const [flight] = await service.flights(AIRCRAFT.id);
 
-    expect(get).toHaveBeenCalledWith(`/v1/aircraft/${AIRCRAFT.id}/flights`);
+    expect(get).toHaveBeenCalledWith(`/v1/aircraft/${AIRCRAFT.id}/flights?source=adsbfi`);
     expect(flight.displayName).toBe("3C6444");
     expect(flight.inProgress).toBe(true);
   });
@@ -151,7 +151,7 @@ describe("AircraftService", () => {
 
     const flight = await service.flight(FLIGHT.id);
 
-    expect(get).toHaveBeenCalledWith(`/v1/flights/${FLIGHT.id}`);
+    expect(get).toHaveBeenCalledWith(`/v1/flights/${FLIGHT.id}?source=adsbfi`);
     expect(flight.displayName).toBe("DLH4AB");
     expect(flight.inProgress).toBe(false);
     expect(flight.trajectory).toHaveLength(1);

@@ -127,7 +127,7 @@ test("the dashboard opens on the live overview and the map", async ({ page }) =>
   await page.goto("/dashboard");
 
   await expect(page.getByRole("heading", { level: 1, name: "Tableau de bord" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "En direct · Île-de-France" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "adsb.fi · 250 NM autour de Paris" })).toBeVisible();
 });
 
 test("the dashboard sends a visitor who is not logged in to the log in screen", async ({ page }) => {

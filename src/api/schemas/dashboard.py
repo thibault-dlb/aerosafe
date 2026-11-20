@@ -34,7 +34,8 @@ class CollectionRunSummary(BaseModel):
 
 
 class CollectionArea(BaseModel):
-    """The rectangle that holds the area of a collection, the one the map shows."""
+    """The area of a collection: the rectangle that holds it, which the map frames, and for a
+    circle (adsb.fi) its centre and radius, which the map draws."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -42,6 +43,9 @@ class CollectionArea(BaseModel):
     west: float
     north: float
     east: float
+    latitude: float | None = Field(default=None, description="Centre of a circle")
+    longitude: float | None = Field(default=None, description="Centre of a circle")
+    radius_km: float | None = Field(default=None, description="Radius of a circle")
 
 
 class CollectionSummary(BaseModel):

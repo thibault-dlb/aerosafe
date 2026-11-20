@@ -12,7 +12,7 @@ from services.alerts.service import (
     AlertStatistics,
     AlertStatus,
 )
-from services.collection.profiles import Circle, CollectionProfile, ProfileCode
+from services.collection.profiles import BoundingBox, Circle, CollectionProfile, ProfileCode
 from services.collection.run_state import (
     CollectionRunResult,
     InMemoryCollectionStateStore,
@@ -237,6 +237,17 @@ async def test_the_collection_of_a_source_gives_its_period_and_its_area() -> Non
     assert summary.area is not None
     assert summary.area.south == pytest.approx(48.65 - 4.164, abs=0.01)
     assert summary.area.north == pytest.approx(48.65 + 4.164, abs=0.01)
+    assert (summary.area.latitude, summary.area.longitude) == (48.65, 2.5)
+    assert summary.area.radius_km == 463.0
+
+
+def test_a_box_has_no_centre() -> None:
+    profile = CollectionProfile(ProfileCode.ILE_DE_FRANCE, BoundingBox(48.0, 49.3, 1.4, 3.6), 30)
+
+    area = DashboardService.area_of(profile)
+
+    assert (area.south, area.west, area.north, area.east) == (48.0, 1.4, 49.3, 3.6)
+    assert (area.latitude, area.longitude, area.radius_km) == (None, None, None)
 
 
 async def test_the_collection_without_profile_has_no_area() -> None:

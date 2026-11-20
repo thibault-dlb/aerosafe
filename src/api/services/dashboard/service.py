@@ -14,7 +14,7 @@ from schemas.dashboard import (
     StatisticsSlice,
 )
 from services.alerts.service import AlertFilters, AlertService, AlertStatus
-from services.collection.profiles import CollectionProfile
+from services.collection.profiles import Circle, CollectionProfile
 from services.collection.run_state import CollectionStateStore
 
 ACTIVE_ALERTS_SHOWN = 5
@@ -127,15 +127,10 @@ class DashboardService:
         pause = await self._collection.pause_state(source)
         runs = await self._collection.runs(limit=RECENT_RUNS_SHOWN, source=source)
         last_success = await self._collection.last_success(source)
-        bounds = profile.bounding_box if profile else None
         return CollectionSummary(
             source=source.value,
             period_seconds=profile.period_seconds if profile else None,
-            area=None
-            if bounds is None
-            else CollectionArea(
-                south=bounds.lat_min, west=bounds.lon_min, north=bounds.lat_max, east=bounds.lon_max
-            ),
+            area=self.area_of(profile) if profile else None,
             enabled=enabled,
             paused=pause.paused,
             running=running,
@@ -144,6 +139,20 @@ class DashboardService:
             recent_runs=[
                 CollectionRunSummary(started_at=run.started_at, status=run.status) for run in runs
             ],
+        )
+
+    @staticmethod
+    def area_of(profile: CollectionProfile) -> CollectionArea:
+        bounds = profile.bounding_box
+        circle = profile.area if isinstance(profile.area, Circle) else None
+        return CollectionArea(
+            south=bounds.lat_min,
+            west=bounds.lon_min,
+            north=bounds.lat_max,
+            east=bounds.lon_max,
+            latitude=circle.latitude if circle else None,
+            longitude=circle.longitude if circle else None,
+            radius_km=round(circle.radius_km, 3) if circle else None,
         )
 
     async def empty_statistics(self, period: StatisticsPeriod) -> DashboardStatisticsOut:

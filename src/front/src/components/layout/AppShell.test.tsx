@@ -234,7 +234,7 @@ describe("AppShell", () => {
     fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Rejeu" }));
     await screen.findByRole("region", { name: "Rejeu du trafic historique" });
 
-    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Direct" }));
+    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "adsb.fi" }));
 
     expect(screen.queryByRole("region", { name: "Rejeu du trafic historique" })).not.toBeInTheDocument();
   });
@@ -257,7 +257,7 @@ describe("AppShell", () => {
     fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Rejeu" }));
     expect(mounted).toHaveBeenCalledTimes(2);
 
-    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "Direct" }));
+    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "adsb.fi" }));
     expect(mounted).toHaveBeenCalledTimes(3);
   });
 
