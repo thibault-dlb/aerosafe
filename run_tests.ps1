@@ -109,7 +109,7 @@ if (-not $script:useDocker) {
         if ($LASTEXITCODE -ne 0) { throw "UV absent" }
         Write-Ok "UV available: $uvVer"
         Write-Info "Tests will run from src/api/ with 'uv run pytest'."
-        Write-Info "No database is needed yet: the tests open no connection."
+        Write-Info "No database is needed for these two suites. The integration tests (tests/integration) are not run here: use 'uv run pytest' from src/api with a migrated database, or the CI."
     } catch {
         Write-Fail "Neither Docker nor UV available — cannot run the tests."
         exit 1
@@ -124,10 +124,11 @@ Write-Info "Root directory  : src/api/tests/"
 Write-Info ""
 Write-Info "conftest.py (root)    — client fixture for the HTTP tests"
 Write-Info "   • Builds an httpx AsyncClient on the FastAPI application (no network)"
-Write-Info "   • No database fixture yet: the application opens no connection at startup"
+Write-Info "   • No database fixture: these suites open no connection (database tests are in integration/)"
 Write-Info ""
-Write-Info "unit/                 — tests of settings, database wrapper and middleware"
+Write-Info "unit/                 — unit tests of settings, core, middleware and services (collection, rules, replay, accounts)"
 Write-Info "api/                  — tests of the HTTP endpoints"
+Write-Info "integration/          — tests that need PostgreSQL (not run by this script)"
 Write-Info ""
 
 # ── Core runner function ──────────────────────────────────────────────────────
@@ -230,17 +231,20 @@ $allResults = @()
 
 if ($Suite -eq "all" -or $Suite -eq "unit") {
 
-    Write-Section "Suite 1 / 2 — Unit tests (configuration and core)"
-    Write-Info "These tests check settings, the database wrapper and the middleware without"
-Write-Info "going through the HTTP API. They do not need a running database."
+    Write-Section "Suite 1 / 2 — Unit tests"
+    Write-Info "These tests check the settings, the core, the middleware and the services (collection,"
+    Write-Info "rules, replay, historical import, accounts) without the HTTP layer. No database is needed."
 
     $res = Invoke-PytestSuite `
-        -Name        "Unit tests — configuration and core" `
-        -Description "Checks the building blocks of the application (settings, database wrapper, middleware)." `
+        -Name        "Unit tests" `
+        -Description "Checks the settings, the core, the middleware and the services without the HTTP layer." `
         -Coverage    @(
-            "unit/test_app_settings.py : application name and version given to FastAPI",
-            "unit/test_database.py     : database URL built from settings, session lifecycle",
-            "unit/test_middleware.py   : unhandled errors are logged and re-raised"
+            "unit/test_collection_*.py : OpenSky client, normaliser, flights, scheduler",
+            "unit/test_rules_*.py      : rules R1 to R5 and their engine",
+            "unit/test_replay_*.py     : replay clock, scheduler and queries",
+            "unit/test_historical_*.py : import of the historical dataset",
+            "unit/test_auth_*.py       : tokens, passwords, login throttling",
+            "unit/test_model_*.py      : database naming conventions"
         ) `
         -Paths       @("tests/unit/") `
         -TbMode      $tbFlag `
@@ -258,7 +262,10 @@ if ($Suite -eq "all" -or $Suite -eq "api") {
     Write-Info ""
     Write-Info "Tested modules:"
     $apiModules = @(
-        "test_health.py            (2 tests) : liveness probe 200, X-Request-ID header on every response"
+        "test_*_routes.py          : the routes of aircraft, alerts, auth, collection, dashboard, flights, replay, rules and users",
+        "test_auth_*.py, test_security.py : tokens, roles, login throttling",
+        "test_health.py, test_routing.py  : liveness probe, request id header, routing",
+        "test_unit_*.py            : the service unit tests, run again here through the API application"
     )
     foreach ($m in $apiModules) { Write-Info $m }
 
@@ -266,7 +273,7 @@ if ($Suite -eq "all" -or $Suite -eq "api") {
         -Name        "API tests — HTTP endpoints" `
         -Description "End-to-end validation of the FastAPI routes through AsyncClient." `
         -Coverage    @(
-            "Health       : liveness probe without authentication, request id header"
+            "Routes       : the endpoints of every work package, with their role checks"
         ) `
         -Paths       @("tests/api/") `
         -TbMode      $tbFlag
