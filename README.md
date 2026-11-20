@@ -8,11 +8,11 @@ AeroSafe is the capstone project ("projet fil rouge") of the Software Engineerin
 
 ## Status
 
-Only the project foundations exist so far: an API with a health check, an empty web interface and the container stack. No business feature has been developed yet. Anything marked `TBD` has not been decided or produced yet.
+The application is built and runs from the container stack: the collection of OpenSky data, the rules R1 to R5 and the alerts, the aircraft lookup and flight trajectories with their statistics, the accounts and roles, the supervision dashboard and the replay of historical traffic, with a French and English web interface. Not started: the deployment and monitoring, and the optional AI module. The live collection is off by default until an OpenSky account is registered for the group. Anything marked `TBD` has not been decided or produced yet.
 
 See the [roadmap](ROADMAP.md) for the steps and next actions.
 
-## Planned features
+## Features
 
 - Search for and view aircraft information
 - Analyse observations and flight parameters (position, altitude, speed, heading)
@@ -21,7 +21,9 @@ See the [roadmap](ROADMAP.md) for the steps and next actions.
 - Generate and store alerts
 - Provide a supervision dashboard
 - Analyse the aeronautical and geospatial data collected
-- Optional bonus: anomaly detection with machine learning, compared with the rules engine
+- Replay historical traffic (PRC Data Challenge 2024) through the same rules, with a Live / Replay switch
+- Manage accounts and roles (User, Supervisor)
+- Optional bonus, not started: anomaly detection with machine learning, compared with the rules engine
 
 ## User profiles
 
@@ -39,9 +41,9 @@ See the [roadmap](ROADMAP.md) for the steps and next actions.
 | Backend / API | Python 3.11+, FastAPI | Set by the project sheet |
 | ORM and migrations | SQLAlchemy 2.0 (async), Alembic | Decided |
 | Frontend | React 19, TypeScript, Vite | Decided |
-| Mapping | Leaflet (BSD-2-Clause) | Decided, wrapper to confirm |
+| Mapping | Leaflet (BSD-2-Clause), used directly without `react-leaflet` (D-01) | In place |
 | Versioning | Git, hosted on GitHub | In place |
-| CI/CD | GitHub Actions | Decided, workflow to write |
+| CI/CD | GitHub Actions | CI in place, deployment not started |
 | Containers | Docker | Set by the project sheet |
 | Python tests and linting | pytest (asyncio, cov, xdist), ruff; minimum 80% coverage | Decided |
 | Frontend tests | Vitest, Testing Library, Playwright; minimum 80% coverage | Decided |
@@ -52,9 +54,14 @@ The reasoning behind each choice is in [technology choices](docs/technology-choi
 
 ## Getting started
 
-`TBD`: there is nothing to install or run yet.
+With Docker and Docker Compose installed:
 
-The application must eventually start from a single documented command, using containers, on a machine with no prior setup. See [installation and configuration](docs/installation.md).
+```bash
+cp .env.example .env   # then replace the passwords and AUTH_JWT_SECRET
+docker compose up --build
+```
+
+The application is then at `http://localhost:8888` and the API documentation at `http://localhost:8888/api/docs`. The steps, the default Supervisor account and the settings are in [installation and configuration](docs/installation.md).
 
 ## Documentation
 
@@ -66,9 +73,9 @@ The application must eventually start from a single documented command, using co
 | [Business rules](docs/business-rules.md) | Rules R1 to R5 and alert format |
 | [OpenSky Network](docs/opensky.md) | Data source terms of use, access, fields and collection constraints |
 | [Historical data](docs/historical-data.md) | Sources explored to replay past traffic, the import of the PRC Data Challenge 2024 dataset and the replay mode (D-20) |
-| [Data model](docs/data-model.md) | Planned entities |
+| [Data model](docs/data-model.md) | Entities, tables and columns |
 | [Database conventions](docs/database-conventions.md) | Naming, keys, types, indexes, timestamps, migrations, security, checklist |
-| [Architecture](docs/architecture.md) | Components, constraints, planned UML diagrams |
+| [Architecture](docs/architecture.md) | Components, constraints, UML diagrams |
 | [Technology choices](docs/technology-choices.md) | Selection grid and decisions |
 | [Installation and configuration](docs/installation.md) | How to install, configure and run the application |
 | [API](docs/api.md) | Backend API reference |

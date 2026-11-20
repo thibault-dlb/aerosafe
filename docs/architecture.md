@@ -2,7 +2,7 @@
 
 Source: project sheet §8 (authentication, web interface, FastAPI API, PostgreSQL database, rules engine, optional AI module) and step 2 (UML, architecture, database design, module organisation); specifications §VI.1.10 and §VII.1; and [technology choices](technology-choices.md).
 
-The detailed architecture is `TBD`: it is produced during the design phase, including a component diagram showing the flows between components.
+The UML diagrams, including the component diagram of the flows between components, are in [uml](uml/component-diagram.md). A more detailed architecture document is still `TBD`.
 
 ## Components
 
@@ -37,7 +37,7 @@ Decided on 2026-11-03 (D-10), following the Marine Nationale standard.
     │   ├── services/          Business logic (rules engine, data collection)
     │   ├── database/          Alembic migrations
     │   ├── docker/            Container support files (database initialisation)
-    │   └── tests/             pytest tests (`unit/`, `api/`)
+    │   └── tests/             pytest tests (`unit/`, `api/`, `integration/`)
     ├── front/                 Web interface (React, TypeScript, Vite)
     │   ├── src/
     │   │   ├── components/    Reusable components
@@ -90,15 +90,15 @@ Unit tests of the frontend sit next to the code they test (`*.test.ts`, `*.test.
 - The whole application can be launched through containers, with no manual dependency installation.
 - The CI pipeline runs the automated tests on every code change.
 
-## Planned UML diagrams
+## UML diagrams
 
-The project sheet requires UML diagrams (step 2, deliverable 1) without listing them. The four below come from the specifications.
+The project sheet requires UML diagrams (step 2, deliverable 1) without listing them. The four below come from the specifications, and were validated with the supervising teacher on 2026-11-12.
 
 | Diagram | Content | Status |
 | --- | --- | --- |
-| [Use cases](uml/use-cases.md) | Actors: Visitor, User, Supervisor, Scheduler, OpenSky | Drafted, to validate |
-| [Classes](uml/class-diagram.md) | Aircraft, Observation, Flight, Rule, Alert, User and reference classes | Drafted, to validate |
-| [Sequence](uml/sequence-alert.md) | "Detection and generation of an alert" scenario | Drafted, to validate |
-| [Components](uml/component-diagram.md) | Application architecture | Drafted, to validate |
+| [Use cases](uml/use-cases.md) | Actors: Visitor, User, Supervisor, Scheduler, OpenSky | Validated |
+| [Classes](uml/class-diagram.md) | Aircraft, Observation, Flight, Rule, Alert, User and reference classes | Validated |
+| [Sequence](uml/sequence-alert.md) | "Detection and generation of an alert" scenario | Validated |
+| [Components](uml/component-diagram.md) | Application architecture | Validated |
 
 The diagrams are written in Mermaid, which GitHub renders directly.

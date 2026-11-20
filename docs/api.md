@@ -1,6 +1,6 @@
 # API
 
-The API only has its health check and empty routers so far. This page lists what the project sheet and the specifications require of it, and will be completed during development.
+This page describes the API as built: authentication, accounts, aircraft, flights, rules, alerts, replay, dashboard and collection. It starts with what the project sheet and the specifications require of it. The other error conventions are still `TBD`.
 
 The API documentation is kept in the repository as Markdown and/or generated automatically (§VIII.2).
 
