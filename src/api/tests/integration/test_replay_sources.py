@@ -20,6 +20,7 @@ from core.data_mode import DataMode
 from models import Aircraft, Alert, Flight, Rule
 from models.reference import DataSource
 from services.aircraft import AircraftSearchCriteria, AircraftService
+from services.collection.normalizer import NormalizedState
 from services.historical.prc2024 import ObservationBatch
 from services.historical.store import HistoricalStore, NewFlight, to_microseconds
 from services.replay import DatabaseReplayStore, ReplayService, ReplayState
@@ -122,7 +123,19 @@ class TestSourceOfTheAircraft:
         await HistoricalStore(session).ensure_aircraft([code])
         store = ObservationStore(session, FlightGrouper(timedelta(minutes=30)))
 
-        ids = await store._ensure_aircraft({code})
+        heard = NormalizedState(
+            icao24=code,
+            callsign=None,
+            last_contact_at=datetime(2026, 11, 20, tzinfo=UTC),
+            position_at=None,
+            latitude=None,
+            longitude=None,
+            altitude=None,
+            speed=None,
+            heading=None,
+            on_ground=False,
+        )
+        ids = await store._ensure_aircraft([heard])
 
         live = await session.get(Aircraft, ids[code])
         replayed_id = (await HistoricalStore(session).ensure_aircraft([code]))[code]
@@ -265,7 +278,6 @@ class TestAircraftAtTheInstant:
         self, session: AsyncSession
     ) -> None:
         from services.collection.flight_grouper import FlightGrouper
-        from services.collection.normalizer import NormalizedState
         from services.collection.store import ObservationStore
 
         code = icao24()
