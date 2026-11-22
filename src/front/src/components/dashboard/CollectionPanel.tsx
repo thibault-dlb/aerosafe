@@ -1,7 +1,9 @@
 import Button from "@/components/ui/Button";
 import Panel from "@/components/ui/Panel";
 import { usePreferences } from "@/hooks/usePreferences";
+import type { TranslationKey } from "@/i18n/fr";
 import type { CollectionSummary } from "@/models/Dashboard";
+import type { DataMode } from "@/services/DataModeService";
 import { Formatter } from "@/services/Formatter";
 
 import styles from "./Dashboard.module.css";
@@ -16,7 +18,17 @@ export interface CollectionPanelProps {
   busy?: boolean;
 }
 
-/** State of the OpenSky collection: last success, credits, mini history, and its controls. */
+const SOURCE_NAMES: Record<DataMode, string> = { opensky: "OpenSky", adsbfi: "adsb.fi", replay: "adsb.fi" };
+const PRECISION: Record<DataMode, TranslationKey> = {
+  opensky: "dashboard.collection.precision.opensky",
+  adsbfi: "dashboard.collection.precision.adsbfi",
+  replay: "dashboard.collection.precision.adsbfi",
+};
+
+/**
+ * State of the collection of one live source: its pace and precision, last success, credits (OpenSky
+ * only), mini history, and its controls.
+ */
 export default function CollectionPanel({ collection, onPause, onResume, onRun, busy = false }: CollectionPanelProps) {
   const { t } = usePreferences();
   let state = t("dashboard.collection.active");
@@ -26,16 +38,28 @@ export default function CollectionPanel({ collection, onPause, onResume, onRun, 
   const controls = Boolean(onPause && onResume && onRun) && collection.enabled;
 
   return (
-    <Panel title={t("dashboard.collection.title")}>
+    <Panel title={t("dashboard.collection.title", { source: SOURCE_NAMES[collection.source] })}>
       <dl className={styles.state}>
         <dt>{t("dashboard.collection.state")}</dt>
         <dd>{state}</dd>
+        {collection.periodSeconds !== null && (
+          <>
+            <dt>{t("dashboard.collection.period")}</dt>
+            <dd>{t("dashboard.collection.every", { seconds: collection.periodSeconds })}</dd>
+          </>
+        )}
+        <dt>{t("dashboard.collection.precision")}</dt>
+        <dd>{t(PRECISION[collection.source])}</dd>
         <dt>{t("dashboard.collection.lastSuccess")}</dt>
         <dd className="mono">
           {collection.lastSuccessAt ? Formatter.date(collection.lastSuccessAt) : t("dashboard.collection.never")}
         </dd>
-        <dt>{t("dashboard.collection.credits")}</dt>
-        <dd className="mono">{collection.remainingCredits ?? Formatter.MISSING}</dd>
+        {collection.countsCredits && (
+          <>
+            <dt>{t("dashboard.collection.credits")}</dt>
+            <dd className="mono">{collection.remainingCredits ?? Formatter.MISSING}</dd>
+          </>
+        )}
       </dl>
       {collection.recentRuns.length > 0 && (
         <>

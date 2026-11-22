@@ -56,7 +56,7 @@ Unit tests of the frontend sit next to the code they test (`*.test.ts`, `*.test.
 
 ## Stated flows
 
-- OpenSky Network data is retrieved live, normalised and stored in PostgreSQL. Two collection profiles can be switched by configuration: Île-de-France at high frequency (30 s) or metropolitan France at low frequency (120 s). See [data source](#data-source).
+- Live data is retrieved from two sources in parallel, normalised and stored in PostgreSQL: the OpenSky Network, with two collection profiles switched by configuration (Île-de-France every 30 s, metropolitan France every 120 s), and the adsb.fi open data API, every 5 s over 250 NM around Paris (D-23). See [data source](#data-source) and [data sources](data-sources.md).
 - The rules engine periodically evaluates the rules on the collected data.
 - Generated alerts are stored in the database and shown on the dashboard.
 
@@ -70,7 +70,8 @@ Unit tests of the frontend sit next to the code they test (`*.test.ts`, `*.test.
 
 ### Data source
 
-- OpenSky Network coverage depends on its collaborative receiver network and is not geographically uniform.
+- The coverage of both sources depends on their collaborative receiver networks and is not geographically uniform: adsb.fi covers the ground of the airports poorly, OpenSky better. See [data sources](data-sources.md).
+- adsb.fi (D-23): no account and no daily quota, one request per second from an address; a refused request (`400`, `401`, `403`, `404`, `429`) counts against the limit, so the collection then waits a minute. Its observations are kept 7 days.
 - API access conditions (quotas, query frequency, authentication) must be checked and respected. The application must degrade cleanly when the source is unavailable or rate-limited.
 - OpenSky quotas (REST API, checked on 2026-11-03): 400 credits per day anonymous, 4 000 per day for a registered account; authentication is OAuth2 client credentials only, with a token that expires after 30 minutes. A request on a bounding box of 25 square degrees or less costs 1 credit, 25 to 100 costs 2, 100 to 400 costs 3, more or a global request costs 4. Beyond the quota the API answers 429.
 - Collection profiles (D-05), configured by environment variables, with a guard that refuses a configuration whose daily cost would exceed the quota:
@@ -80,7 +81,7 @@ Unit tests of the frontend sit next to the code they test (`*.test.ts`, `*.test.
   | High frequency | Île-de-France, about 12 square degrees | 30 s | 1 | 2 880 |
   | Low frequency | Metropolitan France, about 150 square degrees | 120 s | 3 | 2 160 |
 
-- The collection is live only: it never reads historical data. A replay of past traffic is a separate mode (D-20, decided on 2026-11-13): the historical dataset is imported into PostgreSQL, where its aircraft carry the source `REJEU` and the collected ones `DIRECT`, and a shared simulated clock in the API replays it, running the rules engine as the clock goes by. A switch in the interface picks the source of what is shown. See [historical data](historical-data.md#replay-mode).
+- The collection is live only: it never reads historical data. A replay of past traffic is a separate mode (D-20, decided on 2026-11-13): the historical dataset is imported into PostgreSQL, where its aircraft carry the source `REJEU` and the collected ones `DIRECT` (OpenSky) or `ADSBFI`, and a shared simulated clock in the API replays it, running the rules engine as the clock goes by. A switch in the interface picks the source of what is shown: OpenSky, adsb.fi or the replay. See [historical data](historical-data.md#replay-mode).
 - Data can contain missing or inconsistent fields, so it must be cleaned and validated before use.
 - The application must stay accessible and stable during demonstrations, including when the source is temporarily unavailable (NF-04).
 

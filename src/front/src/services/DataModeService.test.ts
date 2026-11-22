@@ -19,8 +19,8 @@ function blockedStore(): PreferenceStore {
 afterEach(() => DataModeService.reset());
 
 describe("DataModeService", () => {
-  it("shows the live data until the replay is chosen", () => {
-    expect(new DataModeService(memoryStore()).current()).toBe("live");
+  it("shows adsb.fi until another source is chosen", () => {
+    expect(new DataModeService(memoryStore()).current()).toBe("adsbfi");
   });
 
   it("remembers the replay for the next visit", () => {
@@ -31,18 +31,20 @@ describe("DataModeService", () => {
     expect(new DataModeService(store).current()).toBe("replay");
   });
 
-  it("ignores a stored value that is not a mode", () => {
-    const service = new DataModeService(memoryStore({ [DataModeService.KEY]: "tomorrow" }));
+  it("ignores a stored value that is not a mode, the former live one included", () => {
+    for (const stored of ["tomorrow", "live"]) {
+      const service = new DataModeService(memoryStore({ [DataModeService.KEY]: stored }));
 
-    expect(service.current()).toBe("live");
+      expect(service.current()).toBe("adsbfi");
+    }
   });
 
-  it("can go back to the live data", () => {
+  it("can go back to a live source", () => {
     const service = new DataModeService(memoryStore());
     service.set("replay");
-    service.set("live");
+    service.set("opensky");
 
-    expect(service.current()).toBe("live");
+    expect(service.current()).toBe("opensky");
   });
 
   it("is followed by the other instances even when nothing can be stored", () => {
@@ -51,28 +53,36 @@ describe("DataModeService", () => {
     expect(new DataModeService(blockedStore()).current()).toBe("replay");
   });
 
-  it("recognises the two modes only", () => {
-    expect(DataModeService.isMode("live")).toBe(true);
-    expect(DataModeService.isMode("replay")).toBe(true);
-    expect(DataModeService.isMode("other")).toBe(false);
+  it("recognises the three modes only", () => {
+    for (const mode of ["opensky", "adsbfi", "replay"]) {
+      expect(DataModeService.isMode(mode)).toBe(true);
+    }
+    expect(DataModeService.isMode("live")).toBe(false);
     expect(DataModeService.isMode(null)).toBe(false);
   });
 });
 
 describe("withSource", () => {
-  it("leaves the live requests alone", () => {
+  it("names the source of every request, with or without other parameters", () => {
     const service = new DataModeService(memoryStore());
 
-    expect(service.withSource("")).toBe("");
-    expect(service.withSource("?limit=5")).toBe("?limit=5");
+    expect(service.withSource("")).toBe("?source=adsbfi");
+    expect(service.withSource("?limit=5")).toBe("?limit=5&source=adsbfi");
   });
 
-  it("marks the replay requests, with or without other parameters", () => {
+  it("marks the replay requests", () => {
     const service = new DataModeService(memoryStore());
     service.set("replay");
 
     expect(service.isReplay()).toBe(true);
-    expect(service.withSource("")).toBe("?source=replay");
     expect(service.withSource("?limit=5")).toBe("?limit=5&source=replay");
+  });
+
+  it("marks the OpenSky requests", () => {
+    const service = new DataModeService(memoryStore());
+    service.set("opensky");
+
+    expect(service.isReplay()).toBe(false);
+    expect(service.withSource("")).toBe("?source=opensky");
   });
 });

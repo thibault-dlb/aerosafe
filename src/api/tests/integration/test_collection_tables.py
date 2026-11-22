@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import CollectionParameter, CollectionProfile, CollectionRun, CollectionStatus
+from models.reference import DataSource
 
 pytestmark = pytest.mark.integration
 
@@ -37,28 +38,58 @@ async def test_collection_statuses_are_inserted(session: AsyncSession) -> None:
 async def test_collection_profiles_are_inserted(session: AsyncSession) -> None:
     codes = (await session.execute(select(CollectionProfile.code))).scalars().all()
 
-    assert set(codes) == {"ILE_DE_FRANCE", "FRANCE"}
+    assert set(codes) == {"ILE_DE_FRANCE", "FRANCE", "ADSBFI_250NM"}
 
 
-async def test_collection_parameter_starts_with_one_row_not_paused(
+async def test_data_sources_are_inserted_with_direct_first(session: AsyncSession) -> None:
+    rows = (await session.execute(select(DataSource.code).order_by(DataSource.id))).all()
+
+    assert [code for (code,) in rows] == ["DIRECT", "REJEU", "ADSBFI"]
+
+
+async def test_collection_parameter_starts_with_one_row_per_live_source_not_paused(
     session: AsyncSession,
 ) -> None:
-    [parameter] = (await session.execute(select(CollectionParameter))).scalars().all()
+    rows = (
+        await session.execute(
+            select(DataSource.code, CollectionParameter)
+            .join(DataSource, DataSource.id == CollectionParameter.source_id)
+            .order_by(DataSource.code)
+        )
+    ).all()
 
-    assert parameter.is_paused is False
-    assert parameter.changed_at is None
-    assert parameter.changed_by_id is None
+    assert [code for code, _ in rows] == ["ADSBFI", "DIRECT"]
+    for _, parameter in rows:
+        assert parameter.is_paused is False
+        assert parameter.changed_at is None
+        assert parameter.changed_by_id is None
 
 
-async def test_collection_parameter_rejects_a_second_row(session: AsyncSession) -> None:
-    session.add(CollectionParameter(is_paused=True))
+async def test_collection_parameter_rejects_a_second_row_for_a_source(
+    session: AsyncSession,
+) -> None:
+    session.add(
+        CollectionParameter(is_paused=True, source_id=await _id_of(session, DataSource, "DIRECT"))
+    )
 
-    with pytest.raises(IntegrityError, match="uq_parametre_collecte_ligne_unique"):
+    with pytest.raises(IntegrityError, match="uq_parametre_collecte_source_donnee"):
         await session.flush()
 
 
+async def test_collection_run_defaults_to_the_opensky_source(session: AsyncSession) -> None:
+    run = await _new_run(session)
+    await session.refresh(run)
+
+    assert run.source_id == await _id_of(session, DataSource, "DIRECT")
+
+
 async def test_application_user_can_pause_the_collection(session: AsyncSession) -> None:
-    parameter = (await session.execute(select(CollectionParameter))).scalar_one()
+    direct = await _id_of(session, DataSource, "DIRECT")
+    parameter = (
+        await session.execute(
+            select(CollectionParameter).where(CollectionParameter.source_id == direct)
+        )
+    ).scalar_one()
     parameter.is_paused = True
     parameter.changed_at = datetime.now(UTC)
     await session.flush()

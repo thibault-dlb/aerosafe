@@ -58,7 +58,7 @@ class AlertFilters:
     offset: int = 0
     # The source of the aircraft. In a replay, `at` is the simulated instant: an alert
     # triggered after it has not happened yet.
-    mode: DataMode = DataMode.LIVE
+    mode: DataMode = DataMode.OPENSKY
     at: datetime | None = None
 
     def __post_init__(self) -> None:
@@ -178,7 +178,7 @@ class AlertService:
         return processed
 
     async def statistics(
-        self, start: datetime, end: datetime, mode: DataMode = DataMode.LIVE
+        self, start: datetime, end: datetime, mode: DataMode = DataMode.OPENSKY
     ) -> AlertStatistics:
         """Count the alerts triggered between `start` and `end`, for the dashboard.
 
@@ -202,7 +202,7 @@ class AlertService:
         return AlertStatistics(total=sum(per_rule.values()), per_rule=per_rule)
 
     async def statistics_by_slice(
-        self, start: datetime, end: datetime, unit: str, mode: DataMode = DataMode.LIVE
+        self, start: datetime, end: datetime, unit: str, mode: DataMode = DataMode.OPENSKY
     ) -> list[AlertBucketCount]:
         """Count the alerts triggered between `start` and `end` per hour or per day (`unit`)
         and per rule code. The slices without alert are not returned."""

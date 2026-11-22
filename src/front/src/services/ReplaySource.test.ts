@@ -4,10 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "@/services/ApiClient";
 import { AircraftService } from "@/services/AircraftService";
 import { AlertService } from "@/services/AlertService";
-import { DataModeService } from "@/services/DataModeService";
+import { type DataMode, DataModeService } from "@/services/DataModeService";
 import { PreferenceStore } from "@/services/PreferenceStore";
 
-function modes(mode: "live" | "replay"): DataModeService {
+function modes(mode: DataMode): DataModeService {
   const values = new Map<string, string>();
   const service = new DataModeService(
     new PreferenceStore({
@@ -65,16 +65,16 @@ describe("AircraftService in the replay", () => {
     ]);
   });
 
-  it("leaves the live requests as they were", async () => {
+  it("names the live source of the requests", async () => {
     const api = client([]);
-    const service = new AircraftService(api as unknown as ApiClient, modes("live"));
+    const service = new AircraftService(api as unknown as ApiClient, modes("opensky"));
 
-    await service.search({ limit: 5 });
+    await service.search({ limit: 5, heardWithinSeconds: 60 });
     await service.flights("abc").catch(() => undefined);
 
     expect(api.get.mock.calls.map(([path]) => path)).toEqual([
-      "/v1/aircraft?limit=5",
-      "/v1/aircraft/abc/flights",
+      "/v1/aircraft?limit=5&heard_within_seconds=60&source=opensky",
+      "/v1/aircraft/abc/flights?source=opensky",
     ]);
   });
 });
@@ -102,11 +102,11 @@ describe("AlertService in the replay", () => {
     );
   });
 
-  it("leaves the live requests as they were", async () => {
+  it("names the live source of the requests", async () => {
     const api = client(PAGE);
 
-    await new AlertService(api as unknown as ApiClient, modes("live")).search();
+    await new AlertService(api as unknown as ApiClient, modes("adsbfi")).search();
 
-    expect(api.get).toHaveBeenCalledWith("/v1/alerts");
+    expect(api.get).toHaveBeenCalledWith("/v1/alerts?source=adsbfi");
   });
 });

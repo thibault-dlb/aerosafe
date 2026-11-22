@@ -1,9 +1,25 @@
 import { Alert, type AlertJson } from "@/models/Alert";
+import type { ZoneArea, ZoneCircle } from "@/services/Basemap";
+import { type DataMode, DataModeService } from "@/services/DataModeService";
 
 /** How far back the chart of alerts goes. */
 export type StatisticsPeriod = "24h" | "7d" | "30d";
 
+export interface CollectionAreaJson {
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+  /** The centre and the radius of a circle (adsb.fi); null for a box (OpenSky). */
+  latitude?: number | null;
+  longitude?: number | null;
+  radius_km?: number | null;
+}
+
 export interface CollectionSummaryJson {
+  source?: string;
+  period_seconds?: number | null;
+  area?: CollectionAreaJson | null;
   enabled: boolean;
   paused: boolean;
   running: boolean;
@@ -42,7 +58,27 @@ export class CollectionRun {
   }
 }
 
-/** State of the OpenSky collection, readable by every account. */
+/** The area of a collection: the rectangle the map frames, and the circle it draws for adsb.fi. */
+export class CollectionArea {
+  constructor(
+    readonly bounds: ZoneArea,
+    readonly circle: ZoneCircle | null,
+  ) {}
+
+  static fromJson(json: CollectionAreaJson): CollectionArea {
+    const bounds = { south: json.south, west: json.west, north: json.north, east: json.east };
+    const { latitude, longitude, radius_km: radiusKm } = json;
+    const circle = latitude != null && longitude != null && radiusKm != null ? { latitude, longitude, radiusKm } : null;
+    return new CollectionArea(bounds, circle);
+  }
+
+  /** What the map outlines: the circle when there is one, otherwise the rectangle. */
+  get zone(): ZoneArea | ZoneCircle {
+    return this.circle ?? this.bounds;
+  }
+}
+
+/** State of the collection of one live source, readable by every account. */
 export class CollectionSummary {
   constructor(
     readonly enabled: boolean,
@@ -51,9 +87,14 @@ export class CollectionSummary {
     readonly lastSuccessAt: Date | null,
     readonly remainingCredits: number | null,
     readonly recentRuns: CollectionRun[],
+    readonly source: DataMode = "opensky",
+    /** Seconds between two collections: the map refreshes at this pace. Null when unknown. */
+    readonly periodSeconds: number | null = null,
+    readonly area: CollectionArea | null = null,
   ) {}
 
   static fromJson(json: CollectionSummaryJson): CollectionSummary {
+    const source = DataModeService.isMode(json.source ?? null) ? (json.source as DataMode) : "opensky";
     return new CollectionSummary(
       json.enabled,
       json.paused,
@@ -61,7 +102,15 @@ export class CollectionSummary {
       json.last_success_at ? new Date(json.last_success_at) : null,
       json.remaining_credits,
       json.recent_runs.map((run) => new CollectionRun(new Date(run.started_at), run.status)),
+      source,
+      json.period_seconds ?? null,
+      json.area ? CollectionArea.fromJson(json.area) : null,
     );
+  }
+
+  /** Only OpenSky counts credits. */
+  get countsCredits(): boolean {
+    return this.source === "opensky";
   }
 }
 

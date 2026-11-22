@@ -74,7 +74,10 @@ class Unit(Base):
 class AircraftModel(Base):
     __tablename__ = "R_MODELE"
     __table_args__ = table_args(
-        comment="Référentiel des modèles d'aéronefs, alimenté par la base de métadonnées OpenSky."
+        comment=(
+            "Référentiel des modèles d'aéronefs, alimenté par la base de métadonnées OpenSky "
+            "et par la collecte adsb.fi."
+        )
     )
 
     id: Mapped[int] = primary_key("Identifiant technique du modèle.")
@@ -147,7 +150,7 @@ class DataSource(Base):
     __table_args__ = table_args(
         comment=(
             "Référentiel des sources de données d'un aéronef : "
-            "collecte OpenSky en direct ou trafic historique rejoué."
+            "collecte en direct OpenSky ou adsb.fi, ou trafic historique rejoué."
         )
     )
 
@@ -157,7 +160,9 @@ class DataSource(Base):
         Text,
         nullable=False,
         unique=True,
-        comment="Code stable de la source, utilisé par l'API (DIRECT ou REJEU).",
+        comment=(
+            "Code stable de la source, utilisé par l'API (DIRECT pour OpenSky, ADSBFI ou REJEU)."
+        ),
     )
     label: Mapped[str] = mapped_column(
         "LB_SOURCE_DONNEE",
@@ -172,7 +177,7 @@ class CollectionStatus(Base):
     __tablename__ = "R_STATUT_COLLECTE"
     __table_args__ = table_args(
         comment=(
-            "Référentiel des statuts d'un cycle de collecte OpenSky "
+            "Référentiel des statuts d'un cycle de collecte en direct "
             "(succès, partiel, échec, quota atteint, ignoré)."
         )
     )
@@ -198,8 +203,8 @@ class CollectionProfile(Base):
     __tablename__ = "R_PROFIL_COLLECTE"
     __table_args__ = table_args(
         comment=(
-            "Référentiel des profils de collecte OpenSky (zone couverte et fréquence), "
-            "choisis par configuration."
+            "Référentiel des profils de collecte en direct, OpenSky ou adsb.fi "
+            "(zone couverte et fréquence), choisis par configuration."
         )
     )
 
@@ -209,7 +214,10 @@ class CollectionProfile(Base):
         Text,
         nullable=False,
         unique=True,
-        comment="Code stable du profil, valeur du paramètre COLLECTION_PROFILE.",
+        comment=(
+            "Code stable du profil : valeur du paramètre COLLECTION_PROFILE pour OpenSky, "
+            "ADSBFI_250NM pour adsb.fi."
+        ),
     )
     label: Mapped[str] = mapped_column(
         "LB_PROFIL_COLLECTE",

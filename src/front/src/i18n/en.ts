@@ -21,7 +21,8 @@ export const en: Record<TranslationKey, string> = {
   "layout.skipToContent": "Skip to the content",
 
   "mode.label": "Data source",
-  "mode.live": "Live",
+  "mode.opensky": "OpenSky",
+  "mode.adsbfi": "adsb.fi",
   "mode.replay": "Replay",
 
   "replay.bar": "Historical traffic replay",
@@ -88,7 +89,8 @@ export const en: Record<TranslationKey, string> = {
   "home.figures.days": "days of replayable traffic",
   "home.steps.title": "How it works",
   "home.steps.collect.title": "Collect",
-  "home.steps.collect.text": "Aircraft positions are read continuously from the OpenSky Network.",
+  "home.steps.collect.text":
+    "Positions are read continuously from two sources: adsb.fi every 5 s, with positions less than 3 s old, and the OpenSky Network every 30 s, with a better coverage of airport grounds.",
   "home.steps.detect.title": "Detect",
   "home.steps.detect.text": "After each reading, five rules analyse every aircraft.",
   "home.steps.alert.title": "Alert",
@@ -99,7 +101,8 @@ export const en: Record<TranslationKey, string> = {
   "home.cta.text": "Open the dashboard, or log in to reach every feature.",
   "layout.disclaimer":
     "Educational project: AeroSafe is not a certified air traffic surveillance or management tool. It must never be used operationally.",
-  "overview.live.title": "Live · Île-de-France",
+  "overview.opensky.title": "OpenSky · Île-de-France",
+  "overview.adsbfi.title": "adsb.fi · 250 NM around Paris",
   "overview.replay.title": "Replay · {time} UTC · France",
   "overview.replay.waiting": "Replay not started",
   "overview.live.loading": "Loading the data…",
@@ -134,7 +137,9 @@ export const en: Record<TranslationKey, string> = {
   "dashboard.track.profile": "Altitude since the start of the flight",
   "dashboard.track.profile.label": "Altitude profile of the flight: {count} points, up to {peak}",
   "dashboard.track.profile.none": "Not enough known points to draw the profile.",
-  "dashboard.error": "Some data could not be loaded. Trying again in a few seconds.",
+  "dashboard.preview.notice":
+    "Live preview of {source}: the traffic of the moment, read on the fly. Nothing is stored (collection is off), so there is no history and no alerts.",
+  "dashboard.error":"Some data could not be loaded. Trying again in a few seconds.",
   "dashboard.alerts.title": "Active alerts",
   "dashboard.alerts.empty.title": "No active alert",
   "dashboard.alerts.empty.body": "The traffic followed triggers no rule at the moment.",
@@ -151,7 +156,14 @@ export const en: Record<TranslationKey, string> = {
   "dashboard.chart.table": "Show the data",
   "dashboard.chart.slice": "Slice",
   "dashboard.chart.total": "Total",
-  "dashboard.collection.title": "OpenSky collection",
+  "dashboard.collection.title": "{source} collection",
+  "dashboard.collection.period": "Pace",
+  "dashboard.collection.every": "Every {seconds} s",
+  "dashboard.collection.precision": "Precision",
+  "dashboard.collection.precision.opensky":
+    "Data about 15 s old, times to the second, good coverage of airport grounds.",
+  "dashboard.collection.precision.adsbfi":
+    "Positions less than 3 s old, error often under 10 to 30 m, few aircraft on the ground.",
   "dashboard.collection.state": "State",
   "dashboard.collection.active": "Active",
   "dashboard.collection.paused": "Paused",
@@ -169,7 +181,7 @@ export const en: Record<TranslationKey, string> = {
   "dashboard.collection.toast.paused": "Collection paused.",
   "dashboard.collection.toast.resumed": "Collection resumed.",
   "dashboard.collection.toast.ran": "Collection run.",
-  "dashboard.collection.error.conflict": "The collection is disabled, already running or limited by OpenSky.",
+  "dashboard.collection.error.conflict": "The collection is disabled, already running or limited by its source.",
 
   "aircraft.search.title": "Aircraft search",
   "aircraft.column.time": "Time",
@@ -287,7 +299,8 @@ export const en: Record<TranslationKey, string> = {
 
   "footer.disclaimer":
     "AeroSafe is an educational project. It is not a certified air traffic surveillance or management system and must not be used operationally.",
-  "footer.data": "Data: The OpenSky Network. Map: Natural Earth and OurAirports.",
+  "footer.data": "Data: The OpenSky Network and",
+  "footer.map": ". Map: Natural Earth and OurAirports.",
 
   // Shared interface elements.
   "criticality.high": "High",

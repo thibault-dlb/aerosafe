@@ -1,26 +1,34 @@
 import type { Aircraft } from "@/models/Aircraft";
 import {
+  type CollectionSummary,
   Dashboard,
   type DashboardJson,
   DashboardStatistics,
   type DashboardStatisticsJson,
   type StatisticsPeriod,
 } from "@/models/Dashboard";
-import { AircraftService, type Area } from "@/services/AircraftService";
+import { type AircraftSearch, AircraftService, type Area } from "@/services/AircraftService";
 import { ApiClient } from "@/services/ApiClient";
 import { DataModeService } from "@/services/DataModeService";
 import { FlightHistory } from "@/services/FlightHistory";
 import type { FlightPoint } from "@/models/Traffic";
 
 /**
- * Reads what the dashboard shows. The figures and the chart come from the dashboard endpoints,
- * open to every account; the aircraft of the map from the aircraft search. In the replay, the
- * alerts are those of the replayed traffic up to the simulated instant; the collection state
- * stays the real one.
+ * Reads what the dashboard shows, for the source chosen. The figures and the chart come from the
+ * dashboard endpoints, open to every account; the aircraft of the map from the aircraft search. In the
+ * replay, the alerts are those of the replayed traffic up to the simulated instant; the collection state
+ * stays the real one, the one of adsb.fi.
  */
 export class DashboardService {
-  /** The Île-de-France collection area (docs/open-points.md): latitude 48.0 to 49.3, longitude 1.4 to 3.6. */
+  /** The OpenSky Île-de-France area (docs/open-points.md), until the API gives the area of the collection. */
   static readonly AREA: Area = { south: 48.0, west: 1.4, north: 49.3, east: 3.6 };
+  /**
+   * The live map keeps the aircraft heard in this many seconds: a minute, or two periods of the source
+   * when they are longer, so an aircraft never blinks between two collections.
+   */
+  static heardWithinSeconds(periodSeconds: number | null): number {
+    return Math.max(60, 2 * (periodSeconds ?? 30));
+  }
   /**
    * What the replayed data covers: metropolitan France without Corsica plus 100 km all around, which
    * is `france-100km` (docs/historical-data.md). The box that holds that outline.
@@ -53,10 +61,32 @@ export class DashboardService {
     return FlightHistory.points(observations);
   }
 
-  /** The aircraft with a known position in the area the data covers. */
-  async trackedAircraft(): Promise<Aircraft[]> {
-    const area = this.modes.isReplay() ? DashboardService.HISTORICAL_AREA : DashboardService.AREA;
-    const found = await this.aircraft.search({ area, limit: DashboardService.MAX_AIRCRAFT });
+  /**
+   * Whether the live source is shown as a preview: its collection is off, so the base holds nothing of it
+   * and the traffic is read from the source itself, without being stored.
+   */
+  static isPreview(collection: CollectionSummary | null, replay: boolean): boolean {
+    return !replay && collection !== null && !collection.enabled;
+  }
+
+  /**
+   * The aircraft with a known position in the area the data covers: the area of the live collection
+   * (given by the dashboard, the Île-de-France box until it is known) and its traffic of the moment, or
+   * the area of the replayed data. A live source that is not collected is read directly instead.
+   */
+  async trackedAircraft(collection: CollectionSummary | null = null): Promise<Aircraft[]> {
+    const replay = this.modes.isReplay();
+    if (DashboardService.isPreview(collection, replay)) {
+      return (await this.aircraft.preview()).filter((item) => item.hasPosition);
+    }
+    const search: AircraftSearch = replay
+      ? { area: DashboardService.HISTORICAL_AREA, limit: DashboardService.MAX_AIRCRAFT }
+      : {
+          area: collection?.area?.bounds ?? DashboardService.AREA,
+          limit: DashboardService.MAX_AIRCRAFT,
+          heardWithinSeconds: DashboardService.heardWithinSeconds(collection?.periodSeconds ?? null),
+        };
+    const found = await this.aircraft.search(search);
     return found.filter((item) => item.hasPosition);
   }
 }

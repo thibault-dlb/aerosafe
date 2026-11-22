@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
@@ -6,6 +7,7 @@ import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import NoResultFound
 
+from core.data_mode import DataMode
 from models import CollectionParameter, CollectionProfile, CollectionRun, CollectionStatus
 from services.collection import run_repository
 from services.collection.run_repository import DatabaseCollectionStateStore, get_state_store
@@ -198,3 +200,48 @@ async def test_pausing_updates_the_parameter_row_and_commits() -> None:
 def test_the_application_state_store_is_the_shared_database_store() -> None:
     assert get_state_store() is run_repository.state_store
     assert isinstance(get_state_store(), DatabaseCollectionStateStore)
+
+
+def literal_sql(statement) -> str:
+    return str(
+        statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
+    )
+
+
+async def test_a_run_records_its_source() -> None:
+    session = FakeSession(reference_ids=[11, 22])
+
+    await repository_on(session).record(replace(result_of(), source=DataMode.ADSBFI))
+
+    [run] = session.added
+    assert "'ADSBFI'" in literal_sql(run.source_id)
+
+
+async def test_the_runs_of_a_source_are_read_alone() -> None:
+    session = FakeSession(runs=[stored_run()])
+
+    [run] = await repository_on(session).runs(limit=5, source=DataMode.ADSBFI)
+
+    assert run.source is DataMode.ADSBFI
+    assert "'ADSBFI'" in literal_sql(session.statements[0])
+
+
+async def test_the_last_success_is_read_for_one_source() -> None:
+    session = FakeSession(runs=[stored_run()])
+
+    found = await repository_on(session).last_success(DataMode.ADSBFI)
+
+    assert found is not None and found.source is DataMode.ADSBFI
+    assert "'ADSBFI'" in literal_sql(session.statements[0])
+
+
+async def test_the_pause_is_read_and_written_on_the_row_of_its_source() -> None:
+    parameter = CollectionParameter(is_paused=False, changed_at=None, changed_by_id=None)
+    session = FakeSession(parameter=parameter)
+    repository = repository_on(session)
+
+    await repository.set_paused(True, T0, 9, DataMode.ADSBFI)
+    state = await repository.pause_state(DataMode.ADSBFI)
+
+    assert state == PauseState(True, T0, 9)
+    assert all("'ADSBFI'" in literal_sql(statement) for statement in session.statements)

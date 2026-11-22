@@ -22,9 +22,9 @@ ReplayServiceDep = Annotated[ReplayService, Depends(get_replay_service)]
 
 @dataclass(frozen=True)
 class DataScope:
-    """Which data a request is about: the live collection, or the replay at an instant."""
+    """Which data a request is about: one of the live collections, or the replay at an instant."""
 
-    mode: DataMode = DataMode.LIVE
+    mode: DataMode = DataMode.OPENSKY
     at: datetime | None = None
 
     @property
@@ -36,11 +36,17 @@ class DataScope:
 async def get_scope(
     service: ReplayServiceDep,
     source: Annotated[
-        DataMode, Query(description="`live` (default) or `replay` of the historical traffic")
-    ] = DataMode.LIVE,
+        DataMode,
+        Query(
+            description=(
+                "`opensky` (default) or `adsbfi` for a live collection, "
+                "`replay` for the historical traffic"
+            )
+        ),
+    ] = DataMode.OPENSKY,
 ) -> DataScope:
-    if source is DataMode.LIVE:
-        return DataScope()
+    if source.is_live:
+        return DataScope(source)
     return DataScope(DataMode.REPLAY, await service.simulated_now())
 
 

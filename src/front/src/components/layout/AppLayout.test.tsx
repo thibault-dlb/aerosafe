@@ -87,6 +87,14 @@ describe("AppLayout", () => {
     expect(within(screen.getByRole("contentinfo")).getByText(/projet pédagogique/)).toBeInTheDocument();
   });
 
+  it("credits OpenSky and adsb.fi, with a link to the home page of adsb.fi", () => {
+    renderAt("/alerts");
+
+    const footer = within(screen.getByRole("contentinfo"));
+    expect(footer.getByText(/The OpenSky Network et/)).toBeInTheDocument();
+    expect(footer.getByRole("link", { name: "adsb.fi" })).toHaveAttribute("href", "https://adsb.fi");
+  });
+
   it.each(["/", "/alerts"])("does not show the educational notice on %s", (path) => {
     renderAt(path);
 

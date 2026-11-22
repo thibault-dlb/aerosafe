@@ -10,6 +10,7 @@ from middlewares.requests import RequestLoggingMiddleware
 from routes.router import api_router, health_router
 from services.auth.tokens import AccessTokenCodec
 from services.collection.scheduler import Scheduler
+from services.preview import live_preview
 from services.replay.scheduler import ReplayScheduler
 
 
@@ -24,6 +25,7 @@ async def lifespan(_application: FastAPI) -> AsyncGenerator[None, None]:
     yield
     await replay_scheduler.stop()
     await scheduler.stop()
+    await live_preview.close()
     await database.close()
 
 

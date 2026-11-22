@@ -6,7 +6,7 @@ import { useDataMode } from "@/hooks/useDataMode";
 import { useReplay } from "@/hooks/useReplay";
 import { ReplayState, type ReplayStateJson } from "@/models/ReplayState";
 import { ApiError } from "@/services/ApiClient";
-import { DataModeService } from "@/services/DataModeService";
+import { type DataMode, DataModeService } from "@/services/DataModeService";
 import { PreferenceStore } from "@/services/PreferenceStore";
 import type { ReplayService } from "@/services/ReplayService";
 
@@ -43,7 +43,7 @@ function fakeService() {
   return { service, api: service as unknown as ReplayService };
 }
 
-function storeIn(mode: "live" | "replay"): PreferenceStore {
+function storeIn(mode: DataMode): PreferenceStore {
   const values = new Map<string, string>();
   const store = new PreferenceStore({
     getItem: (key) => values.get(key) ?? null,
@@ -63,7 +63,7 @@ function Probe() {
       <p data-testid="problem">{replay?.problem ?? "none"}</p>
       <p data-testid="loading">{String(replay?.loading)}</p>
       <p data-testid="speed">{replay?.state?.speed ?? "none"}</p>
-      <button onClick={() => setMode("live")}>live</button>
+      <button onClick={() => setMode("opensky")}>live</button>
       <button onClick={() => void replay?.start(new Date("2022-08-02T00:00:00Z"), 10)}>start</button>
       <button onClick={() => void replay?.pause()}>pause</button>
       <button onClick={() => void replay?.resume()}>resume</button>
@@ -72,7 +72,7 @@ function Probe() {
   );
 }
 
-function renderIn(mode: "live" | "replay", api: ReplayService) {
+function renderIn(mode: DataMode, api: ReplayService) {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <PreferencesProvider store={storeIn(mode)}>
@@ -99,7 +99,7 @@ describe("ReplayProvider", () => {
     vi.useFakeTimers();
     const { service, api } = fakeService();
 
-    renderIn("live", api);
+    renderIn("opensky", api);
     await settle(POLL_MS * 2);
 
     expect(service.get).not.toHaveBeenCalled();
@@ -214,7 +214,7 @@ describe("ReplayProvider", () => {
     fireEvent.click(screen.getByText("live"));
     await settle(POLL_MS * 3);
 
-    expect(screen.getByTestId("mode")).toHaveTextContent("live");
+    expect(screen.getByTestId("mode")).toHaveTextContent("opensky");
     expect(screen.getByTestId("now")).toHaveTextContent("none");
     expect(service.get).toHaveBeenCalledTimes(1);
   });

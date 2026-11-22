@@ -81,3 +81,23 @@ describe("CollectionPanel", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
+
+describe("CollectionPanel of a source", () => {
+  it("names OpenSky and counts its credits", () => {
+    renderInApp(<CollectionPanel collection={summary()} />);
+
+    expect(screen.getByText("Collecte OpenSky")).toBeInTheDocument();
+    expect(screen.getByText("Crédits restants")).toBeInTheDocument();
+    expect(screen.getByText(/bonne couverture au sol des aéroports/)).toBeInTheDocument();
+  });
+
+  it("gives the pace and the precision of adsb.fi, which has no credits", () => {
+    const adsbfi = new CollectionSummary(true, false, false, T0, null, [], "adsbfi", 5);
+    renderInApp(<CollectionPanel collection={adsbfi} />);
+
+    expect(screen.getByText("Collecte adsb.fi")).toBeInTheDocument();
+    expect(screen.getByText("Toutes les 5 s")).toBeInTheDocument();
+    expect(screen.getByText(/Positions de moins de 3 s/)).toBeInTheDocument();
+    expect(screen.queryByText("Crédits restants")).not.toBeInTheDocument();
+  });
+});

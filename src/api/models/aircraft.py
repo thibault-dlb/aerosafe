@@ -30,8 +30,8 @@ class Aircraft(PublicIdMixin, TimestampMixin, Base):
             postgresql_ops={"LB_IMMATRICULATION": "gin_trgm_ops"},
         ),
         comment=(
-            "Aéronef suivi, créé par le collecteur OpenSky "
-            "à la première observation de son code ICAO24."
+            "Aéronef suivi, créé à la première observation de son code ICAO24 dans sa source "
+            "(collecte OpenSky, collecte adsb.fi ou import historique)."
         ),
     )
 
@@ -52,8 +52,8 @@ class Aircraft(PublicIdMixin, TimestampMixin, Base):
         # The key 1 is DIRECT, inserted first by the migration that creates the column.
         server_default=text("1"),
         comment=(
-            "Source de l'aéronef : collecte en direct (DIRECT, par défaut) "
-            "ou trafic historique rejoué (REJEU)."
+            "Source de l'aéronef : collecte OpenSky en direct (DIRECT, par défaut), "
+            "collecte adsb.fi en direct (ADSBFI) ou trafic historique rejoué (REJEU)."
         ),
     )
     registration: Mapped[str | None] = mapped_column(

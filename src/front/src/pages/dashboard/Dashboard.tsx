@@ -19,19 +19,21 @@ import type { Alert } from "@/models/Alert";
 import type { Dashboard as DashboardData, DashboardStatistics, StatisticsPeriod } from "@/models/Dashboard";
 import { type FlightPoint, TrafficAircraftFactory } from "@/models/Traffic";
 import { AlertService } from "@/services/AlertService";
-import { CollectionService } from "@/services/CollectionService";
+import { AlertsPanelPreference } from "@/services/AlertsPanelPreference";
+import { CollectionService, type LiveSource } from "@/services/CollectionService";
 import { DashboardService } from "@/services/DashboardService";
 import { ErrorMessages } from "@/services/ErrorMessages";
 import { FlightHistory } from "@/services/FlightHistory";
 import { ReplayTime } from "@/services/ReplayTime";
 import { AircraftPolling } from "@/services/AircraftPolling";
 
-/** Time between two refreshes of the figures: the Île-de-France collection period. */
-export const REFRESH_MS = 30_000;
+/**
+ * Time between two refreshes of the figures and the aircraft of a live source: its collection period,
+ * until the dashboard gives it (OpenSky every 30 s, adsb.fi every 5 s).
+ */
+const LIVE_REFRESH_MS: Record<LiveSource, number> = { opensky: 30_000, adsbfi: 5_000 };
 /** In the replay the traffic moves with the simulated clock: the figures are read more often. */
 export const REPLAY_REFRESH_MS = 5_000;
-/** Time between two readings of the aircraft in the live mode. */
-export const AIRCRAFT_REFRESH_MS = 30_000;
 /** A click on an alert zooms in to this level if the map is further out, so its aircraft can be centred. */
 export const ALERT_FOCUS_ZOOM = 7;
 
@@ -40,6 +42,8 @@ export interface DashboardProps {
   service?: DashboardService;
   alertService?: AlertService;
   collectionService?: CollectionService;
+  /** Remembers whether the alerts panel is folded. Tests give their own. */
+  alertsPanelPreference?: AlertsPanelPreference;
 }
 
 /**
@@ -47,7 +51,7 @@ export interface DashboardProps {
  * the latest active alerts and the aircraft that is followed floating over it; under it the chart of
  * alerts and the state of the collection. Only the Supervisor gets the buttons that act.
  */
-export default function Dashboard({ service, alertService, collectionService }: DashboardProps) {
+export default function Dashboard({ service, alertService, collectionService, alertsPanelPreference }: DashboardProps) {
   const { t, language, mode } = usePreferences();
   const { user } = useAuth();
   const replay = useReplay();
@@ -61,7 +65,7 @@ export default function Dashboard({ service, alertService, collectionService }: 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [aircraft, setAircraft] = useState<Aircraft[] | null>(null);
   const [statistics, setStatistics] = useState<DashboardStatistics | null>(null);
-  const [period, setPeriod] = useState<StatisticsPeriod>("24h");
+  const [chartPeriod, setChartPeriod] = useState<StatisticsPeriod>("24h");
   const [failed, setFailed] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -69,16 +73,31 @@ export default function Dashboard({ service, alertService, collectionService }: 
   const [trackedAircraft, setTrackedAircraft] = useState<Aircraft | null>(null);
   const [following, setFollowing] = useState(false);
   const [history, setHistory] = useState<FlightPoint[]>([]);
-  const [alertsOpen, setAlertsOpen] = useState(() => !window.matchMedia?.("(max-width: 720px)").matches);
+  const [savedAlertsPanel] = useState(() => alertsPanelPreference ?? new AlertsPanelPreference());
+  // Until the visitor chooses, the panel is open, except on a narrow screen where it would hide the map.
+  const [alertsOpen, setAlertsOpen] = useState(() =>
+    savedAlertsPanel.isOpen(!window.matchMedia?.("(max-width: 720px)").matches),
+  );
   const [fullscreen, setFullscreen] = useState(false);
   // The alert last clicked: a second click on it, once its aircraft is centred, opens it in the alerts.
   const [focusedAlertId, setFocusedAlertId] = useState<string | null>(null);
   const stage = useRef<HTMLElement>(null);
   const map = useRef<TrafficMapHandle>(null);
   const replaying = mode === "replay";
-  const refreshMs = replaying ? REPLAY_REFRESH_MS : REFRESH_MS;
+  // The live source shown, and adsb.fi for the state of the collection during a replay.
+  const source: LiveSource = mode === "opensky" ? "opensky" : "adsbfi";
+  const collectionPeriod = dashboard?.collection.source === source ? dashboard.collection.periodSeconds : null;
+  const liveMs = collectionPeriod ? collectionPeriod * 1000 : LIVE_REFRESH_MS[source];
+  const refreshMs = replaying ? REPLAY_REFRESH_MS : liveMs;
   const speed = replay?.state?.speed ?? 1;
-  const aircraftMs = replaying ? AircraftPolling.replay(speed) : AIRCRAFT_REFRESH_MS;
+  const aircraftMs = replaying ? AircraftPolling.replay(speed) : liveMs;
+  // The collection read last, for the area and the pace of the aircraft search, which runs on its own timer.
+  const collectionRef = useRef<DashboardData["collection"] | null>(null);
+  collectionRef.current = dashboard?.collection.source === source ? dashboard.collection : null;
+  // A live source whose collection is off: its traffic is read from the source itself, and stored nowhere.
+  const previewing = DashboardService.isPreview(collectionRef.current, replaying);
+  const previewingRef = useRef(previewing);
+  previewingRef.current = previewing;
 
   // The latest replay, read by the clock of the map, which runs outside React.
   const replayRef = useRef(replay);
@@ -88,15 +107,15 @@ export default function Dashboard({ service, alertService, collectionService }: 
   trackedRef.current = trackedId;
 
   const refresh = useCallback(async () => {
-    const [overview, chart] = await Promise.allSettled([api.load(), api.statistics(period)]);
+    const [overview, chart] = await Promise.allSettled([api.load(), api.statistics(chartPeriod)]);
     if (overview.status === "fulfilled") setDashboard(overview.value);
     if (chart.status === "fulfilled") setStatistics(chart.value);
     return [overview, chart].some((part) => part.status === "rejected");
-  }, [api, period]);
+  }, [api, chartPeriod]);
 
   const refreshAircraft = useCallback(async () => {
     try {
-      setAircraft(await api.trackedAircraft());
+      setAircraft(await api.trackedAircraft(collectionRef.current));
       return false;
     } catch {
       return true;
@@ -135,7 +154,8 @@ export default function Dashboard({ service, alertService, collectionService }: 
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [refreshAircraft, aircraftMs]);
+    // The aircraft are read again at once when the preview starts or stops, instead of one period later.
+  }, [refreshAircraft, aircraftMs, previewing]);
 
   const stopTracking = useCallback(() => {
     setTrackedId(null);
@@ -156,6 +176,8 @@ export default function Dashboard({ service, alertService, collectionService }: 
       setTrackedAircraft(item);
       setFollowing(true);
       setHistory([]);
+      // A previewed aircraft is not in the base: its line starts now, from the reports that follow.
+      if (previewingRef.current) return;
       try {
         const points = await api.flightOf(item.id);
         if (trackedRef.current === item.id) setHistory(points);
@@ -225,6 +247,11 @@ export default function Dashboard({ service, alertService, collectionService }: 
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  function toggleAlertsPanel() {
+    savedAlertsPanel.setOpen(!alertsOpen);
+    setAlertsOpen(!alertsOpen);
+  }
+
   function toggleFullscreen() {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void stage.current?.requestFullscreen?.();
@@ -243,10 +270,10 @@ export default function Dashboard({ service, alertService, collectionService }: 
     }
   }
 
-  async function act(action: () => Promise<void>, done: "paused" | "resumed" | "ran") {
+  async function act(action: (live: LiveSource) => Promise<void>, done: "paused" | "resumed" | "ran") {
     setBusy(true);
     try {
-      await action();
+      await action(source);
       toast.notify({ message: t(`dashboard.collection.toast.${done}`) });
       await refresh();
     } catch (failure) {
@@ -257,14 +284,15 @@ export default function Dashboard({ service, alertService, collectionService }: 
   }
 
   const instant = replay?.now ?? null;
-  let mapTitle = t("overview.live.title");
+  let mapTitle = t(source === "opensky" ? "overview.opensky.title" : "overview.adsbfi.title");
   if (replaying) {
     mapTitle = instant
       ? t("overview.replay.title", { time: ReplayTime.short(instant, language) })
       : t("overview.replay.waiting");
   }
-  const bounds = replaying ? DashboardService.HISTORICAL_AREA : DashboardService.AREA;
-  const zone = replaying ? "outline" : DashboardService.AREA;
+  const liveArea = collectionRef.current?.area ?? null;
+  const bounds = replaying ? DashboardService.HISTORICAL_AREA : (liveArea?.bounds ?? DashboardService.AREA);
+  const zone = replaying ? "outline" : (liveArea?.zone ?? DashboardService.AREA);
   const tracked = trackedAircraft && trackedId ? trackedAircraft : null;
 
   return (
@@ -274,6 +302,9 @@ export default function Dashboard({ service, alertService, collectionService }: 
         <h2 className={styles.mapTitle}>{mapTitle}</h2>
       </div>
       {failed && <Notice variant="warning">{t("dashboard.error")}</Notice>}
+      {previewing && (
+        <Notice>{t("dashboard.preview.notice", { source: source === "opensky" ? "OpenSky" : "adsb.fi" })}</Notice>
+      )}
       {dashboard ? (
         <>
           <section ref={stage} className={styles.stage} aria-label={mapTitle}>
@@ -309,12 +340,13 @@ export default function Dashboard({ service, alertService, collectionService }: 
                   following={following}
                   onFollow={setFollowing}
                   onClose={stopTracking}
+                  detailLink={!previewing}
                 />
               )}
             </div>
             <div className={styles.right}>
               <div className={styles.alertDock} data-covered={tracked ? "true" : undefined}>
-                <button type="button" className={styles.alertToggle} aria-expanded={alertsOpen} onClick={() => setAlertsOpen((open) => !open)}>
+                <button type="button" className={styles.alertToggle} aria-expanded={alertsOpen} onClick={toggleAlertsPanel}>
                   {alertsOpen ? t("dashboard.map.alerts.hide") : t("dashboard.map.alerts.show", { count: dashboard.activeAlerts })}
                 </button>
                 {alertsOpen && (
@@ -340,13 +372,13 @@ export default function Dashboard({ service, alertService, collectionService }: 
             </div>
           </section>
           <div className={styles.below}>
-            <AlertChart statistics={statistics} period={period} onPeriod={setPeriod} />
+            <AlertChart statistics={statistics} period={chartPeriod} onPeriod={setChartPeriod} />
             <CollectionPanel
               collection={dashboard.collection}
               busy={busy}
-              onPause={supervisor ? () => void act(() => collection.pause(), "paused") : undefined}
-              onResume={supervisor ? () => void act(() => collection.resume(), "resumed") : undefined}
-              onRun={supervisor ? () => void act(() => collection.runNow(), "ran") : undefined}
+              onPause={supervisor ? () => void act((live) => collection.pause(live), "paused") : undefined}
+              onResume={supervisor ? () => void act((live) => collection.resume(live), "resumed") : undefined}
+              onRun={supervisor ? () => void act((live) => collection.runNow(live), "ran") : undefined}
             />
           </div>
         </>

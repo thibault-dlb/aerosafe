@@ -8,6 +8,8 @@ Register of issues not fixed by the defence date, with their severity and any wo
 | --- | --- | --- | --- |
 | K-02 | Login throttling counters live in memory: they reset when the API restarts and are not shared between API processes | Minor | None needed while the API runs as one process |
 | K-03 | A refresh token used twice is refused, but the newer token issued from it stays valid (no token family revocation) | Minor | The refresh cookie is `HttpOnly` and `SameSite=Strict`, which limits theft |
+| K-04 | adsb.fi covers the ground of the airports poorly: on 2026-11-20, 1 aircraft on the ground in the Île-de-France box against 16 for OpenSky | Minor | Choose **OpenSky** in the top bar to see the aircraft on the ground; the rules ignore them anyway |
+| K-05 | R1 and R2 say nothing about an aircraft last placed within 20 km of the edge of the area of its source, so a real loss of contact there raises no alert | Minor | Lower `RULES_EDGE_MARGIN_KM`; the other source may cover the aircraft further |
 
 ## Severity levels
 

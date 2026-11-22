@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { Aircraft, Observation } from "@/models/Aircraft";
+import { CollectionSummary } from "@/models/Dashboard";
 import type { AircraftService } from "@/services/AircraftService";
 import type { ApiClient } from "@/services/ApiClient";
 import { DataModeService } from "@/services/DataModeService";
@@ -47,8 +48,75 @@ describe("DashboardService", () => {
     await new DashboardService({} as ApiClient, modes(true), aircraft).trackedAircraft();
 
     expect(live).toEqual([placed]);
-    expect(search).toHaveBeenNthCalledWith(1, { area: DashboardService.AREA, limit: 2000 });
+    expect(search).toHaveBeenNthCalledWith(1, { area: DashboardService.AREA, limit: 2000, heardWithinSeconds: 60 });
     expect(search).toHaveBeenNthCalledWith(2, { area: DashboardService.HISTORICAL_AREA, limit: 2000 });
+  });
+
+  it("reads the live aircraft in the area of the collection, heard within two of its periods", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const aircraft = { search } as unknown as AircraftService;
+    const collection = CollectionSummary.fromJson({
+      source: "opensky",
+      period_seconds: 120,
+      area: { south: 41.3, west: -5.2, north: 51.1, east: 9.6 },
+      enabled: true,
+      paused: false,
+      running: false,
+      last_success_at: null,
+      remaining_credits: null,
+      recent_runs: [],
+    });
+
+    await new DashboardService({} as ApiClient, modes(false), aircraft).trackedAircraft(collection);
+
+    expect(search).toHaveBeenCalledWith({
+      area: { south: 41.3, west: -5.2, north: 51.1, east: 9.6 },
+      limit: 2000,
+      heardWithinSeconds: 240,
+    });
+  });
+
+  it("reads a live source that is not collected directly, with a position only", async () => {
+    const placed = new Aircraft("3c6444", "3c6444", null, null, null, T0, 48.8, 2.3);
+    const lost = new Aircraft("3c6445", "3c6445", null, null, null, T0, null, null);
+    const preview = vi.fn().mockResolvedValue([placed, lost]);
+    const search = vi.fn();
+    const aircraft = { preview, search } as unknown as AircraftService;
+    const off = new CollectionSummary(false, false, false, null, null, [], "adsbfi", 5);
+
+    const found = await new DashboardService({} as ApiClient, modes(false), aircraft).trackedAircraft(off);
+
+    expect(found).toEqual([placed]);
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it("keeps reading the base while the collection is on, unknown, or the replay is shown", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const preview = vi.fn();
+    const aircraft = { preview, search } as unknown as AircraftService;
+    const on = new CollectionSummary(true, false, false, null, null, [], "adsbfi", 5);
+    const off = new CollectionSummary(false, false, false, null, null, [], "adsbfi", 5);
+
+    await new DashboardService({} as ApiClient, modes(false), aircraft).trackedAircraft(on);
+    await new DashboardService({} as ApiClient, modes(false), aircraft).trackedAircraft(null);
+    await new DashboardService({} as ApiClient, modes(true), aircraft).trackedAircraft(off);
+
+    expect(preview).not.toHaveBeenCalled();
+    expect(search).toHaveBeenCalledTimes(3);
+  });
+
+  it("knows when a source is shown as a preview", () => {
+    const off = new CollectionSummary(false, false, false, null, null, []);
+
+    expect(DashboardService.isPreview(off, false)).toBe(true);
+    expect(DashboardService.isPreview(off, true)).toBe(false);
+    expect(DashboardService.isPreview(null, false)).toBe(false);
+  });
+
+  it("keeps the live aircraft heard in the last minute at least", () => {
+    expect(DashboardService.heardWithinSeconds(5)).toBe(60);
+    expect(DashboardService.heardWithinSeconds(null)).toBe(60);
+    expect(DashboardService.heardWithinSeconds(120)).toBe(240);
   });
 
   it("reads the whole flight of an aircraft", async () => {

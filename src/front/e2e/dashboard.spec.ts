@@ -90,7 +90,8 @@ test("a Supervisor sees the figures, the chart and the collection, and can act",
   await openSession(page, "SUPERVISOR");
   await mockDashboard(page);
   let paused = false;
-  await page.route("**/api/v1/collection/pause", (route) => {
+  await page.route("**/api/v1/collection/pause?source=adsbfi", (route) => {
+    // adsb.fi is the source shown by default: the pause is for its collection.
     paused = true;
     return route.fulfill({ json: {} });
   });
