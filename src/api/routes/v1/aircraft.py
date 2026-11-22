@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.data_mode import DataMode
 from core.database import get_db
 from core.security import CurrentUser, get_current_user
 from routes.v1.flights import FlightServiceDep
@@ -16,6 +17,7 @@ from services.aircraft import (
     ObservationPeriod,
     ObservationReader,
 )
+from services.preview import LivePreview, PreviewUnavailable, live_preview
 from services.replay.dependencies import Scope
 
 router = APIRouter(prefix="/aircraft", tags=["aircraft"])
@@ -35,7 +37,13 @@ def get_observation_reader(
     return ObservationReader(session)
 
 
+def get_live_preview() -> LivePreview:
+    """FastAPI dependency, overridden in tests."""
+    return live_preview
+
+
 Service = Annotated[AircraftService, Depends(get_aircraft_service)]
+PreviewDep = Annotated[LivePreview, Depends(get_live_preview)]
 Reader = Annotated[ObservationReader, Depends(get_observation_reader)]
 # Every authenticated user can look up aircraft, whatever the role (UC-01).
 Caller = Annotated[CurrentUser, Depends(get_current_user)]
@@ -112,6 +120,37 @@ async def search_aircraft(
         else timedelta(seconds=heard_within_seconds),
     )
     return await service.search(criteria)
+
+
+@router.get("/preview", summary="Preview the traffic of a live source, without storing it")
+async def preview_aircraft(
+    preview: PreviewDep,
+    _caller: Caller,
+    source: Annotated[
+        DataMode, Query(description="The live source to read: `opensky` or `adsbfi`")
+    ] = DataMode.ADSBFI,
+) -> list[AircraftSummary]:
+    """The aircraft the source sees now in its area, for a dashboard whose instance does not
+    collect it. Nothing is stored: the aircraft have no flight, no history and no alert, and
+    their `id` is their ICAO24 address. The answer is shared for one period of the source."""
+    if not source.is_live:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="The preview reads a live source: opensky or adsbfi",
+        )
+    try:
+        return await preview.aircraft(source)
+    except PreviewUnavailable as error:
+        headers = (
+            None
+            if error.retry_after_seconds is None
+            else {"Retry-After": str(error.retry_after_seconds)}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"{source.label} cannot be read now",
+            headers=headers,
+        ) from error
 
 
 async def find_aircraft(

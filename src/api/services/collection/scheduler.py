@@ -13,10 +13,10 @@ from config.opensky import settings as opensky_settings
 from core.data_mode import DataMode
 from core.logger import get_logger
 from services.collection.adsbfi_client import AdsbFiClient
+from services.collection.clients import build_live_client
 from services.collection.collector import DataCollector
 from services.collection.cycle import CollectionCycle
 from services.collection.flight_grouper import FlightGrouper
-from services.collection.opensky_client import OpenSkyClient, TokenProvider
 from services.collection.profiles import CollectionProfile
 from services.collection.purge import ObservationPurger
 from services.collection.run_repository import state_store
@@ -231,22 +231,10 @@ class Scheduler:
             logger.exception("adsb.fi purge failed")
 
     def _build_cycle(self, mode: DataMode) -> CollectionCycle:
-        source: LiveSource
-        if mode is DataMode.ADSBFI:
-            http = httpx.AsyncClient(timeout=self._adsbfi_settings.ADSBFI_TIMEOUT_SECONDS)
-            source = AdsbFiSource(AdsbFiClient(http, self._adsbfi_settings.ADSBFI_API_URL))
-        else:
-            settings = self._settings
-            http = httpx.AsyncClient(timeout=settings.OPENSKY_TIMEOUT_SECONDS)
-            token_provider = None
-            if settings.has_credentials:
-                token_provider = TokenProvider(
-                    http,
-                    settings.OPENSKY_TOKEN_URL,
-                    settings.OPENSKY_CLIENT_ID,
-                    settings.OPENSKY_CLIENT_SECRET.get_secret_value(),
-                )
-            source = OpenSkySource(OpenSkyClient(http, settings.OPENSKY_API_URL, token_provider))
+        client, http = build_live_client(mode, self._settings, self._adsbfi_settings)
+        source: LiveSource = (
+            AdsbFiSource(client) if isinstance(client, AdsbFiClient) else OpenSkySource(client)
+        )
         self._collections[mode].http = http
         # One flight gap for both sources (D-06).
         grouper = FlightGrouper(timedelta(minutes=self._settings.COLLECTION_FLIGHT_GAP_MINUTES))
