@@ -85,9 +85,12 @@ Work package `feat/aircraft-lookup` (BF-04 to BF-07, UC-01). Every endpoint need
 | Method and path | Purpose | Answers |
 | --- | --- | --- |
 | `GET /aircraft` | Search aircraft | 200 with a list, possibly empty; 422 for invalid criteria |
+| `GET /aircraft/preview` | Traffic of a live source, read from the source itself and stored nowhere | 200 with a list; 422 for `replay`; 503 when the source cannot be read now (with `Retry-After` when it announced a delay) |
 | `GET /aircraft/{aircraft_id}` | Aircraft record | 200; 404 if unknown or deleted |
 | `GET /aircraft/{aircraft_id}/observations` | Observation history | 200, oldest first; 404; 422 |
 | `GET /aircraft/{aircraft_id}/flights` | Flights of the aircraft | 200, most recent first; 404 |
+
+`GET /aircraft/preview?source=opensky|adsbfi` (default `adsbfi`) is for a dashboard whose instance does not collect the source: the API reads the aircraft of the area of the source on demand (the same area, client and account as the collection), and keeps the answer for one period of the source, whoever asks, so many open dashboards cost one request. Nothing is written to the database: the aircraft have no flight, no history and no alert, and their `id` is their ICAO24 address, so the other aircraft endpoints do not know them.
 
 Query parameters of `GET /aircraft`. Every criterion is optional and they are combined (AND). Results are sorted by ICAO24 address.
 
