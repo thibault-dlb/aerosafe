@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
@@ -7,6 +7,8 @@ import { Alert } from "@/models/Alert";
 import { CollectionRun, CollectionSummary, Dashboard as DashboardData, DashboardStatistics, StatisticsSlice } from "@/models/Dashboard";
 import { ApiError } from "@/services/ApiClient";
 import type { AlertService } from "@/services/AlertService";
+import { AlertsPanelPreference } from "@/services/AlertsPanelPreference";
+import { PreferenceStore } from "@/services/PreferenceStore";
 import type { CollectionService } from "@/services/CollectionService";
 import type { DashboardService } from "@/services/DashboardService";
 import { renderInApp } from "@/test/app";
@@ -34,14 +36,31 @@ function services(overrides: Partial<Record<"load" | "statistics" | "trackedAirc
   } as unknown as DashboardService;
 }
 
+/** A panel preference that remembers in memory only, so a test never reads what another one chose. */
+function memoryPanelPreference(): AlertsPanelPreference {
+  const values = new Map<string, string>();
+  return new AlertsPanelPreference(
+    new PreferenceStore({
+      getItem: (key) => values.get(key) ?? null,
+      setItem: (key, value) => void values.set(key, value),
+    }),
+  );
+}
+
 function renderDashboard(
   role: string,
   service: DashboardService = services(),
-  extra: { alerts?: AlertService; collection?: CollectionService } = {},
+  extra: { alerts?: AlertService; collection?: CollectionService; panel?: AlertsPanelPreference } = {},
 ) {
-  renderInApp(<Dashboard service={service} alertService={extra.alerts} collectionService={extra.collection} />, {
-    session: fakeSession("authenticated", role),
-  });
+  renderInApp(
+    <Dashboard
+      service={service}
+      alertService={extra.alerts}
+      collectionService={extra.collection}
+      alertsPanelPreference={extra.panel ?? memoryPanelPreference()}
+    />,
+    { session: fakeSession("authenticated", role) },
+  );
   return service;
 }
 
@@ -54,7 +73,7 @@ function Where() {
 function renderWithLocation(role: string, service: DashboardService = services()) {
   renderInApp(
     <>
-      <Dashboard service={service} />
+      <Dashboard service={service} alertsPanelPreference={memoryPanelPreference()} />
       <Where />
     </>,
     { session: fakeSession("authenticated", role) },
@@ -221,6 +240,24 @@ describe("Dashboard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Alertes actives (4)" }));
     expect(screen.getByRole("region", { name: "Alertes actives" })).toBeInTheDocument();
+  });
+
+  it("keeps the alerts folded, or unfolded, when the page is loaded again", async () => {
+    const panel = memoryPanelPreference();
+    const service = renderDashboard("USER", services(), { panel });
+    await screen.findByRole("region", { name: "Alertes actives" });
+    fireEvent.click(screen.getByRole("button", { name: "Replier les alertes" }));
+    cleanup();
+
+    renderDashboard("USER", service, { panel });
+    await screen.findByRole("button", { name: "Alertes actives (4)" });
+    expect(screen.queryByRole("region", { name: "Alertes actives" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Alertes actives (4)" }));
+    cleanup();
+
+    renderDashboard("USER", service, { panel });
+    expect(await screen.findByRole("region", { name: "Alertes actives" })).toBeInTheDocument();
   });
   describe("when an alert of the map is clicked", () => {
     it("centres the map on its aircraft first, then opens the alert in the alerts for a Supervisor", async () => {

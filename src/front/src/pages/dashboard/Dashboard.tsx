@@ -19,6 +19,7 @@ import type { Alert } from "@/models/Alert";
 import type { Dashboard as DashboardData, DashboardStatistics, StatisticsPeriod } from "@/models/Dashboard";
 import { type FlightPoint, TrafficAircraftFactory } from "@/models/Traffic";
 import { AlertService } from "@/services/AlertService";
+import { AlertsPanelPreference } from "@/services/AlertsPanelPreference";
 import { CollectionService, type LiveSource } from "@/services/CollectionService";
 import { DashboardService } from "@/services/DashboardService";
 import { ErrorMessages } from "@/services/ErrorMessages";
@@ -41,6 +42,8 @@ export interface DashboardProps {
   service?: DashboardService;
   alertService?: AlertService;
   collectionService?: CollectionService;
+  /** Remembers whether the alerts panel is folded. Tests give their own. */
+  alertsPanelPreference?: AlertsPanelPreference;
 }
 
 /**
@@ -48,7 +51,7 @@ export interface DashboardProps {
  * the latest active alerts and the aircraft that is followed floating over it; under it the chart of
  * alerts and the state of the collection. Only the Supervisor gets the buttons that act.
  */
-export default function Dashboard({ service, alertService, collectionService }: DashboardProps) {
+export default function Dashboard({ service, alertService, collectionService, alertsPanelPreference }: DashboardProps) {
   const { t, language, mode } = usePreferences();
   const { user } = useAuth();
   const replay = useReplay();
@@ -70,7 +73,11 @@ export default function Dashboard({ service, alertService, collectionService }: 
   const [trackedAircraft, setTrackedAircraft] = useState<Aircraft | null>(null);
   const [following, setFollowing] = useState(false);
   const [history, setHistory] = useState<FlightPoint[]>([]);
-  const [alertsOpen, setAlertsOpen] = useState(() => !window.matchMedia?.("(max-width: 720px)").matches);
+  const [savedAlertsPanel] = useState(() => alertsPanelPreference ?? new AlertsPanelPreference());
+  // Until the visitor chooses, the panel is open, except on a narrow screen where it would hide the map.
+  const [alertsOpen, setAlertsOpen] = useState(() =>
+    savedAlertsPanel.isOpen(!window.matchMedia?.("(max-width: 720px)").matches),
+  );
   const [fullscreen, setFullscreen] = useState(false);
   // The alert last clicked: a second click on it, once its aircraft is centred, opens it in the alerts.
   const [focusedAlertId, setFocusedAlertId] = useState<string | null>(null);
@@ -233,6 +240,11 @@ export default function Dashboard({ service, alertService, collectionService }: 
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  function toggleAlertsPanel() {
+    savedAlertsPanel.setOpen(!alertsOpen);
+    setAlertsOpen(!alertsOpen);
+  }
+
   function toggleFullscreen() {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void stage.current?.requestFullscreen?.();
@@ -323,7 +335,7 @@ export default function Dashboard({ service, alertService, collectionService }: 
             </div>
             <div className={styles.right}>
               <div className={styles.alertDock} data-covered={tracked ? "true" : undefined}>
-                <button type="button" className={styles.alertToggle} aria-expanded={alertsOpen} onClick={() => setAlertsOpen((open) => !open)}>
+                <button type="button" className={styles.alertToggle} aria-expanded={alertsOpen} onClick={toggleAlertsPanel}>
                   {alertsOpen ? t("dashboard.map.alerts.hide") : t("dashboard.map.alerts.show", { count: dashboard.activeAlerts })}
                 </button>
                 {alertsOpen && (
