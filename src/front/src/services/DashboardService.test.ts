@@ -76,6 +76,43 @@ describe("DashboardService", () => {
     });
   });
 
+  it("reads a live source that is not collected directly, with a position only", async () => {
+    const placed = new Aircraft("3c6444", "3c6444", null, null, null, T0, 48.8, 2.3);
+    const lost = new Aircraft("3c6445", "3c6445", null, null, null, T0, null, null);
+    const preview = vi.fn().mockResolvedValue([placed, lost]);
+    const search = vi.fn();
+    const aircraft = { preview, search } as unknown as AircraftService;
+    const off = new CollectionSummary(false, false, false, null, null, [], "adsbfi", 5);
+
+    const found = await new DashboardService({} as ApiClient, modes(false), aircraft).trackedAircraft(off);
+
+    expect(found).toEqual([placed]);
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it("keeps reading the base while the collection is on, unknown, or the replay is shown", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const preview = vi.fn();
+    const aircraft = { preview, search } as unknown as AircraftService;
+    const on = new CollectionSummary(true, false, false, null, null, [], "adsbfi", 5);
+    const off = new CollectionSummary(false, false, false, null, null, [], "adsbfi", 5);
+
+    await new DashboardService({} as ApiClient, modes(false), aircraft).trackedAircraft(on);
+    await new DashboardService({} as ApiClient, modes(false), aircraft).trackedAircraft(null);
+    await new DashboardService({} as ApiClient, modes(true), aircraft).trackedAircraft(off);
+
+    expect(preview).not.toHaveBeenCalled();
+    expect(search).toHaveBeenCalledTimes(3);
+  });
+
+  it("knows when a source is shown as a preview", () => {
+    const off = new CollectionSummary(false, false, false, null, null, []);
+
+    expect(DashboardService.isPreview(off, false)).toBe(true);
+    expect(DashboardService.isPreview(off, true)).toBe(false);
+    expect(DashboardService.isPreview(null, false)).toBe(false);
+  });
+
   it("keeps the live aircraft heard in the last minute at least", () => {
     expect(DashboardService.heardWithinSeconds(5)).toBe(60);
     expect(DashboardService.heardWithinSeconds(null)).toBe(60);

@@ -135,7 +135,9 @@ export const fr = {
   "dashboard.track.profile": "Altitude depuis le début du vol",
   "dashboard.track.profile.label": "Profil d'altitude du vol : {count} points, jusqu'à {peak}",
   "dashboard.track.profile.none": "Pas assez de points connus pour tracer le profil.",
-  "dashboard.error": "Certaines données n'ont pas pu être chargées. Nouvel essai dans quelques secondes.",
+  "dashboard.preview.notice":
+    "Aperçu direct de {source} : le trafic du moment, lu à la volée. Rien n'est enregistré (la collecte est désactivée), donc ni historique ni alertes.",
+  "dashboard.error":"Certaines données n'ont pas pu être chargées. Nouvel essai dans quelques secondes.",
   "dashboard.alerts.title": "Alertes actives",
   "dashboard.alerts.empty.title": "Aucune alerte active",
   "dashboard.alerts.empty.body": "Le trafic suivi ne déclenche aucune règle en ce moment.",

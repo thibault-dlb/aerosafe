@@ -69,6 +69,16 @@ export class AircraftService {
     return json.map((item) => Aircraft.fromJson(item));
   }
 
+  /**
+   * The traffic of the live source as it is now, read from the source itself and stored nowhere: for a
+   * source whose collection is off. The aircraft have no flight and no history, and their `id` is their
+   * ICAO24 address.
+   */
+  async preview(): Promise<Aircraft[]> {
+    const json = await this.client.get<AircraftJson[]>(`/v1/aircraft/preview${this.modes.withSource("")}`);
+    return json.map((item) => Aircraft.fromJson(item));
+  }
+
   async get(aircraftId: string): Promise<Aircraft> {
     const json = await this.client.get<AircraftJson>(
       `/v1/aircraft/${encodeURIComponent(aircraftId)}${this.modes.withSource("")}`,

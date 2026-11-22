@@ -94,6 +94,10 @@ export default function Dashboard({ service, alertService, collectionService, al
   // The collection read last, for the area and the pace of the aircraft search, which runs on its own timer.
   const collectionRef = useRef<DashboardData["collection"] | null>(null);
   collectionRef.current = dashboard?.collection.source === source ? dashboard.collection : null;
+  // A live source whose collection is off: its traffic is read from the source itself, and stored nowhere.
+  const previewing = DashboardService.isPreview(collectionRef.current, replaying);
+  const previewingRef = useRef(previewing);
+  previewingRef.current = previewing;
 
   // The latest replay, read by the clock of the map, which runs outside React.
   const replayRef = useRef(replay);
@@ -150,7 +154,8 @@ export default function Dashboard({ service, alertService, collectionService, al
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [refreshAircraft, aircraftMs]);
+    // The aircraft are read again at once when the preview starts or stops, instead of one period later.
+  }, [refreshAircraft, aircraftMs, previewing]);
 
   const stopTracking = useCallback(() => {
     setTrackedId(null);
@@ -171,6 +176,8 @@ export default function Dashboard({ service, alertService, collectionService, al
       setTrackedAircraft(item);
       setFollowing(true);
       setHistory([]);
+      // A previewed aircraft is not in the base: its line starts now, from the reports that follow.
+      if (previewingRef.current) return;
       try {
         const points = await api.flightOf(item.id);
         if (trackedRef.current === item.id) setHistory(points);
@@ -295,6 +302,9 @@ export default function Dashboard({ service, alertService, collectionService, al
         <h2 className={styles.mapTitle}>{mapTitle}</h2>
       </div>
       {failed && <Notice variant="warning">{t("dashboard.error")}</Notice>}
+      {previewing && (
+        <Notice>{t("dashboard.preview.notice", { source: source === "opensky" ? "OpenSky" : "adsb.fi" })}</Notice>
+      )}
       {dashboard ? (
         <>
           <section ref={stage} className={styles.stage} aria-label={mapTitle}>
@@ -330,6 +340,7 @@ export default function Dashboard({ service, alertService, collectionService, al
                   following={following}
                   onFollow={setFollowing}
                   onClose={stopTracking}
+                  detailLink={!previewing}
                 />
               )}
             </div>

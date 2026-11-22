@@ -137,7 +137,9 @@ export const en: Record<TranslationKey, string> = {
   "dashboard.track.profile": "Altitude since the start of the flight",
   "dashboard.track.profile.label": "Altitude profile of the flight: {count} points, up to {peak}",
   "dashboard.track.profile.none": "Not enough known points to draw the profile.",
-  "dashboard.error": "Some data could not be loaded. Trying again in a few seconds.",
+  "dashboard.preview.notice":
+    "Live preview of {source}: the traffic of the moment, read on the fly. Nothing is stored (collection is off), so there is no history and no alerts.",
+  "dashboard.error":"Some data could not be loaded. Trying again in a few seconds.",
   "dashboard.alerts.title": "Active alerts",
   "dashboard.alerts.empty.title": "No active alert",
   "dashboard.alerts.empty.body": "The traffic followed triggers no rule at the moment.",

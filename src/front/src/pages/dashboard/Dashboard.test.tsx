@@ -198,6 +198,38 @@ describe("Dashboard", () => {
     expect(service.flightOf).toHaveBeenCalledWith("01AIRCRAFT");
   });
 
+  describe("when the collection of the source is off", () => {
+    const OFF = new CollectionSummary(false, false, false, null, null, [], "adsbfi", 5);
+    const PREVIEWED = new DashboardData(0, 0, 0, [], OFF, []);
+
+    it("says the traffic is a live preview, and shows it", async () => {
+      const service = renderDashboard("USER", services({ load: vi.fn().mockResolvedValue(PREVIEWED) }));
+
+      expect(await screen.findByText(/Aperçu direct de adsb\.fi/)).toBeInTheDocument();
+      await waitFor(() => expect(service.trackedAircraft).toHaveBeenCalledWith(OFF));
+    });
+
+    it("follows an aircraft without asking for a flight the base does not have, nor linking its page", async () => {
+      const service = renderDashboard("USER", services({ load: vi.fn().mockResolvedValue(PREVIEWED) }));
+      const search = await screen.findByRole("combobox", { name: "Suivre un aéronef" });
+      await waitFor(() => expect(service.trackedAircraft).toHaveBeenCalledWith(OFF));
+
+      fireEvent.change(search, { target: { value: "f-gkxa" } });
+      fireEvent.submit(search);
+
+      await screen.findByRole("region", { name: "Aéronef suivi" });
+      expect(screen.queryByRole("link", { name: "Ouvrir la fiche" })).not.toBeInTheDocument();
+      expect(service.flightOf).not.toHaveBeenCalled();
+    });
+
+    it("shows no such notice when the source is collected", async () => {
+      renderDashboard("USER");
+      await screen.findByRole("region", { name: "Alertes actives" });
+
+      expect(screen.queryByText(/Aperçu direct/)).not.toBeInTheDocument();
+    });
+  });
+
   it("stops following when the card is closed", async () => {
     renderDashboard("USER");
     const search = await screen.findByRole("combobox", { name: "Suivre un aéronef" });

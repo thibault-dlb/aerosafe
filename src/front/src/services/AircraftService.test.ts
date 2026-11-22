@@ -91,6 +91,16 @@ describe("AircraftService", () => {
     expect(aircraft.onGround).toBe(false);
   });
 
+  it("previews the traffic of the live source, which is not stored", async () => {
+    const { service, get } = serviceReturning([{ ...AIRCRAFT, id: "3c6444" }]);
+
+    const [aircraft] = await service.preview();
+
+    expect(get).toHaveBeenCalledWith("/v1/aircraft/preview?source=adsbfi");
+    expect(aircraft.id).toBe("3c6444");
+    expect(aircraft.hasPosition).toBe(true);
+  });
+
   it("accepts an aircraft sent without its heading or ground state", () => {
     const old: AircraftJson = { ...AIRCRAFT };
     delete old.heading;

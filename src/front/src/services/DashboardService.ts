@@ -62,12 +62,24 @@ export class DashboardService {
   }
 
   /**
+   * Whether the live source is shown as a preview: its collection is off, so the base holds nothing of it
+   * and the traffic is read from the source itself, without being stored.
+   */
+  static isPreview(collection: CollectionSummary | null, replay: boolean): boolean {
+    return !replay && collection !== null && !collection.enabled;
+  }
+
+  /**
    * The aircraft with a known position in the area the data covers: the area of the live collection
    * (given by the dashboard, the Île-de-France box until it is known) and its traffic of the moment, or
-   * the area of the replayed data.
+   * the area of the replayed data. A live source that is not collected is read directly instead.
    */
   async trackedAircraft(collection: CollectionSummary | null = null): Promise<Aircraft[]> {
-    const search: AircraftSearch = this.modes.isReplay()
+    const replay = this.modes.isReplay();
+    if (DashboardService.isPreview(collection, replay)) {
+      return (await this.aircraft.preview()).filter((item) => item.hasPosition);
+    }
+    const search: AircraftSearch = replay
       ? { area: DashboardService.HISTORICAL_AREA, limit: DashboardService.MAX_AIRCRAFT }
       : {
           area: collection?.area?.bounds ?? DashboardService.AREA,

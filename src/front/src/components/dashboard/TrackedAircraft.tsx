@@ -28,6 +28,8 @@ export interface TrackedAircraftProps {
   following: boolean;
   onFollow: (following: boolean) => void;
   onClose: () => void;
+  /** The link to the page of the aircraft. A previewed aircraft is not in the base: it has no page. */
+  detailLink?: boolean;
 }
 
 /**
@@ -35,7 +37,16 @@ export interface TrackedAircraftProps {
  * how high and how fast, when it was last heard, its active alert and the profile of its altitude
  * over the whole flight known. Its place is an estimate between two reports.
  */
-export default function TrackedAircraft({ aircraft, describe, alert, history, following, onFollow, onClose }: TrackedAircraftProps) {
+export default function TrackedAircraft({
+  aircraft,
+  describe,
+  alert,
+  history,
+  following,
+  onFollow,
+  onClose,
+  detailLink = true,
+}: TrackedAircraftProps) {
   const { t, units } = usePreferences();
   const [snapshot, setSnapshot] = useState<TrackedSnapshot | null>(() => describe(aircraft.id));
 
@@ -113,7 +124,7 @@ export default function TrackedAircraft({ aircraft, describe, alert, history, fo
         )}
       </div>
       <footer className={styles.foot}>
-        <Link to={`/aircraft/${aircraft.id}`}>{t("dashboard.track.open")}</Link>
+        {detailLink ? <Link to={`/aircraft/${aircraft.id}`}>{t("dashboard.track.open")}</Link> : <span />}
         <button type="button" aria-pressed={following} onClick={() => onFollow(!following)}>
           {following ? t("dashboard.track.following") : t("dashboard.track.follow")}
         </button>
